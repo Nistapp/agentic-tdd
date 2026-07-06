@@ -1,0 +1,20 @@
+name: Enforce Dev to Main Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if pull request source is 'dev'
+        run: |
+          echo "Target branch is: ${{ github.base_ref }}"
+          echo "Source branch is: ${{ github.head_ref }}"
+          if [ "${{ github.head_ref }}" != "dev" ]; then
+            echo "::error::Direct PRs to 'main' must only originate from the 'dev' branch. Please merge your branch to 'dev' first, then create a PR from 'dev' to 'main'."
+            exit 1
+          fi
+          echo "Validation successful!"
