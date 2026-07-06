@@ -1,0 +1,17 @@
+model_list:
+  - model_name: "*"
+    litellm_params:
+      model: openrouter/*
+      api_key: "os.environ/OPENROUTER_API_KEY"
+  - model_name: default
+    litellm_params:
+      model: openrouter/meta-llama/llama-3.3-70b-instruct:free
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+router_settings:
+  routing_strategy: simple-shuffle
+  enable_pre_call_checks: true
+
+litellm_settings:
+  drop_params: True
+  set_verbose: True

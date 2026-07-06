@@ -1,0 +1,15 @@
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm@sha256:7c311546c25e7bb6e8cafede9fcd3d0d622ac636b5c9418befaa32e85dfb0186
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    env_file:
+      - .env
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_DISABLE_AUTH=${LITELLM_DISABLE_AUTH:-True}
+    command: [ "--port", "4000", "--config", "/app/config.yaml", "--detailed_debug" ]
+    restart: always

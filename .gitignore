@@ -1,0 +1,30 @@
+# Secrets — NEVER commit
+.env
+opencode.json
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+
+# Pipeline artifacts (transient — deleted by Context Compaction on success)
+.opencode_error.log
+session*
+
+# opencode internals
+.opencode/node_modules/
+.opencode/agent/
+.opencode/package-lock.json
+
+
+# Editors
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
