@@ -1,7 +1,15 @@
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { execa } from 'execa';
 import type { ICommandRunner } from '../core/interfaces.js';
 import type { TestRunResult } from '../core/types.js';
 import { loggers, reqLogger } from '../utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const OPENCODE_CONFIG_DIR = resolve(__dirname, '..', '..');
+export const PACKAGE_AGENTS_DIR = resolve(OPENCODE_CONFIG_DIR, 'agent');
 
 const OPENCODE_WATCHDOG_INTERVAL_MS = 30_000;
 const OPENCODE_HEARTBEAT_THRESHOLD_MS = 120_000;
@@ -46,7 +54,7 @@ export class CommandRunner implements ICommandRunner {
   }
 
   async runOpenCode(args: string[]): Promise<string> {
-    const child = execa('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = execa('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, OPENCODE_CONFIG_DIR } });
 
     loggers.core.info({ pid: child.pid, opencode_log: OPENCODE_LOG_PATH }, 'Opencode process spawned');
     reqLogger().debug({ pid: child.pid, command: ['opencode', ...args] }, 'Executing shell command');

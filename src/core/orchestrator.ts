@@ -11,6 +11,7 @@ import {
   GIT_COMMIT_PASSES,
 } from './types.js';
 import { loggers, createExecutionContextLogger, executionContextStorage, reqLogger, sanitizeLogPayload, type ExecutionContext } from '../utils/logger.js';
+import { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
 const STATE_FILE = join(cwd(), '.opencode', 'active-run.json');
 
@@ -372,7 +373,7 @@ export class PipelineOrchestrator {
   async #logPreFlight(ctx: PipelineContext): Promise<void> {
     const pass = ctx.currentPass!;
     const agentName = AGENT_NAMES[pass];
-    const agentFile = `.opencode/agent/${agentName}.md`;
+    const agentFile = resolve(PACKAGE_AGENTS_DIR, `${agentName}.md`);
 
     let model = '<unknown>';
     try {

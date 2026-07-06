@@ -281,7 +281,7 @@ describe('CommandRunner', () => {
     });
     const runner = new CommandRunner();
     const result = await runner.runOpenCode(['run', '--agent', 'pass-0-design-agent']);
-    expect(execaMock).toHaveBeenCalledWith('opencode', ['run', '--agent', 'pass-0-design-agent'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    expect(execaMock).toHaveBeenCalledWith('opencode', ['run', '--agent', 'pass-0-design-agent'], expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] }));
     expect(result).toBe('agent output\n\n');
   });
 

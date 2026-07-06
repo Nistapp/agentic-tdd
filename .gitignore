@@ -15,7 +15,6 @@ session*
 
 # opencode internals
 .opencode/node_modules/
-.opencode/agent/
 .opencode/package-lock.json
 
 
