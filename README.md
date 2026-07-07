@@ -12,11 +12,12 @@
 
 ## The Problem
 
-Ad-hoc agentic coding fails at the enterprise level for three reasons:
+Ad-hoc agentic coding fails at the enterprise level for multiple reasons:
 
 1. **Context Bloat** — Dumping entire codebases into a single prompt burns millions of tokens and causes "lost in the middle" attention drift.
 2. **Spaghetti Edits** — Asking one model to write logic, enforce security, and format logs simultaneously causes "lazy coding" on at least one constraint.
 3. **Specification Drift** — Agents change the code but leave the architecture docs untouched, creating a legacy codebase on day one.
+4. **Lack of Formal development Process and quality gating** - This leads to inconsistent code quality, security vulnerabilities, and drift from the intended architecture.
 
 ## The Solution: AI as an Assembly Line
 
@@ -28,7 +29,7 @@ Pass 1  Contracts & Types      →  type stubs in source files
 Pass 2  TDD Test Generation    →  test file                   [Red Phase]
 Pass 3  Core Implementation    →  logic                       [Green Phase + self-correction]
 Pass 4  Refactor & Optimise    →  complexity/DRY              [self-correction]
-Pass 5  Security Hardening     →  OWASP Top-10               [self-correction]
+Pass 5  Security Hardening     →  Secure Code + OWASP         [self-correction]
 Pass 6  Observability & Logs   →  logging + error classes     [self-correction]
 Pass 7  Documentation          →  docstrings + @see links
 ```
@@ -117,21 +118,6 @@ stateDiagram-v2
     Gate_7 --> [*] : Branch Ready for PR
 ```
 
-### Decoupled Architecture (Node.js / TypeScript)
-
-This is a ground-up rewrite of the Python orchestrator, designed for extensibility:
-
-| Layer | Technology | Role |
-|---|---|---|
-| **Core Engine** (`src/core/`) | Pure TypeScript state machine | Pipeline state transitions, pass scheduling, self-correction loop |
-| **OS Integrations** (`src/infrastructure/`) | Dependency Injection via interfaces | File system, Git, subprocess execution (`execa`), EventBus |
-| **CLI** (`src/cli/`) | Commander.js | Argument parsing, terminal UX (banners, HITL prompts, pass headers) |
-
-The Core Engine has zero knowledge of filesystems, Git, or shell commands. All OS interactions are injected. This means the exact same engine can drive:
-
-- A **native VS Code extension** (swap `NodeFileSystem` for `VSCodeFileSystem`, `CommandRunner` for `VSCodeTerminal`).
-- A **web dashboard** (swap the EventBus listener for a WebSocket broadcaster).
-- A **GitHub Actions runner** (swap the Git service for the GitHub API).
 
 ### Three Cost-Critical Invariants
 
@@ -143,57 +129,21 @@ The Core Engine has zero knowledge of filesystems, Git, or shell commands. All O
 
 ---
 
-## Repository Structure
-
-```
-agentic-tdd-node/
-├── .opencode/                # Agent engine: agents.xml + 8 agent .md files
-│   └── agent/                # One .md file per pipeline pass
-├── docs/
-│   ├── architecture-manifesto.md   # Full design rationale & diagrams
-│   └── roadmap.md
-├── examples/
-│   └── basic-addition/       # Verified integration test (run this first!)
-│       ├── basic_addition.py
-│       ├── basic_addition_test.py
-│       ├── design.mmd
-│       └── spec.gherkin
-├── infra/
-│   ├── docker-compose.yml    # LiteLLM proxy stack
-│   └── litellm_config.yaml   # Model routing configuration
-├── src/
-│   ├── core/                 # Pipeline orchestrator (pure state machine)
-│   │   ├── orchestrator.ts   # 8-pass sequential pipeline engine
-│   │   └── types.ts          # Pipeline pass enums, context & event types
-│   ├── infrastructure/       # DI-wired OS adapters
-│   │   ├── file-system.ts    # IFilesystem → NodeFileSystem
-│   │   ├── git-service.ts    # IGitService → GitService
-│   │   ├── command-runner.ts # ICommandRunner → CommandRunner (execa)
-│   │   └── event-bus.ts      # IEventBus → EventBus
-│   └── cli/
-│       └── index.ts          # Commander.js CLI entrypoint
-├── test/                     # Vitest test suite
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
 
 ## Quick Start
 
 ### Prerequisites
 
 - **Node.js >= 22**
-- [opencode CLI](https://opencode.ai) (`npm install -g opencode-ai`)
-- An [OpenRouter](https://openrouter.ai) API key
+- [opencode CLI](https://opencode.ai) 
+- An API key - [OpenRouter](https://openrouter.ai) or Claude or openAi codex (or configure opencode to use free models on openrouter or opencode Zen.)
 - `git` initialized in your working directory
 
 ### 1. Install dependencies
 
 ```bash
-git clone https://github.com/Digital-Assistant/agentic-tdd-node.git
-cd agentic-tdd-node
+git clone https://github.com/Nistapp/agentic-tdd.git
+cd agentic-tdd
 npm install
 ```
 
@@ -216,30 +166,16 @@ cp .env.example .env
 # Edit .env and add your OPENROUTER_API_KEY
 ```
 
-### 5. Run the example
-
-```bash
-# Run the full 8-pass pipeline against the basic-addition example
-npx agentic-tdd examples/basic-addition/basic_addition.py
-
-# Skip the human approval gate (for CI/automated use)
-npx agentic-tdd examples/basic-addition/basic_addition.py --skip-hitl
-
-# Just run the tests directly (no API calls)
-pytest examples/basic-addition/ -v
-```
-
 ### 6. Run against your own file
 
 ```bash
-npx agentic-tdd path/to/your/module.py --test-cmd "pytest path/to/tests/ -x"
-npx agentic-tdd path/to/your/module.ts --test-cmd "npm test"
+npx agentic-tdd --feature-desc-file ./src/artefacts/Prompt-3.md --log-level DEBUG --test-cmd "pytest"
 ```
 
 If you ran `npm link`, you can also use the bare command:
 
 ```bash
-agentic-tdd specs/my_feature.md --skip-hitl
+agentic-tdd --feature-desc-file specs/my_feature.md --skip-hitl --test-cmd "pytest"
 ```
 
 ---
@@ -247,44 +183,29 @@ agentic-tdd specs/my_feature.md --skip-hitl
 ## CLI Usage
 
 ```
-agentic-tdd [spec_file] [options]
+agentic-tdd -feature-desc-file <spec_file> [options]
 ```
 
 ### Options
 
-| Flag | Default | Description |
-|---|---|---|
-| `--test-cmd <command>` | `npm test` | Test command to run after each guarded pass. |
-| `--skip-hitl` | `false` | Skip the human approval gate after Pass 0 (for CI/CD). |
-| `--issue <ref>` | — | Issue ref (e.g. `123` or `PAY-404`) to auto-create a feature branch. |
-| `--base-branch <name>` | — | Base branch for auto-branching (bypasses the `main` guardrail). |
-| `--log-level <level>` | `INFO` | Logging verbosity. Choices: `DEBUG` \| `INFO` \| `WARNING` \| `ERROR`. |
+| Command | Description |
+| :--- | :--- |
+| -V, --version | output the version number |
+| --feature-desc-file <path> | Path to the feature description file (e.g. specs/feature.md) |
+| --test-cmd <command> | Test command to run after each pass (language-specific) |
+| --skip-hitl | Skip human-in-the-loop prompts |
+| --base-branch <branch> | Base branch to create the feature branch from |
+| --log-level <level> | Log level (DEBUG, INFO, WARNING, ERROR) (default: "INFO") |
+| --resume | Resume an active Agentic TDD session |
+| --abort | Abort the active session and rewind Git history |
+| -h, --help | display help for command |
 
-
-
----
-
-## The Infrastructure Layer (Optional)
-
-For enterprise use, route all agent traffic through a self-hosted **LiteLLM** proxy. This gives you:
-
-- **Budget control** per developer/department
-- **Model routing** (cheap models for docs, frontier models for security)
-- **PII masking** before prompts leave your network
-
-```bash
-cd infra/
-docker compose up -d
-# LiteLLM proxy now running at http://localhost:4000
-```
-
-See `docs/architecture-manifesto.md` for the full enterprise architecture including SSO, Bloop semantic indexing, and DevContainer sandboxing.
 
 ---
 
 ## Agent Configuration
 
-Agents are defined in `.opencode/agents.xml` and `.opencode/agent/*.md`. Each agent file has YAML frontmatter that locks the model, permissions, and scope.
+Agents are defined in `src/agents/`. Each agent file has YAML frontmatter that locks the model, permissions, and scope.
 
 The pipeline enforces that agents can only:
 
@@ -296,45 +217,17 @@ See `docs/architecture-manifesto.md` § 4 for the full agent guardrail design.
 
 ---
 
-## Development
+## Uninstall
+
+To remove the CLI:
 
 ```bash
-# Clone and install
-git clone https://github.com/Digital-Assistant/agentic-tdd-node.git
-cd agentic-tdd-node
-npm install
+# If installed via npm link
+npm unlink -g agentic-tdd
 
-# Build
-npm run build
-
-# Run the test suite (Vitest)
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Type-check only (no emit)
-npm run lint
+# If installed via npm install -g
+npm uninstall -g agentic-tdd
 ```
-
----
-
-## Roadmap
-
-- [x] 8-pass pipeline orchestrator (TypeScript state machine)
-- [x] Decoupled Core Engine / OS layer (Dependency Injection)
-- [x] Commander.js CLI with terminal UX
-- [x] Self-correction loop (max 2 retries per guarded pass)
-- [x] Human-in-the-Loop gate after Pass 0
-- [x] Atomic git commits per pass
-- [x] Agent guardrails via `.opencode/agents.xml`
-- [x] Vitest test suite (72 tests, 100% pass rate)
-- [ ] VS Code extension (native HITL UX, inline diagram preview)
-- [ ] Bloop integration for cross-repo semantic context retrieval
-- [ ] Semgrep hard-fail gates between passes
-- [ ] DevContainer / Nix flake for deterministic agent sandboxing
-
-See `docs/roadmap.md` for the full list.
 
 ---
 
