@@ -200,6 +200,44 @@ describe('PipelineOrchestrator', () => {
       expect(args).toContain(issueSpec);
       expect(args).toContain('--dangerously-skip-permissions');
     });
+
+    it('characterization: event kind sequence for full 8-pass happy path', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.config, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: true }));
+
+      expect(m.emittedEvents.map(e => e.kind)).toMatchInlineSnapshot(`
+        [
+          "PIPELINE_STARTED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "PIPELINE_COMPLETED",
+        ]
+      `);
+    });
   });
 
   describe('Pass 0 — design phase', () => {
