@@ -13,7 +13,7 @@ import { GitService } from '../infrastructure/git-service.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
 import { EventBus } from '../infrastructure/event-bus.js';
 import { JsonStateStore } from '../infrastructure/state-store.js';
-import { getStateFilePath } from '../utils/paths.js';
+import { getStateFilePath, getOpencodeLogPath } from '../utils/paths.js';
 import {
   PipelinePass,
   PASS_LABELS,
@@ -22,6 +22,7 @@ import {
   DEFAULT_MAX_CORRECTION_RETRIES,
 } from '../core/types.js';
 import type { PipelineContext, AgenticEvent } from '../core/types.js';
+import type { PipelineConfig } from '../core/interfaces.js';
 import type { HitlHandler } from '../core/orchestrator.js';
 import { loggers } from '../utils/logger.js';
 
@@ -370,7 +371,12 @@ program
       const cmdRunner = new CommandRunner();
       const hitlHandler = createHitlHandler(ctx);
 
-      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, hitlHandler);
+      const pipelineConfig: PipelineConfig = {
+        opencodeLogPath: getOpencodeLogPath(),
+        apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+      };
+
+      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, pipelineConfig, hitlHandler);
 
       try {
         await orchestrator.run(ctx, startPass);
@@ -498,7 +504,12 @@ program
     const cmdRunner = new CommandRunner();
     const hitlHandler = createHitlHandler(ctx);
 
-    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, hitlHandler);
+    const pipelineConfig: PipelineConfig = {
+      opencodeLogPath: getOpencodeLogPath(),
+      apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+    };
+
+    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, pipelineConfig, hitlHandler);
 
     try {
       await orchestrator.run(ctx, PipelinePass.Design);
