@@ -164,24 +164,24 @@ export class PipelineOrchestrator {
 
 
 
-  async #runPass1(ctx: PipelineContext): Promise<void> {
+  async #runSimplePass(ctx: PipelineContext): Promise<void> {
     this.#emitPassStarted(ctx);
     reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     await this.#invokeOpenCode(ctx, prompt);
     const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes }); //TODO: where are we doing git commit or writing to Statefile ?
+    this.#emitPassCompleted(ctx, { files: changes });
+  }
+
+  async #runPass1(ctx: PipelineContext): Promise<void> {
+    //TODO: where are we doing git commit or writing to Statefile ?
+    await this.#runSimplePass(ctx);
   }
 
   async #runPass2(ctx: PipelineContext): Promise<void> {
-    this.#emitPassStarted(ctx);
-    reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
-    const prompt = this.#getAgentContextPayload(ctx);
-    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    await this.#invokeOpenCode(ctx, prompt);
-    const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes });//REMARK: Looks like Statefile has not been implemented at all
+    //REMARK: Looks like Statefile has not been implemented at all
+    await this.#runSimplePass(ctx);
   }
 
   async #runSelfCorrectingPass(ctx: PipelineContext): Promise<void> {
@@ -264,15 +264,10 @@ export class PipelineOrchestrator {
   }
 
   async #runPass7(ctx: PipelineContext): Promise<void> {
-    this.#emitPassStarted(ctx);
-    reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
-    const prompt = this.#getAgentContextPayload(ctx);
-    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    await this.#invokeOpenCode(ctx, prompt);
-    const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes });
-  } //REMARK: What is happening with Git here ? What is happening with statefile here?
-  //        Do we automate the final PR too ? 
+    //REMARK: What is happening with Git here ? What is happening with statefile here?
+    //        Do we automate the final PR too ?
+    await this.#runSimplePass(ctx);
+  }
 
   // -- Helpers ---------------------------------------------------------------
 
