@@ -10,7 +10,7 @@ import type {
   ICommandRunner,
   IEventBus,
 } from '../src/core/interfaces.js';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
