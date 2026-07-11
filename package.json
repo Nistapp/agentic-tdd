@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build:full"
+    "prepublishOnly": "npm run lint && npm test && npm run build:full"
   },
   "keywords": [],
   "author": "",
