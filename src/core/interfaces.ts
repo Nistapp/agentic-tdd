@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -121,4 +121,15 @@ export interface IEventBus {
    * @returns An unsubscribe function that removes the listener.
    */
   on(kind: AgenticEventKind, handler: (event: AgenticEvent) => void): () => void;
+}
+
+// ---------------------------------------------------------------------------
+// IStateStore — persistence for pipeline session state (DEFERRED)
+// ---------------------------------------------------------------------------
+
+export interface IStateStore {
+  save(ctx: PipelineContext): Promise<void>;
+  load(): Promise<PipelineContext>;
+  delete(): Promise<void>;
+  exists(): Promise<boolean>;
 }
