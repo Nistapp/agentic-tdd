@@ -12,7 +12,7 @@
 // Pass definitions — matches AGENTS / PASS_LABELS dicts in Python cli.py
 // ---------------------------------------------------------------------------
 
-export const enum PipelinePass {
+export enum PipelinePass {
   Design             = 0,
   Contracts          = 1,
   TestGeneration     = 2,
