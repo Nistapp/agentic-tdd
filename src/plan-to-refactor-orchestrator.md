@@ -37,8 +37,8 @@ Chronological, low-risk-first ordering. Each step is self-contained and verifiab
   - `getLogDir(workDir?: string): string`
   - `getPackageAgentsDir(): string`
   - `getOpencodeLogPath(): string`
-- [ ] 4.2 Remove the module-level `STATE_FILE` constant from orchestrator.ts:16. Call `getStateFilePath()` inside methods instead.
-- [ ] 4.3 Remove the duplicate `STATE_FILE` constant from `src/cli/index.ts:275`. Import from `paths.ts`.
+- [ ] 4.2 STATE_FILE constant removed from orchestrator.ts (StateFile cleanup, Step A.1). No replacement — orchestrator no longer touches state file.
+- [ ] 4.3 STATE_FILE constant removed from `src/cli/index.ts:275`. Now uses `JsonStateStore` → `getStateFilePath()` from `paths.ts` (StateFile cleanup, Step B-C).
 - [ ] 4.4 Remove `PACKAGE_AGENTS_DIR` import from `../infrastructure/command-runner.js` in orchestrator.ts:14. Use `getPackageAgentsDir()` from `paths.ts`.
 - [ ] 4.5 Move `#persistPassLog` (orchestrator.ts:396–410) to use `getLogDir()` from `paths.ts`.
 - [ ] 4.6 Run `npm test`.
