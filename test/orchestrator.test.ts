@@ -68,7 +68,7 @@ function makeMocks(): Mocks {
 
   const fs: IFileSystem = {
     exists: vi.fn().mockResolvedValue(true),
-    readFile: vi.fn().mockResolvedValue('%% Module: my_module\n'),
+    readFile: vi.fn().mockResolvedValue('%% Module: my_module\n%% This is a long enough module design mock string \n'),
     writeFile: vi.fn().mockResolvedValue(undefined),
     mkdir: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
