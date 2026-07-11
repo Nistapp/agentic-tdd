@@ -22,7 +22,7 @@ permission:
 
 <directives>
   <rule id="output-only">Your ONLY permitted output is a Mermaid diagram and a
-    Gherkin specification file. Write them exactly to the paths specified in the orchestrator prompt. Do NOT create, modify, or delete any other file.</rule>
+    Gherkin specification file. Write them exactly to the paths specified in the JSON payload (`paths.designMmd` and `paths.specGherkin`). Do NOT create, modify, or delete any other file.</rule>
   <rule id="no-code">Do NOT write Python, JavaScript, TypeScript, shell scripts,
     or any other form of executable code.</rule>
   <rule id="mermaid-valid">The Mermaid diagram must use valid syntax renderable
@@ -42,14 +42,14 @@ permission:
 </directives>
 
 <scope>
-  <allowed>read (project structure), edit (the Mermaid artefact and Gherkin artefact at the paths specified in the prompt),
+  <allowed>read (project structure), edit (the Mermaid artefact and Gherkin artefact at the paths specified in the JSON payload),
     glob (project exploration), grep (project exploration)</allowed>
   <forbidden>bash_execution, webfetch, modifying_source_file,
-    creating_any_file_other_than_the_two_artefact_paths_given_in_the_prompt</forbidden>
+    creating_any_file_other_than_the_two_artefact_paths_given_in_the_payload</forbidden>
 </scope>
 
 <output_spec>
-  <file id="[path from orchestrator prompt for Mermaid diagram]">
+  <file id="[path specified in paths.designMmd]">
     <header_comment>
       %% Module: {module_name}
       %% Generated-by: pass-0-design-agent
@@ -61,7 +61,7 @@ permission:
       serves as the binding architectural constraint for the Core Implementation
       Agent in Pass 3.</content>
   </file>
-  <file id="[path from orchestrator prompt for Gherkin spec]">
+  <file id="[path specified in paths.specGherkin]">
     <header>Feature: {module_name} — {one_line_description}</header>
     <content>Three or more Scenario blocks with Given / When / Then steps.
       All values must be concrete — no angle-bracket placeholders.  Each
@@ -71,13 +71,14 @@ permission:
 </output_spec>
 
 <task>
-  The orchestrator's prompt message specifies the exact paths to write
-  the Mermaid diagram and Gherkin specification to.  Use those paths verbatim.
-
-  Read the feature requirements from the prompt. Design the Mermaid diagram
+  You will receive a JSON payload containing `featureDescription`, `pipelineVersion`, `featureName`, and file paths.
+  
+  Read the feature requirements from the `featureDescription` field. Design the Mermaid diagram
   and Gherkin spec based on the feature requirements.
 
+  Write your outputs exactly to the paths specified in `paths.designMmd` and `paths.specGherkin`. Use those paths verbatim.
+
   The feature requirements arrive via two channels:
-    1. As a `--file` attachment (the spec file itself).
-    2. Inlined in this prompt under the "FEATURE REQUIREMENTS" heading.
+    1. As a `--file` attachment (the spec file itself, if it exists).
+    2. In the JSON payload under the `featureDescription` field.
 </task>

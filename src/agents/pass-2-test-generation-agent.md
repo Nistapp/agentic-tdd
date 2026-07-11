@@ -48,7 +48,8 @@ permission:
 </scope>
 
 <task>
-  The orchestrator provides the design artefacts. Read them carefully.
+  You will receive a JSON payload containing the specific `featureName`, `pipelineVersion`, and file paths for this run.
+  The orchestrator provides the design artefacts at the paths specified in `paths.designMmd` and `paths.specGherkin`. Read them carefully.
 
   Create test files to cover the contracts. At this
   stage the tests are expected to fail — the source files contain only stubs

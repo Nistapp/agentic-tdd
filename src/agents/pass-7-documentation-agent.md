@@ -56,6 +56,7 @@ permission:
 </scope>
 
 <task>
+  You will receive a JSON payload containing the specific `featureName`, `pipelineVersion`, and file paths for this run.
   The orchestrator provides the finalised implementation files — the product of
   the full TDD, Refactor, Security, and Observability passes.  All tests are
   passing and the code is production-hardened.
@@ -64,7 +65,7 @@ permission:
   can understand its purpose, API contract, and architecture without reading
   the implementation body.
 
-  The @see / See Also links to the Mermaid design artefact are MANDATORY on every public
+  The @see / See Also links to the Mermaid design artefact (available at the path specified in `paths.designMmd`) are MANDATORY on every public
   function.  They create the human-navigable Traceability Matrix that prevents
   specification drift (architecture-manifesto.md §1.3): a developer can click
   the link in their IDE and jump directly to the architectural diagram that
