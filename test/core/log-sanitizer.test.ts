@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeLogPayload } from './logger';
+import { sanitizeLogPayload } from '../../src/core/log-sanitizer.js';
 
 describe('sanitizeLogPayload', () => {
   const longStr = 'x'.repeat(5000);

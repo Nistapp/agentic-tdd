@@ -1,8 +1,8 @@
 import { resolve, dirname, basename, extname, join } from 'node:path';
 import { cwd } from 'node:process';
 import { randomUUID } from 'node:crypto';
-import type { IGitService, IFileSystem, ICommandRunner, IEventBus, PipelineConfig } from './interfaces.js';
-import type { PipelineContext, AgenticEvent, ExecutionMetadata } from './types.js';
+import type { IGitService, IFileSystem, ICommandRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
+import type { PipelineContext, AgenticEvent } from './types.js';
 import {
   PipelinePass,
   AGENT_NAMES,
@@ -13,7 +13,7 @@ import {
 import type { PassCompletedPayload } from './types.js';
 // DEFERRED: StateFile — see docs/statefile-design.md
 
-import { loggers, createExecutionContextLogger, executionContextStorage, reqLogger, sanitizeLogPayload, type ExecutionContext } from '../utils/logger.js';
+import { sanitizeLogPayload } from './log-sanitizer.js';
 import { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
 // ---------------------------------------------------------------------------
@@ -27,14 +27,17 @@ export class PipelineOrchestrator {
   readonly #fs: IFileSystem;
   readonly #cmd: ICommandRunner;
   readonly #events: IEventBus;
+  readonly #logger: ILogger;
   readonly #config: PipelineConfig;
   readonly #onHitl: HitlHandler;
+  #passLogger: ILogger;
 
   constructor(
     git: IGitService,
     fs: IFileSystem,
     cmd: ICommandRunner,
     events: IEventBus,
+    logger: ILogger,
     config: PipelineConfig,
     onHitl: HitlHandler = () => Promise.resolve(),
   ) {
@@ -42,18 +45,20 @@ export class PipelineOrchestrator {
     this.#fs = fs;
     this.#cmd = cmd;
     this.#events = events;
+    this.#logger = logger;
     this.#config = config;
     this.#onHitl = onHitl;
+    this.#passLogger = logger;
   }
 
-  #buildExecContext(ctx: PipelineContext, pass: PipelinePass, attempt: number): ExecutionContext {
-    const metadata: ExecutionMetadata = {
-      runId: ctx.runId!,
+  #childLogger(ctx: PipelineContext, pass: PipelinePass, attempt: number): ILogger {
+    return this.#logger.child({
+      module: 'execution',
+      runId: ctx.runId,
       targetFile: ctx.specFileAbsPath,
       passId: pass,
       attemptCount: attempt,
-    };
-    return { metadata, logger: createExecutionContextLogger(metadata) };
+    });
   }
 
   // -- Public entry point ----------------------------------------------------
@@ -73,8 +78,8 @@ export class PipelineOrchestrator {
       if (startPass <= PipelinePass.Design) {
         ctx.currentPass = PipelinePass.Design;
         ctx.currentAttempt = 1;
-        const exec = this.#buildExecContext(ctx, PipelinePass.Design, 1);
-        await executionContextStorage.run(exec, () => this.#runPass0(ctx));
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Design, 1);
+        await this.#runPass0(ctx);
 
         if (!ctx.skipHitl) {
           this.#emit(
@@ -90,8 +95,8 @@ export class PipelineOrchestrator {
       if (startPass <= PipelinePass.Contracts) { //check if we are saving startPass to file. Consider renaming this variable.
         ctx.currentPass = PipelinePass.Contracts;
         ctx.currentAttempt = 1;
-        const exec = this.#buildExecContext(ctx, PipelinePass.Contracts, 1);
-        await executionContextStorage.run(exec, () => this.#runPass1(ctx)); // TODO: what does ctx contain ?
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Contracts, 1);
+        await this.#runPass1(ctx); // TODO: what does ctx contain ?
         await this.#maybeCommit(ctx); //Review: why maybe ? In what situation will we not have git commit ?
         // TODO: not sure if we decided to implement a state file. If so, I will assume that we need to write something to statefile.
         //        This state file need not be committed to git I think.
@@ -101,8 +106,8 @@ export class PipelineOrchestrator {
       if (startPass <= PipelinePass.TestGeneration) {
         ctx.currentPass = PipelinePass.TestGeneration;
         ctx.currentAttempt = 1;
-        const exec = this.#buildExecContext(ctx, PipelinePass.TestGeneration, 1);
-        await executionContextStorage.run(exec, () => this.#runPass2(ctx));
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.TestGeneration, 1);
+        await this.#runPass2(ctx);
         await this.#maybeCommitTestFile(ctx);
       }
 
@@ -116,8 +121,8 @@ export class PipelineOrchestrator {
         if (startPass <= pass) {
           ctx.currentPass = pass;
           ctx.currentAttempt = 1;
-          const exec = this.#buildExecContext(ctx, pass, 1);
-          await executionContextStorage.run(exec, () => this.#runSelfCorrectingPass(ctx));
+          this.#passLogger = this.#childLogger(ctx, pass, 1);
+          await this.#runSelfCorrectingPass(ctx);
           await this.#maybeCommit(ctx);
         }
       }
@@ -126,8 +131,8 @@ export class PipelineOrchestrator {
       if (startPass <= PipelinePass.Documentation) {
         ctx.currentPass = PipelinePass.Documentation;
         ctx.currentAttempt = 1;
-        const exec = this.#buildExecContext(ctx, PipelinePass.Documentation, 1);
-        await executionContextStorage.run(exec, () => this.#runPass7(ctx));
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Documentation, 1);
+        await this.#runPass7(ctx);
         await this.#maybeCommit(ctx);
       }
 
@@ -151,9 +156,9 @@ export class PipelineOrchestrator {
 
     ctx.currentPass = PipelinePass.Design;
     this.#emitPassStarted(ctx);
-    reqLogger().info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
+    this.#passLogger.info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
-    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
+    this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     await this.#invokeOpenCode(ctx, prompt);
     this.#emitPassCompleted(ctx);
 
@@ -166,9 +171,9 @@ export class PipelineOrchestrator {
 
   async #runSimplePass(ctx: PipelineContext): Promise<void> {
     this.#emitPassStarted(ctx);
-    reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
+    this.#passLogger.info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
-    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
+    this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     await this.#invokeOpenCode(ctx, prompt);
     const changes = await this.#git.getPendingChanges();
     this.#emitPassCompleted(ctx, { files: changes });
@@ -194,19 +199,16 @@ export class PipelineOrchestrator {
     this.#emitPassStarted(ctx);
 
     // Initial agent run
-    reqLogger().info(`Entering Pass ${pass} [Attempt 1]`);
-    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
+    this.#passLogger.info(`Entering Pass ${pass} [Attempt 1]`);
+    this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     await this.#invokeOpenCode(ctx, prompt);
 
     for (let attemptIdx = 0; attemptIdx < totalAttempts; attemptIdx++) {
       const humanAttempt = attemptIdx + 1;
       ctx.currentAttempt = humanAttempt;
-      const store = executionContextStorage.getStore()!;
-      const fresh = this.#buildExecContext(ctx, pass, humanAttempt);
-      store.metadata = fresh.metadata;
-      store.logger = fresh.logger;
+      this.#passLogger = this.#childLogger(ctx, pass, humanAttempt);
 
-      reqLogger().info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
+      this.#passLogger.info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
 
       // Run the test suite
       this.#emit('TEST_RUN_STARTED', `Running tests — attempt ${humanAttempt}/${totalAttempts}`, ctx);
@@ -224,7 +226,7 @@ export class PipelineOrchestrator {
       }
 
       // Tests failed
-      reqLogger().warn(
+      this.#passLogger.warn(
         { output: result.output.slice(0, 500), passed: false },
         `Test gate failed for Pass ${pass} [Attempt ${humanAttempt}] -- initiating self-correction loop-back`,
       );
@@ -256,9 +258,9 @@ export class PipelineOrchestrator {
       );
 
       // Re-invoke agent with correction prompt + error log
-      reqLogger().info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
+      this.#passLogger.info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
       const correctionPrompt = this.#getAgentContextPayload(ctx, { attemptNumber: humanAttempt });
-      reqLogger().info({ payload: { prompt: sanitizeLogPayload(correctionPrompt, 'info') } }, 'Dispatching prompt to Opencode');
+      this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(correctionPrompt, 'info') } }, 'Dispatching prompt to Opencode');
       await this.#invokeOpenCode(ctx, correctionPrompt, ctx.errorLogPath);
     }
   }
@@ -319,21 +321,21 @@ export class PipelineOrchestrator {
     }
     if (ctx.specFileAbsPath) {
       const specExists = await this.#fs.exists(ctx.specFileAbsPath);
-      loggers.core.debug(`buildArgs: specFileAbsPath='${ctx.specFileAbsPath}' exists=${specExists}`);
+      this.#passLogger.debug(`buildArgs: specFileAbsPath='${ctx.specFileAbsPath}' exists=${specExists}`);
       if (specExists) {
         args.push('--file', ctx.specFileAbsPath);
       } else {
-        loggers.core.debug(`buildArgs: specFileAbsPath does not exist — not attaching as --file`);
+        this.#passLogger.debug(`buildArgs: specFileAbsPath does not exist — not attaching as --file`);
       }
     } else if (ctx.featureDescription) {
-      loggers.core.debug(`buildArgs: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file`);
+      this.#passLogger.debug(`buildArgs: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file`);
     }
     if (errorLog && (await this.#fs.exists(errorLog))) {
       args.push('--file', errorLog);
     }
-    const level = reqLogger().level;
+    const level = this.#logger.level;
     if (level === 'debug' || level === 'trace') {
-      loggers.core.debug(`buildArgs: active log level is '${level}' — injecting --print-logs and --log-level DEBUG`);
+      this.#passLogger.debug(`buildArgs: active log level is '${level}' — injecting --print-logs and --log-level DEBUG`);
       args.push('--print-logs', '--log-level', 'DEBUG');
     }
     args.push('--dangerously-skip-permissions', prompt);
@@ -344,14 +346,14 @@ export class PipelineOrchestrator {
     try {
       await this.#logPreFlight(ctx);
       const response = await this.#cmd.runOpenCode(await this.#buildArgs(ctx, prompt, errorLog));
-      reqLogger().debug('Received completion from Opencode');
-      reqLogger().debug({ payload: { completion: sanitizeLogPayload(response, 'debug') } }, 'Opencode completion payload');
-      loggers.agent(ctx.currentPass!).debug({ payload: response }, 'LLM response received');
+      this.#passLogger.debug('Received completion from Opencode');
+      this.#passLogger.debug({ payload: { completion: sanitizeLogPayload(response, 'debug') } }, 'Opencode completion payload');
+      this.#passLogger.child({ module: `agent:${AGENT_NAMES[ctx.currentPass!]}` }).debug({ payload: response }, 'LLM response received');
       await this.#persistPassLog(ctx, response);
       return response;
     } catch (err) {
       const opencodeLog = this.#config.opencodeLogPath;
-      reqLogger().error(
+      this.#passLogger.error(
         { err, hint: `Check opencode self-log at ${opencodeLog} for upstream error diagnostics` },
         'Opencode invocation failed',
       );
@@ -372,11 +374,11 @@ export class PipelineOrchestrator {
         if (match) model = (match[1] ?? '').trim() || '<unknown>';
       }
     } catch {
-      loggers.core.warn({ agentFile }, 'Could not read agent model');
+      this.#passLogger.warn({ agentFile }, 'Could not read agent model');
     }
 
     const apiKeySet = this.#config.apiKeySet;
-    loggers.core.info(
+    this.#passLogger.info(
       { pass, agent: agentName, model, apiKey: apiKeySet },
       'Pre-flight: invoking opencode agent',
     );
@@ -392,9 +394,9 @@ export class PipelineOrchestrator {
       const runId = ctx.runId ?? 'unknown';
       const logFile = join(logDir, `pass-${pass}-${runId}.log`);
       await this.#fs.writeFile(logFile, response);
-      reqLogger().debug({ logFile }, 'Persisted opencode output to per-pass log');
+      this.#passLogger.debug({ logFile }, 'Persisted opencode output to per-pass log');
     } catch (err) {
-      reqLogger().warn({ err }, 'Failed to persist per-pass opencode log');
+      this.#passLogger.warn({ err }, 'Failed to persist per-pass opencode log');
     }
   }
 

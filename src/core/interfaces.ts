@@ -135,6 +135,20 @@ export interface IStateStore {
 }
 
 // ---------------------------------------------------------------------------
+// ILogger — structured logging (no dependency on pino or process.stdout)
+// ---------------------------------------------------------------------------
+
+export interface ILogger {
+  debug(msgOrObj: string | object, msg?: string): void;
+  info(msgOrObj: string | object, msg?: string): void;
+  warn(msgOrObj: string | object, msg?: string): void;
+  error(msgOrObj: string | object, msg?: string): void;
+  child(bindings: Record<string, unknown>): ILogger;
+  /** Read-only intent: gates CLI flags like --print-logs/--log-level. */
+  level: string;
+}
+
+// ---------------------------------------------------------------------------
 // PipelineConfig — configuration values injected at construction time
 // ---------------------------------------------------------------------------
 
