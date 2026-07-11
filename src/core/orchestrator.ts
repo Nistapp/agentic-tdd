@@ -11,10 +11,10 @@ import {
   GIT_COMMIT_PASSES,
 } from './types.js';
 import type { PassCompletedPayload } from './types.js';
+// DEFERRED: StateFile — see docs/statefile-design.md
+
 import { loggers, createExecutionContextLogger, executionContextStorage, reqLogger, sanitizeLogPayload, type ExecutionContext } from '../utils/logger.js';
 import { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
-
-const STATE_FILE = join(cwd(), '.opencode', 'active-run.json');
 
 // ---------------------------------------------------------------------------
 // PipelineOrchestrator — Pure-DI 8-pass state machine
@@ -126,11 +126,6 @@ export class PipelineOrchestrator {
         const exec = this.#buildExecContext(ctx, PipelinePass.Documentation, 1);
         await executionContextStorage.run(exec, () => this.#runPass7(ctx));
         await this.#maybeCommit(ctx);
-      }
-
-      // Delete state file to free the lock
-      if (await this.#fs.exists(STATE_FILE)) {
-        await this.#fs.deleteFile(STATE_FILE);
       }
 
       this.#emit('PIPELINE_COMPLETED', 'All 8 passes completed successfully.', ctx);

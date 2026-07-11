@@ -11,8 +11,6 @@ import type {
   IEventBus,
 } from '../src/core/interfaces.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { join } from 'node:path';
-import { cwd } from 'node:process';
 
 // ---------------------------------------------------------------------------
 // Factory for a minimal PipelineContext (all artefact paths in specs/)
@@ -333,41 +331,6 @@ describe('PipelineOrchestrator', () => {
       expect(result).toBe(true);
       expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(1);
       expect(m.cmd.runTests).not.toHaveBeenCalled();
-    });
-
-    it('deletes state file on successful completion', async () => {
-      const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-      const ctx = makeContext({ skipHitl: true });
-
-      const stateFilePath = join(cwd(), '.opencode', 'active-run.json');
-      // exists returns true for the state file
-      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(async (p: string) => {
-        if (p === stateFilePath) return true;
-        return true;
-      });
-
-      await orch.run(ctx);
-
-      expect(m.fs.deleteFile).toHaveBeenCalledWith(stateFilePath);
-    });
-
-    it('does NOT delete state file when pipeline fails', async () => {
-      const m = makeMocks();
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockResolvedValue({ passed: false, output: 'FAIL' });
-
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-      const ctx = makeContext({ skipHitl: true, maxCorrectionRetries: 0 });
-
-      const stateFilePath = join(cwd(), '.opencode', 'active-run.json');
-      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(async (p: string) => {
-        if (p === stateFilePath) return true;
-        return true;
-      });
-
-      await expect(orch.run(ctx)).rejects.toThrow();
-
-      expect(m.fs.deleteFile).not.toHaveBeenCalledWith(stateFilePath);
     });
   });
 });
