@@ -3,6 +3,9 @@
   "version": "0.1.0-Beta",
   "description": "An npx-executable, agentic TDD pipeline orchestration tool — 8-pass state machine for enterprise software development",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Digital-Assistant/agentic-tdd-node"
