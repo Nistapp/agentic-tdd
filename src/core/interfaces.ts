@@ -133,3 +133,12 @@ export interface IStateStore {
   delete(): Promise<void>;
   exists(): Promise<boolean>;
 }
+
+// ---------------------------------------------------------------------------
+// PipelineConfig — configuration values injected at construction time
+// ---------------------------------------------------------------------------
+
+export interface PipelineConfig {
+  readonly opencodeLogPath: string;
+  readonly apiKeySet: 'present' | 'missing';
+}

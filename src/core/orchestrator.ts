@@ -1,7 +1,7 @@
 import { resolve, dirname, basename, extname, join } from 'node:path';
 import { cwd } from 'node:process';
 import { randomUUID } from 'node:crypto';
-import type { IGitService, IFileSystem, ICommandRunner, IEventBus } from './interfaces.js';
+import type { IGitService, IFileSystem, ICommandRunner, IEventBus, PipelineConfig } from './interfaces.js';
 import type { PipelineContext, AgenticEvent, ExecutionMetadata } from './types.js';
 import {
   PipelinePass,
@@ -27,6 +27,7 @@ export class PipelineOrchestrator {
   readonly #fs: IFileSystem;
   readonly #cmd: ICommandRunner;
   readonly #events: IEventBus;
+  readonly #config: PipelineConfig;
   readonly #onHitl: HitlHandler;
 
   constructor(
@@ -34,12 +35,14 @@ export class PipelineOrchestrator {
     fs: IFileSystem,
     cmd: ICommandRunner,
     events: IEventBus,
+    config: PipelineConfig,
     onHitl: HitlHandler = () => Promise.resolve(),
   ) {
     this.#git = git;
     this.#fs = fs;
     this.#cmd = cmd;
     this.#events = events;
+    this.#config = config;
     this.#onHitl = onHitl;
   }
 
@@ -352,7 +355,7 @@ export class PipelineOrchestrator {
       await this.#persistPassLog(ctx, response);
       return response;
     } catch (err) {
-      const opencodeLog = `${process.env.HOME ?? '~'}/.local/share/opencode/log/opencode.log`;
+      const opencodeLog = this.#config.opencodeLogPath;
       reqLogger().error(
         { err, hint: `Check opencode self-log at ${opencodeLog} for upstream error diagnostics` },
         'Opencode invocation failed',
@@ -377,7 +380,7 @@ export class PipelineOrchestrator {
       loggers.core.warn({ agentFile }, 'Could not read agent model');
     }
 
-    const apiKeySet = process.env.OPENROUTER_API_KEY ? 'present' : 'missing';
+    const apiKeySet = this.#config.apiKeySet;
     loggers.core.info(
       { pass, agent: agentName, model, apiKey: apiKeySet },
       'Pre-flight: invoking opencode agent',
