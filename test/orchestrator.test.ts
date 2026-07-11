@@ -22,7 +22,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
   const specsDir = '/project/specs';
   const srcDir = '/project/src';
   return {
-    issueName: 'my_module',
+    featureName: 'my_module',
     testCmd: ['npm', 'test'],
     skipHitl: true,
     maxCorrectionRetries: 2,
@@ -30,7 +30,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     sourceType: 'file',
     logLevel: 'INFO',
     specFileAbsPath: `${specsDir}/my_module.md`,
-    issueDescription: 'Create a simple utility module',
+    featureDescription: 'Create a simple utility module',
     artefactDir: specsDir,
     designMmdPath: `${specsDir}/my_module.mmd`,
     specGherkinPath: `${specsDir}/my_module.gherkin`,
@@ -84,7 +84,7 @@ function makeMocks(): Mocks {
     emit: vi.fn((event: AgenticEvent) => {
       emittedEvents.push(event);
     }),
-    on: vi.fn().mockReturnValue(() => {}),
+    on: vi.fn().mockReturnValue(() => { }),
   };
 
   const hitl = vi.fn().mockResolvedValue(undefined);
@@ -242,7 +242,7 @@ describe('PipelineOrchestrator', () => {
       // Context Compaction: error log written once, then deleted on pass
       expect(m.fs.writeFile).toHaveBeenCalled();
       const writeCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls;
-      const errorLogCall = writeCalls.find((c: unknown[]) => (c[0] as string).endsWith('.opencode_error.log'));
+      const errorLogCall = writeCalls.find((c: unknown[]) => (c[0] as string).endsWith('.opencode_error.log'))!;
       expect(errorLogCall).toBeTruthy();
       expect(errorLogCall[1]).toContain('AssertionError');
 
