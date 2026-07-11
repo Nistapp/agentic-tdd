@@ -24,6 +24,7 @@ import {
 import type { PipelineContext, AgenticEvent } from '../core/types.js';
 import type { PipelineConfig } from '../core/interfaces.js';
 import type { HitlHandler } from '../core/orchestrator.js';
+import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { loggers } from '../utils/logger.js';
 
 process.on('uncaughtException', (err) => {
@@ -376,7 +377,7 @@ program
         apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
       };
 
-      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, pipelineConfig, hitlHandler);
+      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
       try {
         await orchestrator.run(ctx, startPass);
@@ -509,7 +510,7 @@ program
       apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
     };
 
-    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, pipelineConfig, hitlHandler);
+    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
     try {
       await orchestrator.run(ctx, PipelinePass.Design);
