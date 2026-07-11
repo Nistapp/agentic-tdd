@@ -10,6 +10,7 @@ import {
   SELF_CORRECTION_PASSES,
   GIT_COMMIT_PASSES,
 } from './types.js';
+import type { PassCompletedPayload } from './types.js';
 import { loggers, createExecutionContextLogger, executionContextStorage, reqLogger, sanitizeLogPayload, type ExecutionContext } from '../utils/logger.js';
 import { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
@@ -147,23 +148,18 @@ export class PipelineOrchestrator {
    * Runs the design agent with a spec file.
    */
   async #runPass0(ctx: PipelineContext): Promise<void> {
-    try {
-      await this.#fs.writeFile(ctx.designMmdPath, '');
-      await this.#fs.writeFile(ctx.specGherkinPath, '');
+    await this.#fs.writeFile(ctx.designMmdPath, '');
+    await this.#fs.writeFile(ctx.specGherkinPath, '');
 
-      ctx.currentPass = PipelinePass.Design;
-      this.#emitPassStarted(ctx);
-      reqLogger().info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
-      const prompt = this.#getAgentContextPayload(ctx);
-      reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-      const genAiOutput = await this.#invokeOpenCode(ctx, prompt);
-      this.#emitPassCompleted(ctx);
+    ctx.currentPass = PipelinePass.Design;
+    this.#emitPassStarted(ctx);
+    reqLogger().info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
+    const prompt = this.#getAgentContextPayload(ctx);
+    reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
+    await this.#invokeOpenCode(ctx, prompt);
+    this.#emitPassCompleted(ctx);
 
-      await this.#ensureNonEmptyArtefacts(ctx);
-
-    } finally {
-      // Nothing to clean up anymore
-    }
+    await this.#ensureNonEmptyArtefacts(ctx);
   }
 
 
@@ -175,9 +171,9 @@ export class PipelineOrchestrator {
     reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    const genAiOutput = await this.#invokeOpenCode(ctx, prompt);
+    await this.#invokeOpenCode(ctx, prompt);
     const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes as unknown as Record<string, unknown> }); //TODO: where are we doing git commit or writing to Statefile ?
+    this.#emitPassCompleted(ctx, { files: changes }); //TODO: where are we doing git commit or writing to Statefile ?
   }
 
   async #runPass2(ctx: PipelineContext): Promise<void> {
@@ -185,9 +181,9 @@ export class PipelineOrchestrator {
     reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    const genAiOutput = await this.#invokeOpenCode(ctx, prompt);
+    await this.#invokeOpenCode(ctx, prompt);
     const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes as unknown as Record<string, unknown> });//REMARK: Looks like Statefile has not been implemented at all
+    this.#emitPassCompleted(ctx, { files: changes });//REMARK: Looks like Statefile has not been implemented at all
   }
 
   async #runSelfCorrectingPass(ctx: PipelineContext): Promise<void> {
@@ -202,7 +198,7 @@ export class PipelineOrchestrator {
     // Initial agent run
     reqLogger().info(`Entering Pass ${pass} [Attempt 1]`);
     reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    const genAiOutput = await this.#invokeOpenCode(ctx, prompt);
+    await this.#invokeOpenCode(ctx, prompt);
 
     for (let attemptIdx = 0; attemptIdx < totalAttempts; attemptIdx++) {
       const humanAttempt = attemptIdx + 1;
@@ -225,7 +221,7 @@ export class PipelineOrchestrator {
           await this.#fs.deleteFile(ctx.errorLogPath);
         }
         const changes = await this.#git.getPendingChanges();
-        this.#emitPassCompleted(ctx, { files: changes as unknown as Record<string, unknown>, attempts: humanAttempt });
+        this.#emitPassCompleted(ctx, { files: changes, attempts: humanAttempt });
         return;
       }
 
@@ -265,7 +261,7 @@ export class PipelineOrchestrator {
       reqLogger().info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
       const correctionPrompt = this.#getAgentContextPayload(ctx, { attemptNumber: humanAttempt });
       reqLogger().info({ payload: { prompt: sanitizeLogPayload(correctionPrompt, 'info') } }, 'Dispatching prompt to Opencode');
-      const genAiOutput = await this.#invokeOpenCode(ctx, correctionPrompt, ctx.errorLogPath);
+      await this.#invokeOpenCode(ctx, correctionPrompt, ctx.errorLogPath);
     }
   }
 
@@ -274,9 +270,9 @@ export class PipelineOrchestrator {
     reqLogger().info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     reqLogger().info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    const genAiOutput = await this.#invokeOpenCode(ctx, prompt);
+    await this.#invokeOpenCode(ctx, prompt);
     const changes = await this.#git.getPendingChanges();
-    this.#emitPassCompleted(ctx, { files: changes as unknown as Record<string, unknown> });
+    this.#emitPassCompleted(ctx, { files: changes });
   } //REMARK: What is happening with Git here ? What is happening with statefile here?
   //        Do we automate the final PR too ? 
 
@@ -297,7 +293,7 @@ export class PipelineOrchestrator {
     this.#emit('PASS_STARTED', `Starting Pass ${ctx.currentPass}`, ctx);
   }
 
-  #emitPassCompleted(ctx: PipelineContext, payload?: Record<string, unknown>): void {
+  #emitPassCompleted(ctx: PipelineContext, payload?: PassCompletedPayload): void {
     this.#emit('PASS_COMPLETED', `Completed Pass ${ctx.currentPass}`, ctx, payload);
   }
 
@@ -409,13 +405,9 @@ export class PipelineOrchestrator {
     }
   }
 
-  async #ensureNonEmptyArtefacts(
-    ctx: PipelineContext,
-    altGherkinPath?: string,
-  ): Promise<void> {
-    const gherkinPath = altGherkinPath ?? ctx.specGherkinPath;
+  async #ensureNonEmptyArtefacts(ctx: PipelineContext): Promise<void> {
     const mmdContent = (await this.#fs.readFile(ctx.designMmdPath)).trim();
-    const gherkinContent = (await this.#fs.readFile(gherkinPath)).trim();
+    const gherkinContent = (await this.#fs.readFile(ctx.specGherkinPath)).trim();
     if (mmdContent.length < 30) {
       throw new Error(`Design agent failed to produce a valid Mermaid design diagram (content length < 30). This usually means the agent failed to generate a concrete design for the feature.`);
     }

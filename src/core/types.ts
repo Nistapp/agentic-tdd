@@ -201,3 +201,9 @@ export interface FileChange {
   status: string;
   file: string;
 }
+
+export interface PassCompletedPayload {
+  files?: FileChange[];
+  attempts?: number;
+  [k: string]: unknown;
+}
