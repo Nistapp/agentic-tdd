@@ -11,6 +11,8 @@ import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { NodeFileSystem } from '../infrastructure/file-system.js';
 import { GitService } from '../infrastructure/git-service.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
+import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
+import { SelfCorrectionRunner } from '../core/runners/self-correction-runner.js';
 import { EventBus } from '../infrastructure/event-bus.js';
 import { JsonStateStore } from '../infrastructure/state-store.js';
 import { getStateFilePath, getOpencodeLogPath } from '../utils/paths.js';
@@ -377,7 +379,13 @@ program
         apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
       };
 
-      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
+      const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
+
+      const selfCorrectionRunner = new SelfCorrectionRunner(
+        agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
+      );
+
+      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
       try {
         await orchestrator.run(ctx, startPass);
@@ -510,7 +518,13 @@ program
       apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
     };
 
-    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
+    const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
+
+    const selfCorrectionRunner = new SelfCorrectionRunner(
+      agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
+    );
+
+    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
     try {
       await orchestrator.run(ctx, PipelinePass.Design);

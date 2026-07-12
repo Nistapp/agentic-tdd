@@ -8,6 +8,8 @@ import type {
   IGitService,
   IFileSystem,
   ICommandRunner,
+  IAgentRunner,
+  ISelfCorrectionRunner,
   IEventBus,
   ILogger,
   PipelineConfig,
@@ -79,6 +81,8 @@ interface Mocks {
   git: IGitService;
   fs: IFileSystem;
   cmd: ICommandRunner;
+  agentRunner: IAgentRunner;
+  selfCorrectionRunner: ISelfCorrectionRunner;
   events: IEventBus;
   config: PipelineConfig;
   logger: StubLogger;
@@ -111,7 +115,14 @@ function makeMocks(): Mocks {
 
   const cmd: ICommandRunner = {
     runTests: vi.fn().mockResolvedValue({ passed: true, output: '' }),
-    runOpenCode: vi.fn().mockResolvedValue(''),
+  };
+
+  const agentRunner: IAgentRunner = {
+    execute: vi.fn().mockResolvedValue({ output: '' }),
+  };
+
+  const selfCorrectionRunner: ISelfCorrectionRunner = {
+    execute: vi.fn().mockResolvedValue(undefined),
   };
 
   const events: IEventBus = {
@@ -130,7 +141,7 @@ function makeMocks(): Mocks {
 
   const logger = new StubLogger();
 
-  return { git, fs, cmd, events, config, logger, hitl, emittedEvents };
+  return { git, fs, cmd, agentRunner, selfCorrectionRunner, events, config, logger, hitl, emittedEvents };
 }
 
 // ---------------------------------------------------------------------------
@@ -147,20 +158,23 @@ function findEvents(events: AgenticEvent[], kind: string): AgenticEvent[] {
 
 describe('PipelineOrchestrator', () => {
   describe('Happy Path — all 8 passes succeed', () => {
-    it('calls runOpenCode exactly 8 times (once per pass)', async () => {
+    it('calls agentRunner.execute for non-guarded passes and delegates to selfCorrectionRunner for guarded ones', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx);
 
       expect(result).toBe(true);
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(8);
+      // Passes 0, 1, 2, 7 use agentRunner directly → 4 calls
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(4);
+      // Passes 3-6 delegate to selfCorrectionRunner → 4 calls
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(4);
     });
 
     it('emits PIPELINE_STARTED and PIPELINE_COMPLETED', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -169,30 +183,30 @@ describe('PipelineOrchestrator', () => {
       expect(completed).toHaveLength(1);
     });
 
-    it('emits PASS_STARTED and PASS_COMPLETED for all 8 passes', async () => {
+    it('emits PASS_STARTED and PASS_COMPLETED for non-guarded passes (0, 1, 2, 7)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
       console.log(m.emittedEvents.filter(e => e.kind === 'PASS_STARTED').map(e => e.pass));
 
-      expect(findEvents(m.emittedEvents, 'PASS_STARTED')).toHaveLength(8);
-      expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(8);
+      expect(findEvents(m.emittedEvents, 'PASS_STARTED')).toHaveLength(4);
+      expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(4);
     });
 
-    it('runs tests for each self-correction pass exactly once on success', async () => {
+    it('delegates to selfCorrectionRunner for each self-correction pass', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // Passes 3, 4, 5, 6 each run tests once → 4 calls
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
+      // Passes 3, 4, 5, 6 each delegate once → 4 calls
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
     });
 
     it('calls git.commit for passes 1–7 (7 commits)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -202,7 +216,7 @@ describe('PipelineOrchestrator', () => {
 
     it('does NOT emit HITL_REQUIRED when skipHitl is true', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -211,7 +225,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits HITL_REQUIRED and calls hitl handler when skipHitl is false', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -219,27 +233,26 @@ describe('PipelineOrchestrator', () => {
       expect(m.hitl).toHaveBeenCalledTimes(1);
     });
 
-    it('includes design artefact, Gherkin spec, and spec file in Pass 0 opencode args', async () => {
+    it('includes design artefact, Gherkin spec, and spec file in Pass 0 agent request', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
-      const designBefore = ctx.designMmdPath;
-      const specBefore = ctx.specGherkinPath;
-      const issueSpec = ctx.specFileAbsPath;
 
       await orch.run(ctx);
 
-      const firstCall = (m.cmd.runOpenCode as ReturnType<typeof vi.fn>).mock.calls[0];
-      const args = firstCall[0] as string[];
-      expect(args).toContain(designBefore);
-      expect(args).toContain(specBefore);
-      expect(args).toContain(issueSpec);
-      expect(args).toContain('--dangerously-skip-permissions');
+      const firstCall = (m.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls[0];
+      const request = firstCall[0] as { pass: number; prompt: string; artefacts: Record<string, string | undefined>; runId?: string };
+      expect(request.pass).toBe(0);
+      expect(request.artefacts.designMmd).toBe(ctx.designMmdPath);
+      expect(request.artefacts.specGherkin).toBe(ctx.specGherkinPath);
+      expect(request.artefacts.specFile).toBe(ctx.specFileAbsPath);
+      expect(request.runId).toBeDefined();
+      expect(request.prompt).toContain(ctx.featureName);
     });
 
     it('characterization: event kind sequence for full 8-pass happy path', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -253,22 +266,6 @@ describe('PipelineOrchestrator', () => {
           "PASS_STARTED",
           "PASS_COMPLETED",
           "PASS_STARTED",
-          "TEST_RUN_STARTED",
-          "TEST_RUN_COMPLETED",
-          "PASS_COMPLETED",
-          "PASS_STARTED",
-          "TEST_RUN_STARTED",
-          "TEST_RUN_COMPLETED",
-          "PASS_COMPLETED",
-          "PASS_STARTED",
-          "TEST_RUN_STARTED",
-          "TEST_RUN_COMPLETED",
-          "PASS_COMPLETED",
-          "PASS_STARTED",
-          "TEST_RUN_STARTED",
-          "TEST_RUN_COMPLETED",
-          "PASS_COMPLETED",
-          "PASS_STARTED",
           "PASS_COMPLETED",
           "PIPELINE_COMPLETED",
         ]
@@ -280,7 +277,7 @@ describe('PipelineOrchestrator', () => {
     it('runs Pass 0 and handles design artefacts', async () => {
       const m = makeMocks();
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -289,78 +286,44 @@ describe('PipelineOrchestrator', () => {
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.designMmdPath, '');
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.specGherkinPath, '');
 
-      // Total opencode calls: 8 (Pass 0 + Passes 1-7)
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(8);
+      // Passes 0, 1, 2, 7 use agentRunner directly → 4 calls
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(4);
     });
   });
 
-  describe('Self-Correction Path — Pass 3 fails once then recovers', () => {
-    it('writes error log, retries agent, deletes error log, and ultimately succeeds', async () => {
+  describe('Self-Correction delegation', () => {
+    it('delegates to selfCorrectionRunner for passes 3-6, which handles the loop internally', async () => {
       const m = makeMocks();
-
-      // runTests: fail on 1st call (Pass 3 attempt 1), succeed on all later calls
-      let testCallCount = 0;
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-        testCallCount++;
-        if (testCallCount === 1) {
-          return { passed: false, output: 'AssertionError: expected 3 to equal 4' };
-        }
-        return { passed: true, output: '' };
-      });
-
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // runOpenCode: 8 passes + 1 correction = 9 calls
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(9);
-
-      // runTests: Pass 3 fails once → 2 calls for Pass 3, +3 for Pass 4-6 = 5
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size + 1);
-
-      // Context Compaction: error log written once, then deleted on pass
-      expect(m.fs.writeFile).toHaveBeenCalled();
-      const writeCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls;
-      const errorLogCall = writeCalls.find((c: unknown[]) => (c[0] as string).endsWith('.opencode_error.log'))!;
-      expect(errorLogCall).toBeTruthy();
-      expect(errorLogCall[1]).toContain('AssertionError');
-
-      expect(m.fs.deleteFile).toHaveBeenCalledWith('/project/src/.opencode_error.log');
-
-      // Events
-      expect(findEvents(m.emittedEvents, 'SELF_CORRECTION_ATTEMPTED')).toHaveLength(1);
-      expect(findEvents(m.emittedEvents, 'TEST_RUN_FAILED')).toHaveLength(1);
+      // Self-correction runner called 4 times (once per guarded pass)
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
+      // Pipeline completes successfully
       expect(findEvents(m.emittedEvents, 'PIPELINE_COMPLETED')).toHaveLength(1);
     });
-  });
 
-  describe('Self-Correction Path — max retries exhausted', () => {
-    it('throws an error when all retries are consumed and tests still fail', async () => {
+    it('throws when selfCorrectionRunner rejects, propagating the error', async () => {
       const m = makeMocks();
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockResolvedValue({
-        passed: false,
-        output: 'FAIL',
-      });
+      (m.selfCorrectionRunner.execute as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('FAILED after 2 attempt(s). The test suite still fails after 1 self-correction retries.'),
+      );
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await expect(
         orch.run(makeContext({ skipHitl: true, maxCorrectionRetries: 1 })),
       ).rejects.toThrow(/FAILED after 2 attempt/);
 
-      // Error on Pass 3 aborts pipeline — passes 4-7 never execute.
-      // Pass 0:1 + Pass 1:1 + Pass 2:1 + Pass 3:2 (initial + correction) = 5
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(5);
-
-      // Error log deleted after last failed attempt
-      expect(m.fs.deleteFile).toHaveBeenCalledWith('/project/src/.opencode_error.log');
+      expect(findEvents(m.emittedEvents, 'ERROR')).toHaveLength(1);
     });
   });
 
   describe('Event payload accuracy', () => {
     it('passes currentPass and passLabel on every event', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -375,7 +338,7 @@ describe('PipelineOrchestrator', () => {
   describe('Pass 2 commits all changes', () => {
     it('commits all changes after Pass 2 completes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -390,28 +353,27 @@ describe('PipelineOrchestrator', () => {
   describe('Rebase Pattern — resume with startPass', () => {
     it('runs only passes from startPass onwards (Pass 3 resume)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.CoreImplementation); // start at Pass 3
 
       expect(result).toBe(true);
-      // Passes 0, 1, 2 skipped; Passes 3-7 run = 5 opencode calls
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(5);
-      // Passes 3, 4, 5, 6 each run tests once
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
+      // Passes 0, 1, 2 skipped; Passes 3-6 delegate to selfCorrectionRunner (4 calls), Pass 7 uses agentRunner (1 call)
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(1);
     });
 
     it('runs only Pass 7 when starting at Documentation', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.Documentation);
 
       expect(result).toBe(true);
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(1);
-      expect(m.cmd.runTests).not.toHaveBeenCalled();
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(1);
+      expect(m.selfCorrectionRunner.execute).not.toHaveBeenCalled();
     });
   });
 });

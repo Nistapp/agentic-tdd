@@ -1,8 +1,6 @@
-import { resolve, dirname, basename, extname, join } from 'node:path';
-import { cwd } from 'node:process';
 import { randomUUID } from 'node:crypto';
-import type { IGitService, IFileSystem, ICommandRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
-import type { PipelineContext, AgenticEvent } from './types.js';
+import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, ISelfCorrectionRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
+import type { PipelineContext, AgenticEvent, AgentRunRequest, AgentArtefacts } from './types.js';
 import {
   PipelinePass,
   AGENT_NAMES,
@@ -14,7 +12,6 @@ import type { PassCompletedPayload } from './types.js';
 // DEFERRED: StateFile — see docs/statefile-design.md
 
 import { sanitizeLogPayload } from './log-sanitizer.js';
-import { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
 // ---------------------------------------------------------------------------
 // PipelineOrchestrator — Pure-DI 8-pass state machine
@@ -26,6 +23,8 @@ export class PipelineOrchestrator {
   readonly #git: IGitService;
   readonly #fs: IFileSystem;
   readonly #cmd: ICommandRunner;
+  readonly #agentRunner: IAgentRunner;
+  readonly #selfCorrectionRunner: ISelfCorrectionRunner;
   readonly #events: IEventBus;
   readonly #logger: ILogger;
   readonly #config: PipelineConfig;
@@ -36,6 +35,8 @@ export class PipelineOrchestrator {
     git: IGitService,
     fs: IFileSystem,
     cmd: ICommandRunner,
+    agentRunner: IAgentRunner,
+    selfCorrectionRunner: ISelfCorrectionRunner,
     events: IEventBus,
     logger: ILogger,
     config: PipelineConfig,
@@ -44,6 +45,8 @@ export class PipelineOrchestrator {
     this.#git = git;
     this.#fs = fs;
     this.#cmd = cmd;
+    this.#agentRunner = agentRunner;
+    this.#selfCorrectionRunner = selfCorrectionRunner;
     this.#events = events;
     this.#logger = logger;
     this.#config = config;
@@ -122,7 +125,7 @@ export class PipelineOrchestrator {
           ctx.currentPass = pass;
           ctx.currentAttempt = 1;
           this.#passLogger = this.#childLogger(ctx, pass, 1);
-          await this.#runSelfCorrectingPass(ctx);
+          await this.#selfCorrectionRunner.execute(ctx);
           await this.#maybeCommit(ctx);
         }
       }
@@ -159,7 +162,13 @@ export class PipelineOrchestrator {
     this.#passLogger.info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    await this.#invokeOpenCode(ctx, prompt);
+    const agentRequest: AgentRunRequest = {
+      pass: ctx.currentPass!,
+      prompt,
+      artefacts: await this.#buildArtefacts(ctx),
+      runId: ctx.runId,
+    };
+    await this.#agentRunner.execute(agentRequest);
     this.#emitPassCompleted(ctx);
 
     await this.#ensureNonEmptyArtefacts(ctx);
@@ -174,7 +183,13 @@ export class PipelineOrchestrator {
     this.#passLogger.info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = this.#getAgentContextPayload(ctx);
     this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    await this.#invokeOpenCode(ctx, prompt);
+    const agentRequest: AgentRunRequest = {
+      pass: ctx.currentPass!,
+      prompt,
+      artefacts: await this.#buildArtefacts(ctx),
+      runId: ctx.runId,
+    };
+    await this.#agentRunner.execute(agentRequest);
     const changes = await this.#git.getPendingChanges();
     this.#emitPassCompleted(ctx, { files: changes });
   }
@@ -187,82 +202,6 @@ export class PipelineOrchestrator {
   async #runPass2(ctx: PipelineContext): Promise<void> {
     //REMARK: Looks like Statefile has not been implemented at all
     await this.#runSimplePass(ctx);
-  }
-
-  async #runSelfCorrectingPass(ctx: PipelineContext): Promise<void> {
-    const pass = ctx.currentPass!;
-    const label = PASS_LABELS[pass];
-    const agent = AGENT_NAMES[pass];
-    const totalAttempts = ctx.maxCorrectionRetries + 1;
-    const prompt = this.#getAgentContextPayload(ctx);
-
-    this.#emitPassStarted(ctx);
-
-    // Initial agent run
-    this.#passLogger.info(`Entering Pass ${pass} [Attempt 1]`);
-    this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
-    await this.#invokeOpenCode(ctx, prompt);
-
-    for (let attemptIdx = 0; attemptIdx < totalAttempts; attemptIdx++) {
-      const humanAttempt = attemptIdx + 1;
-      ctx.currentAttempt = humanAttempt;
-      this.#passLogger = this.#childLogger(ctx, pass, humanAttempt);
-
-      this.#passLogger.info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
-
-      // Run the test suite
-      this.#emit('TEST_RUN_STARTED', `Running tests — attempt ${humanAttempt}/${totalAttempts}`, ctx);
-      const result = await this.#cmd.runTests(ctx.testCmd);
-
-      if (result.passed) {
-        this.#emit('TEST_RUN_COMPLETED', `Tests passed on attempt ${humanAttempt}/${totalAttempts}`, ctx);
-        // Context Compaction: flush stale error log
-        if (await this.#fs.exists(ctx.errorLogPath)) {
-          await this.#fs.deleteFile(ctx.errorLogPath);
-        }
-        const changes = await this.#git.getPendingChanges();
-        this.#emitPassCompleted(ctx, { files: changes, attempts: humanAttempt });
-        return;
-      }
-
-      // Tests failed
-      this.#passLogger.warn(
-        { output: result.output.slice(0, 500), passed: false },
-        `Test gate failed for Pass ${pass} [Attempt ${humanAttempt}] -- initiating self-correction loop-back`,
-      );
-      this.#emit(
-        'TEST_RUN_FAILED',
-        `Tests failed (attempt ${humanAttempt}/${totalAttempts}) — ${result.output.slice(0, 200)}`,
-        ctx,
-        { output: result.output },
-      ); //REMARK: We could ask the dev to review the generated code, make any minor corrections if necessary and continue for anothe cycle of corrections. How many cycles do we limit this to ?
-
-      // Last attempt exhausted → abort
-      if (attemptIdx === ctx.maxCorrectionRetries) {
-        // Context Compaction: write the final error log so it can be inspected
-        await this.#fs.writeFile(ctx.errorLogPath, result.output);
-
-        throw new Error(
-          `Pass ${pass} (${label}) FAILED after ${totalAttempts} attempt(s). ` +
-          `The test suite still fails after ${ctx.maxCorrectionRetries} self-correction retries.`,
-        );
-      }
-
-      // Context Compaction: write error to a disposable file
-      await this.#fs.writeFile(ctx.errorLogPath, result.output);
-      this.#emit(
-        'SELF_CORRECTION_ATTEMPTED',
-        `Self-correction cycle ${humanAttempt}/${ctx.maxCorrectionRetries} — error log written to ${ctx.errorLogPath}`,
-        ctx,
-        { attempt: humanAttempt, maxRetries: ctx.maxCorrectionRetries },
-      );
-
-      // Re-invoke agent with correction prompt + error log
-      this.#passLogger.info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
-      const correctionPrompt = this.#getAgentContextPayload(ctx, { attemptNumber: humanAttempt });
-      this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(correctionPrompt, 'info') } }, 'Dispatching prompt to Opencode');
-      await this.#invokeOpenCode(ctx, correctionPrompt, ctx.errorLogPath);
-    }
   }
 
   async #runPass7(ctx: PipelineContext): Promise<void> {
@@ -308,96 +247,33 @@ export class PipelineOrchestrator {
     );
   } // TODO: Check if this is even required once we fix the issues of git commit and statefile. We do not need to generate if tests already exist.
 
-  // -- Command building ------------------------------------------------------
+  // -- Artefact building -----------------------------------------------------
 
-  async #buildArgs(ctx: PipelineContext, prompt: string, errorLog?: string): Promise<string[]> {
-    const args = ['run', '--agent', AGENT_NAMES[ctx.currentPass!]];
+  async #buildArtefacts(ctx: PipelineContext, errorLog?: string): Promise<AgentArtefacts> {
+    const artefacts: AgentArtefacts = {};
 
     if (await this.#fs.exists(ctx.designMmdPath)) {
-      args.push('--file', ctx.designMmdPath);
+      artefacts.designMmd = ctx.designMmdPath;
     }
     if (await this.#fs.exists(ctx.specGherkinPath)) {
-      args.push('--file', ctx.specGherkinPath);
+      artefacts.specGherkin = ctx.specGherkinPath;
     }
     if (ctx.specFileAbsPath) {
       const specExists = await this.#fs.exists(ctx.specFileAbsPath);
-      this.#passLogger.debug(`buildArgs: specFileAbsPath='${ctx.specFileAbsPath}' exists=${specExists}`);
+      this.#passLogger.debug(`buildArtefacts: specFileAbsPath='${ctx.specFileAbsPath}' exists=${specExists}`);
       if (specExists) {
-        args.push('--file', ctx.specFileAbsPath);
+        artefacts.specFile = ctx.specFileAbsPath;
       } else {
-        this.#passLogger.debug(`buildArgs: specFileAbsPath does not exist — not attaching as --file`);
+        this.#passLogger.debug('buildArtefacts: specFileAbsPath does not exist — not attaching as --file');
       }
     } else if (ctx.featureDescription) {
-      this.#passLogger.debug(`buildArgs: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file`);
+      this.#passLogger.debug('buildArtefacts: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file');
     }
-    if (errorLog && (await this.#fs.exists(errorLog))) {
-      args.push('--file', errorLog);
-    }
-    const level = this.#logger.level;
-    if (level === 'debug' || level === 'trace') {
-      this.#passLogger.debug(`buildArgs: active log level is '${level}' — injecting --print-logs and --log-level DEBUG`);
-      args.push('--print-logs', '--log-level', 'DEBUG');
-    }
-    args.push('--dangerously-skip-permissions', prompt);
-    return args;
-  }
-
-  async #invokeOpenCode(ctx: PipelineContext, prompt: string, errorLog?: string): Promise<string> {
-    try {
-      await this.#logPreFlight(ctx);
-      const response = await this.#cmd.runOpenCode(await this.#buildArgs(ctx, prompt, errorLog));
-      this.#passLogger.debug('Received completion from Opencode');
-      this.#passLogger.debug({ payload: { completion: sanitizeLogPayload(response, 'debug') } }, 'Opencode completion payload');
-      this.#passLogger.child({ module: `agent:${AGENT_NAMES[ctx.currentPass!]}` }).debug({ payload: response }, 'LLM response received');
-      await this.#persistPassLog(ctx, response);
-      return response;
-    } catch (err) {
-      const opencodeLog = this.#config.opencodeLogPath;
-      this.#passLogger.error(
-        { err, hint: `Check opencode self-log at ${opencodeLog} for upstream error diagnostics` },
-        'Opencode invocation failed',
-      );
-      throw err;
-    }
-  }
-
-  async #logPreFlight(ctx: PipelineContext): Promise<void> {
-    const pass = ctx.currentPass!;
-    const agentName = AGENT_NAMES[pass];
-    const agentFile = resolve(PACKAGE_AGENTS_DIR, `${agentName}.md`);
-
-    let model = '<unknown>';
-    try {
-      if (await this.#fs.exists(agentFile)) {
-        const content = await this.#fs.readFile(agentFile);
-        const match = content.match(/^model:\s*(.+)$/m);
-        if (match) model = (match[1] ?? '').trim() || '<unknown>';
-      }
-    } catch {
-      this.#passLogger.warn({ agentFile }, 'Could not read agent model');
+    if (errorLog) {
+      artefacts.errorLog = errorLog;
     }
 
-    const apiKeySet = this.#config.apiKeySet;
-    this.#passLogger.info(
-      { pass, agent: agentName, model, apiKey: apiKeySet },
-      'Pre-flight: invoking opencode agent',
-    );
-  }
-
-  async #persistPassLog(ctx: PipelineContext, response: string): Promise<void> {
-    try {
-      const logDir = join(cwd(), '.opencode', 'log');
-      if (!(await this.#fs.exists(logDir))) {
-        await this.#fs.mkdir(logDir);
-      }
-      const pass = ctx.currentPass!;
-      const runId = ctx.runId ?? 'unknown';
-      const logFile = join(logDir, `pass-${pass}-${runId}.log`);
-      await this.#fs.writeFile(logFile, response);
-      this.#passLogger.debug({ logFile }, 'Persisted opencode output to per-pass log');
-    } catch (err) {
-      this.#passLogger.warn({ err }, 'Failed to persist per-pass opencode log');
-    }
+    return artefacts;
   }
 
   async #ensureNonEmptyArtefacts(ctx: PipelineContext): Promise<void> {
