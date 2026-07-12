@@ -207,3 +207,25 @@ export interface PassCompletedPayload {
   attempts?: number;
   [k: string]: unknown;
 }
+
+// ---------------------------------------------------------------------------
+// Agent runner DTOs — the seam between orchestrator and agent invocations
+// ---------------------------------------------------------------------------
+
+export interface AgentArtefacts {
+  designMmd?: string;
+  specGherkin?: string;
+  specFile?: string;
+  errorLog?: string;
+}
+
+export interface AgentRunRequest {
+  pass: PipelinePass;
+  prompt: string;
+  artefacts: AgentArtefacts;
+  runId?: string;
+}
+
+export interface AgentRunResult {
+  output: string;
+}

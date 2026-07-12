@@ -270,7 +270,7 @@ describe('CommandRunner', () => {
     expect(result.output).toContain('AssertionError');
   });
 
-  it('runOpenCode passes args through to execa and returns output', async () => {
+  it('spawn passes args through to execa and returns output', async () => {
     execaMock.mockImplementation(() => {
       const thenable: any = Promise.resolve({ stdout: 'agent output\n', stderr: '', exitCode: 0 });
       thenable.pid = 12345;
@@ -280,12 +280,12 @@ describe('CommandRunner', () => {
       return thenable;
     });
     const runner = new CommandRunner();
-    const result = await runner.runOpenCode(['run', '--agent', 'pass-0-design-agent']);
+    const result = await runner.spawn(['run', '--agent', 'pass-0-design-agent']);
     expect(execaMock).toHaveBeenCalledWith('opencode', ['run', '--agent', 'pass-0-design-agent'], expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] }));
     expect(result).toBe('agent output\n\n');
   });
 
-  it('runOpenCode rejects when execa throws', async () => {
+  it('spawn rejects when execa throws', async () => {
     const err = new Error('opencode crashed');
     execaMock.mockImplementation(() => {
       const thenable: any = Promise.reject(err);
@@ -297,6 +297,6 @@ describe('CommandRunner', () => {
       return thenable;
     });
     const runner = new CommandRunner();
-    await expect(runner.runOpenCode(['run', '--agent', 'pass-0-design-agent'])).rejects.toThrow('opencode crashed');
+    await expect(runner.spawn(['run', '--agent', 'pass-0-design-agent'])).rejects.toThrow('opencode crashed');
   });
 });
