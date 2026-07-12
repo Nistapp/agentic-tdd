@@ -10,6 +10,14 @@
     "type": "git",
     "url": "https://github.com/Digital-Assistant/agentic-tdd-node"
   },
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
+  },
   "bin": {
     "agentic-tdd": "./dist/cli/index.js"
   },
