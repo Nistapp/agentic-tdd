@@ -91,6 +91,16 @@ function makeMocks(): Mocks {
 
 describe('OpenCodeAgentRunner', () => {
   describe('execute() — argv assembly', () => {
+    it('includes --pure to prevent external plugin loading', async () => {
+      const m = makeMocks();
+      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+
+      await runner.execute(makeRequest());
+
+      const args = (m.spawner.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
+      expect(args).toContain('--pure');
+    });
+
     it('calls spawner.spawn with --agent and --dangerously-skip-permissions', async () => {
       const m = makeMocks();
       const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
