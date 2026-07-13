@@ -76,20 +76,53 @@ The `codebase-memory-mcp` server (binary at `/usr/bin/codebase-memory-mcp`, v0.8
 is installed and registered as an MCP tool. **You must use it proactively** — not
 just reactively — at every significant stage of work.
 
-### Available tools
+> [!IMPORTANT]
+> **Always prefer `codebase_memory` MCP tools over reading full source files.**
+> This avoids unnecessary token consumption and gives richer semantic context.
 
-| Tool | When to use |
-|---|---|
-| `index_repository` | **Start of every session.** Re-index if you have not indexed recently or if the agent warns the index is stale. |
-| `detect_changes` | Before planning or after pulling upstream changes, to understand what has shifted. |
-| `index_status` | Verify that the index is current before relying on graph queries. |
-| `search_graph` | Find all callers, implementors, or usages of a symbol before modifying it. |
-| `query_graph` | Answer structural questions: "what interfaces does `CommandRunner` implement?", "which files import `PipelineContext`?". |
-| `trace_path` | Trace dependency chains — e.g., confirm that `orchestrator.ts` → `ICommandRunner` → `CommandRunner` before refactoring the interface. |
-| `get_code_snippet` | Retrieve a symbol's source without reading entire files. |
-| `get_architecture` | Get a high-level structural map when approaching unfamiliar areas. |
-| `search_code` | Perform regex/text search across the indexed graph (prefer over `grep` for cross-file symbol queries). |
-| `manage_adr` | Record architecture decisions when a significant design choice is made. |
+### Tool selection — priority order
+
+| Situation | Preferred Tool | Fall-back |
+|---|---|---|
+| Understand overall structure / dependencies | `get_architecture` | — |
+| Find a class, function, or method | `search_graph` | `search_code` |
+| Understand call chains / data flow | `trace_path` | — |
+| Read a specific function body | `get_code_snippet` | `view_file` (targeted line range only) |
+| Locate usages of a symbol | `query_graph` | `grep_search` |
+| Check if files changed since last index | `detect_changes` | — |
+| Understand test coverage for a module | `query_graph` with `TESTS` edge type | — |
+| Read an entire source file | ❌ avoid | only when `get_code_snippet` is insufficient |
+
+### Quick-start recipes
+
+```
+# High-level architecture
+codebase_memory: get_architecture(project="Nistapp-agentic-tdd", aspects=["all"])
+
+# Find a symbol
+codebase_memory: search_graph(project="Nistapp-agentic-tdd", query="PipelineOrchestrator")
+
+# Read a function body
+codebase_memory: get_code_snippet(project="Nistapp-agentic-tdd", node_id="<qualified_name>")
+
+# Trace call path between two symbols
+codebase_memory: trace_path(project="Nistapp-agentic-tdd", from_node="...", to_node="...")
+
+# Check index freshness before starting work
+codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
+```
+
+> [!TIP]
+> After any significant code change, call
+> `index_repository(repo_path="/home/kc/Projects/UDAN/agentic-compress-before-github--6Jun26/agentic-tdd")`
+> to keep the index fresh before querying.
+
+### File Reading Policy
+
+1. **Start with `codebase_memory` graph queries** — resolve symbols, relationships, call chains.
+2. **Use `get_code_snippet`** to read specific function/method bodies.
+3. **Use `view_file` with explicit line ranges** only when the snippet tool is insufficient.
+4. **Never open entire large files** without a compelling reason — query by symbol name instead.
 
 ### Required workflow
 
@@ -193,7 +226,7 @@ editing them:
 - Preserve the YAML frontmatter (`model`, `tools`, `permissions`).
 - Keep scope narrow — each agent is responsible for exactly one pass.
 - Never grant an agent permission to read or write files outside its declared scope.
-- After editing, rebuild with `npm run build` so the updated prompts are copied to `dist/agent/`.
+- After editing, rebuild with `npm run build` so the updated prompts are copied to `dist/agents/`.
 
 ---
 
