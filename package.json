@@ -24,7 +24,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc && npm run copy:agents",
-    "copy:agents": "mkdir -p dist/agent && cp -r src/agents/* dist/agent/",
+    "copy:agents": "mkdir -p dist/agents && cp -r src/agents/* dist/agents/ && echo '{\"type\":\"module\"}' > dist/package.json",
     "build:full": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -8,8 +8,8 @@ import { loggers, reqLogger } from '../utils/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const OPENCODE_CONFIG_DIR = resolve(__dirname, '..', '..');
-export const PACKAGE_AGENTS_DIR = resolve(OPENCODE_CONFIG_DIR, 'agent');
+const OPENCODE_CONFIG_DIR = resolve(__dirname, '..');
+export const PACKAGE_AGENTS_DIR = resolve(OPENCODE_CONFIG_DIR, 'agents');
 
 const OPENCODE_WATCHDOG_INTERVAL_MS = 30_000;
 const OPENCODE_HEARTBEAT_THRESHOLD_MS = 120_000;

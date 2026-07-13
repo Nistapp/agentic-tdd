@@ -1,12 +1,13 @@
 import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { vi } from 'vitest';
 
 import { NodeFileSystem } from '../../src/infrastructure/file-system.js';
 import { EventBus } from '../../src/infrastructure/event-bus.js';
 import { GitService } from '../../src/infrastructure/git-service.js';
-import { CommandRunner } from '../../src/infrastructure/command-runner.js';
+import { CommandRunner, PACKAGE_AGENTS_DIR } from '../../src/infrastructure/command-runner.js';
 import type { AgenticEvent } from '../../src/core/types.js';
 
 // ---------------------------------------------------------------------------
@@ -270,6 +271,24 @@ describe('CommandRunner', () => {
     expect(result.output).toContain('AssertionError');
   });
 
+  it('spawn passes OPENCODE_CONFIG_DIR in env to execa', async () => {
+    execaMock.mockImplementation(() => {
+      const thenable: any = Promise.resolve({ stdout: '', stderr: '', exitCode: 0 });
+      thenable.pid = 12344;
+      thenable.stdout = undefined;
+      thenable.stderr = undefined;
+      thenable.kill = vi.fn();
+      return thenable;
+    });
+    const runner = new CommandRunner();
+    await runner.spawn(['run', '--agent', 'pass-0-design-agent']);
+    const execaCall = execaMock.mock.calls[0];
+    expect(execaCall).toBeTruthy();
+    const opts = execaCall![2] as Record<string, unknown>;
+    expect(opts.env).toBeTruthy();
+    expect((opts.env as Record<string, string>).OPENCODE_CONFIG_DIR).toBeTruthy();
+  });
+
   it('spawn passes args through to execa and returns output', async () => {
     execaMock.mockImplementation(() => {
       const thenable: any = Promise.resolve({ stdout: 'agent output\n', stderr: '', exitCode: 0 });
@@ -298,5 +317,44 @@ describe('CommandRunner', () => {
     });
     const runner = new CommandRunner();
     await expect(runner.spawn(['run', '--agent', 'pass-0-design-agent'])).rejects.toThrow('opencode crashed');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PACKAGE_AGENTS_DIR — path sanity
+// ---------------------------------------------------------------------------
+
+describe('PACKAGE_AGENTS_DIR', () => {
+  it('is a non-empty absolute path ending with /agents', () => {
+    expect(PACKAGE_AGENTS_DIR).toBeTruthy();
+    expect(PACKAGE_AGENTS_DIR).toBeTypeOf('string');
+    expect(PACKAGE_AGENTS_DIR.startsWith('/')).toBe(true);
+    expect(PACKAGE_AGENTS_DIR.endsWith('agents')).toBe(true);
+  });
+
+  it('resolves to a directory containing all 8 pass agent files', () => {
+    expect(existsSync(PACKAGE_AGENTS_DIR), `Expected ${PACKAGE_AGENTS_DIR} to exist`).toBe(true);
+
+    const files = readdirSync(PACKAGE_AGENTS_DIR);
+    const mdFiles = files.filter(f => f.endsWith('.md'));
+
+    const expected = [
+      'pass-0-design-agent.md',
+      'pass-1-contracts-agent.md',
+      'pass-2-test-generation-agent.md',
+      'pass-3-core-implementation-agent.md',
+      'pass-4-refactor-agent.md',
+      'pass-5-security-agent.md',
+      'pass-6-observability-agent.md',
+      'pass-7-documentation-agent.md',
+    ];
+
+    for (const name of expected) {
+      const fullPath = resolve(PACKAGE_AGENTS_DIR, name);
+      expect(existsSync(fullPath), `Expected ${fullPath} to exist`).toBe(true);
+    }
+
+    const agentNames = mdFiles.filter(f => /^pass-\d/.test(f));
+    expect(agentNames).toHaveLength(8);
   });
 });
