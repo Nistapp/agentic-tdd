@@ -5,8 +5,8 @@ description: >
   and a Gherkin BDD specification.
 mode: all
 # model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
-# model: deepseek/deepseek-v4-pro
-model: deepseek/deepseek-v4-flash
+model: deepseek/deepseek-v4-pro
+# model: deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow
