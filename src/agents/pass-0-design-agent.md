@@ -4,7 +4,9 @@ description: >
   and produces two human-reviewable design artefacts: a Mermaid diagram
   and a Gherkin BDD specification.
 mode: all
-model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+# model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+# model: deepseek/deepseek-v4-pro
+model: deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow

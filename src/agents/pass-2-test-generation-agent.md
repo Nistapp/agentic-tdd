@@ -5,7 +5,9 @@ description: >
   this stage — that failure confirms the tests encode real constraints (Red
   Phase). Use when the orchestrator invokes the test-generation pass.
 mode: all
-model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+# model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+model: deepseek/deepseek-v4-pro
+# model: deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow

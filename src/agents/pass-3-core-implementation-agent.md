@@ -6,7 +6,9 @@ description: >
   re-invokes this agent with the error log. Use when the orchestrator invokes
   the core-implementation pass.
 mode: all
-model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+# model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+model: deepseek/deepseek-v4-pro
+# model: deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow
