@@ -27,7 +27,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     featureName: 'my_module',
     testCmd: ['npm', 'test'],
     skipHitl: true,
-    maxCorrectionRetries: 2,
+    maxCorrectionRetries: 3,
     pipelineVersion: '1.0.0',
     sourceType: 'file',
     logLevel: 'INFO',
@@ -166,10 +166,10 @@ describe('PipelineOrchestrator', () => {
       const result = await orch.run(ctx);
 
       expect(result).toBe(true);
-      // Passes 0, 1, 2, 7 use agentRunner directly → 4 calls
-      expect(m.agentRunner.execute).toHaveBeenCalledTimes(4);
-      // Passes 3-6 delegate to selfCorrectionRunner → 4 calls
-      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(4);
+      // Passes 0, 1, 2 use agentRunner directly → 3 calls
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(3);
+      // Passes 3-7 delegate to selfCorrectionRunner → 5 calls
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(5);
     });
 
     it('emits PIPELINE_STARTED and PIPELINE_COMPLETED', async () => {
@@ -183,15 +183,15 @@ describe('PipelineOrchestrator', () => {
       expect(completed).toHaveLength(1);
     });
 
-    it('emits PASS_STARTED and PASS_COMPLETED for non-guarded passes (0, 1, 2, 7)', async () => {
+    it('emits PASS_STARTED and PASS_COMPLETED for non-guarded passes (0, 1, 2)', async () => {
       const m = makeMocks();
       const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
       console.log(m.emittedEvents.filter(e => e.kind === 'PASS_STARTED').map(e => e.pass));
 
-      expect(findEvents(m.emittedEvents, 'PASS_STARTED')).toHaveLength(4);
-      expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(4);
+      expect(findEvents(m.emittedEvents, 'PASS_STARTED')).toHaveLength(3);
+      expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(3);
     });
 
     it('delegates to selfCorrectionRunner for each self-correction pass', async () => {
@@ -200,7 +200,7 @@ describe('PipelineOrchestrator', () => {
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // Passes 3, 4, 5, 6 each delegate once → 4 calls
+      // Passes 3, 4, 5, 6, 7 each delegate once → 5 calls
       expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
     });
 
@@ -265,8 +265,6 @@ describe('PipelineOrchestrator', () => {
           "PASS_COMPLETED",
           "PASS_STARTED",
           "PASS_COMPLETED",
-          "PASS_STARTED",
-          "PASS_COMPLETED",
           "PIPELINE_COMPLETED",
         ]
       `);
@@ -286,19 +284,19 @@ describe('PipelineOrchestrator', () => {
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.designMmdPath, '');
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.specGherkinPath, '');
 
-      // Passes 0, 1, 2, 7 use agentRunner directly → 4 calls
-      expect(m.agentRunner.execute).toHaveBeenCalledTimes(4);
+      // Passes 0, 1, 2 use agentRunner directly → 3 calls
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('Self-Correction delegation', () => {
-    it('delegates to selfCorrectionRunner for passes 3-6, which handles the loop internally', async () => {
+    it('delegates to selfCorrectionRunner for passes 3-7, which handles the loop internally', async () => {
       const m = makeMocks();
       const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // Self-correction runner called 4 times (once per guarded pass)
+      // Self-correction runner called 5 times (once per guarded pass: 3, 4, 5, 6, 7)
       expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
       // Pipeline completes successfully
       expect(findEvents(m.emittedEvents, 'PIPELINE_COMPLETED')).toHaveLength(1);
@@ -307,14 +305,14 @@ describe('PipelineOrchestrator', () => {
     it('throws when selfCorrectionRunner rejects, propagating the error', async () => {
       const m = makeMocks();
       (m.selfCorrectionRunner.execute as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('FAILED after 2 attempt(s). The test suite still fails after 1 self-correction retries.'),
+        new Error('FAILED after 4 attempt(s). The test suite still fails after 3 self-correction retries.'),
       );
 
       const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
 
       await expect(
-        orch.run(makeContext({ skipHitl: true, maxCorrectionRetries: 1 })),
-      ).rejects.toThrow(/FAILED after 2 attempt/);
+        orch.run(makeContext({ skipHitl: true, maxCorrectionRetries: 3 })),
+      ).rejects.toThrow(/FAILED after 4 attempt/);
 
       expect(findEvents(m.emittedEvents, 'ERROR')).toHaveLength(1);
     });
@@ -359,9 +357,9 @@ describe('PipelineOrchestrator', () => {
       const result = await orch.run(ctx, PipelinePass.CoreImplementation); // start at Pass 3
 
       expect(result).toBe(true);
-      // Passes 0, 1, 2 skipped; Passes 3-6 delegate to selfCorrectionRunner (4 calls), Pass 7 uses agentRunner (1 call)
+      // Passes 0, 1, 2 skipped; Passes 3-7 delegate to selfCorrectionRunner (5 calls); agentRunner not called
       expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
-      expect(m.agentRunner.execute).toHaveBeenCalledTimes(1);
+      expect(m.agentRunner.execute).not.toHaveBeenCalled();
     });
 
     it('runs only Pass 7 when starting at Documentation', async () => {
@@ -372,8 +370,8 @@ describe('PipelineOrchestrator', () => {
       const result = await orch.run(ctx, PipelinePass.Documentation);
 
       expect(result).toBe(true);
-      expect(m.agentRunner.execute).toHaveBeenCalledTimes(1);
-      expect(m.selfCorrectionRunner.execute).not.toHaveBeenCalled();
+      expect(m.agentRunner.execute).not.toHaveBeenCalled();
+      expect(m.selfCorrectionRunner.execute).toHaveBeenCalledTimes(1);
     });
   });
 });

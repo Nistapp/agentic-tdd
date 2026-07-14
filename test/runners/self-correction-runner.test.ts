@@ -59,7 +59,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     featureName: 'my_module',
     testCmd: ['npm', 'test'],
     skipHitl: true,
-    maxCorrectionRetries: 2,
+    maxCorrectionRetries: 3,
     pipelineVersion: '1.0.0',
     sourceType: 'file',
     logLevel: 'INFO',
