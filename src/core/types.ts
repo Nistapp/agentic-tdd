@@ -69,8 +69,8 @@ export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
   PipelinePass.Documentation,
 ]);
 
-/** Default max self-correction retries — matches Python MAX_CORRECTION_RETRIES. */
-export const DEFAULT_MAX_CORRECTION_RETRIES = 2;
+/** Default max self-correction retries (3 retries → 4 total attempts per pass). */
+export const DEFAULT_MAX_CORRECTION_RETRIES = 3;
 
 // ---------------------------------------------------------------------------
 // Input source type — matches Python --source-type flag
@@ -94,7 +94,7 @@ export interface PipelineContext {
   /** If true, skip the human-in-the-loop gate after Pass 0. */
   skipHitl: boolean;
 
-  /** Maximum additional self-correction attempts (default 2 → 3 total). */
+  /** Maximum additional self-correction attempts (default 3 → 4 total). */
   maxCorrectionRetries: number;
 
   /** Pipeline semver string (e.g. "1.0.0"). */
