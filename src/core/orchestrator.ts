@@ -1,17 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, ISelfCorrectionRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
-import type { PipelineContext, AgenticEvent, AgentRunRequest, AgentArtefacts } from './types.js';
+import type { PipelineContext, AgenticEvent, AgentRunRequest } from './types.js';
 import {
   PipelinePass,
-  AGENT_NAMES,
   PASS_LABELS,
-  SELF_CORRECTION_PASSES,
   GIT_COMMIT_PASSES,
 } from './types.js';
 import type { PassCompletedPayload } from './types.js';
 // DEFERRED: StateFile — see docs/statefile-design.md
 
 import { sanitizeLogPayload } from './log-sanitizer.js';
+import { getAgentContextPayload, buildArtefacts } from './runners/shared.js';
 
 // ---------------------------------------------------------------------------
 // PipelineOrchestrator — Pure-DI 8-pass state machine
@@ -114,23 +113,43 @@ export class PipelineOrchestrator {
         await this.#maybeCommitTestFile(ctx);
       }
 
-      // Passes 3–6 — self-correction guarded
-      for (const pass of [
-        PipelinePass.CoreImplementation,
-        PipelinePass.Refactor,
-        PipelinePass.Security,
-        PipelinePass.Observability,
-      ]) {
-        if (startPass <= pass) {
-          ctx.currentPass = pass;
-          ctx.currentAttempt = 1;
-          this.#passLogger = this.#childLogger(ctx, pass, 1);
-          await this.#selfCorrectionRunner.execute(ctx);
-          await this.#maybeCommit(ctx);
-        }
+      // Pass 3 — Core Implementation
+      if (startPass <= PipelinePass.CoreImplementation) {
+        ctx.currentPass = PipelinePass.CoreImplementation;
+        ctx.currentAttempt = 1;
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.CoreImplementation, 1);
+        await this.#runPass3(ctx);
+        await this.#maybeCommit(ctx);
       }
 
-      // Pass 7 — Documentation, commit target
+      // Pass 4 — Refactor & Optimise
+      if (startPass <= PipelinePass.Refactor) {
+        ctx.currentPass = PipelinePass.Refactor;
+        ctx.currentAttempt = 1;
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Refactor, 1);
+        await this.#runPass4(ctx);
+        await this.#maybeCommit(ctx);
+      }
+
+      // Pass 5 — Security Hardening
+      if (startPass <= PipelinePass.Security) {
+        ctx.currentPass = PipelinePass.Security;
+        ctx.currentAttempt = 1;
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Security, 1);
+        await this.#runPass5(ctx);
+        await this.#maybeCommit(ctx);
+      }
+
+      // Pass 6 — Observability & Logging
+      if (startPass <= PipelinePass.Observability) {
+        ctx.currentPass = PipelinePass.Observability;
+        ctx.currentAttempt = 1;
+        this.#passLogger = this.#childLogger(ctx, PipelinePass.Observability, 1);
+        await this.#runPass6(ctx);
+        await this.#maybeCommit(ctx);
+      }
+
+      // Pass 7 — Documentation
       if (startPass <= PipelinePass.Documentation) {
         ctx.currentPass = PipelinePass.Documentation;
         ctx.currentAttempt = 1;
@@ -160,12 +179,12 @@ export class PipelineOrchestrator {
     ctx.currentPass = PipelinePass.Design;
     this.#emitPassStarted(ctx);
     this.#passLogger.info(`Entering Pass ${PipelinePass.Design} [Attempt 1]`);
-    const prompt = this.#getAgentContextPayload(ctx);
+    const prompt = getAgentContextPayload(ctx);
     this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     const agentRequest: AgentRunRequest = {
       pass: ctx.currentPass!,
       prompt,
-      artefacts: await this.#buildArtefacts(ctx),
+      artefacts: await buildArtefacts(ctx, this.#fs, undefined, this.#passLogger),
       runId: ctx.runId,
     };
     await this.#agentRunner.execute(agentRequest);
@@ -174,19 +193,15 @@ export class PipelineOrchestrator {
     await this.#ensureNonEmptyArtefacts(ctx);
   }
 
-
-
-
-
   async #runSimplePass(ctx: PipelineContext): Promise<void> {
     this.#emitPassStarted(ctx);
     this.#passLogger.info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
-    const prompt = this.#getAgentContextPayload(ctx);
+    const prompt = getAgentContextPayload(ctx);
     this.#passLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to Opencode');
     const agentRequest: AgentRunRequest = {
       pass: ctx.currentPass!,
       prompt,
-      artefacts: await this.#buildArtefacts(ctx),
+      artefacts: await buildArtefacts(ctx, this.#fs, undefined, this.#passLogger),
       runId: ctx.runId,
     };
     await this.#agentRunner.execute(agentRequest);
@@ -204,10 +219,24 @@ export class PipelineOrchestrator {
     await this.#runSimplePass(ctx);
   }
 
+  async #runPass3(ctx: PipelineContext): Promise<void> {
+    await this.#selfCorrectionRunner.execute(ctx);
+  }
+
+  async #runPass4(ctx: PipelineContext): Promise<void> {
+    await this.#selfCorrectionRunner.execute(ctx);
+  }
+
+  async #runPass5(ctx: PipelineContext): Promise<void> {
+    await this.#selfCorrectionRunner.execute(ctx);
+  }
+
+  async #runPass6(ctx: PipelineContext): Promise<void> {
+    await this.#selfCorrectionRunner.execute(ctx);
+  }
+
   async #runPass7(ctx: PipelineContext): Promise<void> {
-    //REMARK: What is happening with Git here ? What is happening with statefile here?
-    //        Do we automate the final PR too ?
-    await this.#runSimplePass(ctx);
+    await this.#selfCorrectionRunner.execute(ctx);
   }
 
   // -- Helpers ---------------------------------------------------------------
@@ -247,35 +276,6 @@ export class PipelineOrchestrator {
     );
   } // TODO: Check if this is even required once we fix the issues of git commit and statefile. We do not need to generate if tests already exist.
 
-  // -- Artefact building -----------------------------------------------------
-
-  async #buildArtefacts(ctx: PipelineContext, errorLog?: string): Promise<AgentArtefacts> {
-    const artefacts: AgentArtefacts = {};
-
-    if (await this.#fs.exists(ctx.designMmdPath)) {
-      artefacts.designMmd = ctx.designMmdPath;
-    }
-    if (await this.#fs.exists(ctx.specGherkinPath)) {
-      artefacts.specGherkin = ctx.specGherkinPath;
-    }
-    if (ctx.specFileAbsPath) {
-      const specExists = await this.#fs.exists(ctx.specFileAbsPath);
-      this.#passLogger.debug(`buildArtefacts: specFileAbsPath='${ctx.specFileAbsPath}' exists=${specExists}`);
-      if (specExists) {
-        artefacts.specFile = ctx.specFileAbsPath;
-      } else {
-        this.#passLogger.debug('buildArtefacts: specFileAbsPath does not exist — not attaching as --file');
-      }
-    } else if (ctx.featureDescription) {
-      this.#passLogger.debug('buildArtefacts: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file');
-    }
-    if (errorLog) {
-      artefacts.errorLog = errorLog;
-    }
-
-    return artefacts;
-  }
-
   async #ensureNonEmptyArtefacts(ctx: PipelineContext): Promise<void> {
     const mmdContent = (await this.#fs.readFile(ctx.designMmdPath)).trim();
     const gherkinContent = (await this.#fs.readFile(ctx.specGherkinPath)).trim();
@@ -286,22 +286,5 @@ export class PipelineOrchestrator {
     if (gherkinContent.length < 30) {
       throw new Error(`Spec agent failed to produce a valid Gherkin specification (content length < 30). This usually means the agent failed to generate concrete test scenarios for the feature.`);
     }
-  }
-
-  // -- Pass prompts (mirrors Python cli.py) ----------------------------------
-
-  #getAgentContextPayload(ctx: PipelineContext, meta: Record<string, unknown> = {}): string {
-    const payload = {
-      featureName: ctx.featureName,
-      featureDescription: ctx.featureDescription,
-      pipelineVersion: ctx.pipelineVersion,
-      paths: {
-        designMmd: ctx.designMmdPath,
-        specGherkin: ctx.specGherkinPath,
-        errorLog: ctx.errorLogPath
-      },
-      meta
-    };
-    return JSON.stringify(payload, null, 2);
   }
 }

@@ -55,6 +55,7 @@ export const SELF_CORRECTION_PASSES = new Set<PipelinePass>([
   PipelinePass.Refactor,
   PipelinePass.Security,
   PipelinePass.Observability,
+  PipelinePass.Documentation,
 ]);
 
 /** Passes where a git commit is made after the agent completes. */

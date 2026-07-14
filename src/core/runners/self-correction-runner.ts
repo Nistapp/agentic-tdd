@@ -1,14 +1,10 @@
 import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, IEventBus, ILogger, ISelfCorrectionRunner } from '../interfaces.js';
-import type { PipelineContext, AgentRunRequest, AgentArtefacts } from '../types.js';
+import type { PipelineContext, AgentRunRequest } from '../types.js';
 import type { AgenticEvent } from '../types.js';
 import type { PassCompletedPayload } from '../types.js';
 import { PipelinePass, PASS_LABELS } from '../types.js';
 import { sanitizeLogPayload } from '../log-sanitizer.js';
-
-// REMARK: The helpers below (#emit, #emitPassStarted, #emitPassCompleted,
-// #getAgentContextPayload, #buildArtefacts) are duplicated from
-// PipelineOrchestrator. When each pass becomes an independent runner
-// (roadmap), extract these to src/core/pass-utils.ts as shared functions.
+import { getAgentContextPayload, buildArtefacts } from './shared.js';
 
 export class SelfCorrectionRunner implements ISelfCorrectionRunner {
   readonly #agentRunner: IAgentRunner;
@@ -54,11 +50,11 @@ export class SelfCorrectionRunner implements ISelfCorrectionRunner {
 
       const isFirstAttempt = attemptIdx === 0;
       const prompt = isFirstAttempt
-        ? this.#getAgentContextPayload(ctx)
-        : this.#getAgentContextPayload(ctx, { attemptNumber: humanAttempt });
+        ? getAgentContextPayload(ctx)
+        : getAgentContextPayload(ctx, { attemptNumber: humanAttempt });
       const artefacts = isFirstAttempt
-        ? await this.#buildArtefacts(ctx)
-        : await this.#buildArtefacts(ctx, ctx.errorLogPath);
+        ? await buildArtefacts(ctx, this.#fs)
+        : await buildArtefacts(ctx, this.#fs, ctx.errorLogPath);
 
       attemptLogger.info(`Entering Pass ${pass} [Attempt ${humanAttempt}]`);
       attemptLogger.info({ payload: { prompt: sanitizeLogPayload(prompt, 'info') } }, 'Dispatching prompt to agent');
@@ -126,42 +122,5 @@ export class SelfCorrectionRunner implements ISelfCorrectionRunner {
 
   #emitPassCompleted(ctx: PipelineContext, payload?: PassCompletedPayload): void {
     this.#emit('PASS_COMPLETED', `Completed Pass ${ctx.currentPass}`, ctx, payload);
-  }
-
-  #getAgentContextPayload(ctx: PipelineContext, meta: Record<string, unknown> = {}): string {
-    const payload = {
-      featureName: ctx.featureName,
-      featureDescription: ctx.featureDescription,
-      pipelineVersion: ctx.pipelineVersion,
-      paths: {
-        designMmd: ctx.designMmdPath,
-        specGherkin: ctx.specGherkinPath,
-        errorLog: ctx.errorLogPath,
-      },
-      meta,
-    };
-    return JSON.stringify(payload, null, 2);
-  }
-
-  async #buildArtefacts(ctx: PipelineContext, errorLog?: string): Promise<AgentArtefacts> {
-    const artefacts: AgentArtefacts = {};
-
-    if (await this.#fs.exists(ctx.designMmdPath)) {
-      artefacts.designMmd = ctx.designMmdPath;
-    }
-    if (await this.#fs.exists(ctx.specGherkinPath)) {
-      artefacts.specGherkin = ctx.specGherkinPath;
-    }
-    if (ctx.specFileAbsPath) {
-      const specExists = await this.#fs.exists(ctx.specFileAbsPath);
-      if (specExists) {
-        artefacts.specFile = ctx.specFileAbsPath;
-      }
-    }
-    if (errorLog) {
-      artefacts.errorLog = errorLog;
-    }
-
-    return artefacts;
   }
 }
