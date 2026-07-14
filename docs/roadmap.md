@@ -71,6 +71,7 @@ Items in no particular order of priority. Contributions welcome — see the [arc
 - [x] Verified integration example (`examples/basic-addition/`)
 
 ## Command to run: (Todo: explain in detail)
+- source .tic-tac-env/bin/activate
 - agentic-tdd --issue "Create tkinter app using pytest.  Refer to specs/tictactoe-frontned-prompt.md" --test-cmd "pytest"
 - Other misc:
 -   npm run build
