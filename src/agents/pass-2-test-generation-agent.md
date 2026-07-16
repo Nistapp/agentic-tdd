@@ -5,7 +5,9 @@ description: >
   this stage — that failure confirms the tests encode real constraints (Red
   Phase). Use when the orchestrator invokes the test-generation pass.
 mode: all
-model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+# model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+model: deepseek/deepseek-v4-pro
+# model: deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow
@@ -48,7 +50,8 @@ permission:
 </scope>
 
 <task>
-  The orchestrator provides the design artefacts. Read them carefully.
+  You will receive a JSON payload containing the specific `featureName`, `pipelineVersion`, and file paths for this run.
+  The orchestrator provides the design artefacts at the paths specified in `paths.designMmd` and `paths.specGherkin`. Read them carefully.
 
   Create test files to cover the contracts. At this
   stage the tests are expected to fail — the source files contain only stubs

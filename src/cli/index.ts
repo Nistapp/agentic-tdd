@@ -11,7 +11,11 @@ import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { NodeFileSystem } from '../infrastructure/file-system.js';
 import { GitService } from '../infrastructure/git-service.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
+import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
+import { SelfCorrectionRunner } from '../core/runners/self-correction-runner.js';
 import { EventBus } from '../infrastructure/event-bus.js';
+import { JsonStateStore } from '../infrastructure/state-store.js';
+import { getStateFilePath, getOpencodeLogPath } from '../utils/paths.js';
 import {
   PipelinePass,
   PASS_LABELS,
@@ -20,7 +24,9 @@ import {
   DEFAULT_MAX_CORRECTION_RETRIES,
 } from '../core/types.js';
 import type { PipelineContext, AgenticEvent } from '../core/types.js';
+import type { PipelineConfig } from '../core/interfaces.js';
 import type { HitlHandler } from '../core/orchestrator.js';
+import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { loggers } from '../utils/logger.js';
 
 process.on('uncaughtException', (err) => {
@@ -272,25 +278,7 @@ function computeArtefactPaths(featureName: string): ArtefactPaths {
 // Command-line setup
 // ---------------------------------------------------------------------------
 
-const STATE_FILE = join(cwd(), '.opencode', 'active-run.json');
-
-// ---------------------------------------------------------------------------
-// State-file helpers
-// ---------------------------------------------------------------------------
-
-async function readStateFile(fs: NodeFileSystem): Promise<PipelineContext> {
-  const raw = await fs.readFile(STATE_FILE);
-  return JSON.parse(raw) as PipelineContext;
-}
-
-async function writeStateFile(fs: NodeFileSystem, ctx: PipelineContext): Promise<void> {
-  await fs.mkdir(join(cwd(), '.opencode'));
-  await fs.writeFile(STATE_FILE, JSON.stringify(ctx, null, 2));
-}
-
-async function deleteStateFile(fs: NodeFileSystem): Promise<void> {
-  await fs.deleteFile(STATE_FILE);
-}
+// DEFERRED: StateFile — see docs/statefile-design.md
 
 program
   .name('agentic-tdd')
@@ -325,7 +313,8 @@ program
     }
 
     const fs = new NodeFileSystem();
-    const stateExists = await fs.exists(STATE_FILE);
+    const stateStore = new JsonStateStore(fs);
+    const stateExists = await stateStore.exists();
 
     // ---------------------------------------------------------------------
     // Branch: State file exists — guard, abort, or resume
@@ -336,7 +325,7 @@ program
       }
 
       if (abort) {
-        const ctx = await readStateFile(fs);
+        const ctx = await stateStore.load();
         const git = new GitService();
 
         if (ctx.originalBaseSha) {
@@ -347,13 +336,13 @@ program
           console.log('\n  Abort: reset working tree to HEAD.\n');
         }
 
-        await deleteStateFile(fs);
+        await stateStore.delete();
         console.log('  Session cancelled.  Repository state restored.\n');
         process.exit(0);
       }
 
       // --resume branch
-      const ctx = await readStateFile(fs);
+      const ctx = await stateStore.load();
       ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
       const git = new GitService();
 
@@ -364,7 +353,7 @@ program
       const startPass = lastCompletedPass !== null ? (lastCompletedPass + 1) as PipelinePass : PipelinePass.Design;
 
       if (startPass > PipelinePass.Documentation) {
-        await deleteStateFile(fs);
+        await stateStore.delete();
         console.log('  All passes already completed — nothing to resume.\n');
         process.exit(0);
       }
@@ -385,10 +374,22 @@ program
       const cmdRunner = new CommandRunner();
       const hitlHandler = createHitlHandler(ctx);
 
-      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, hitlHandler);
+      const pipelineConfig: PipelineConfig = {
+        opencodeLogPath: getOpencodeLogPath(),
+        apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+      };
+
+      const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
+
+      const selfCorrectionRunner = new SelfCorrectionRunner(
+        agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
+      );
+
+      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
       try {
         await orchestrator.run(ctx, startPass);
+        await stateStore.delete();
         process.exit(0);
       } catch (err) {
         fatal(err instanceof Error ? err.message : String(err));
@@ -499,8 +500,8 @@ program
     };
 
     // --- Persist state file ---
-    await writeStateFile(fs, ctx);
-    console.log(`  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${STATE_FILE}.\n`);
+    await stateStore.save(ctx);
+    console.log(`  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${getStateFilePath()}.\n`);
 
     // --- Display banner ---
     banner(ctx);
@@ -512,10 +513,22 @@ program
     const cmdRunner = new CommandRunner();
     const hitlHandler = createHitlHandler(ctx);
 
-    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, events, hitlHandler);
+    const pipelineConfig: PipelineConfig = {
+      opencodeLogPath: getOpencodeLogPath(),
+      apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+    };
+
+    const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
+
+    const selfCorrectionRunner = new SelfCorrectionRunner(
+      agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
+    );
+
+    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
 
     try {
       await orchestrator.run(ctx, PipelinePass.Design);
+      await stateStore.delete();
       process.exit(0);
     } catch (err) {
       fatal(err instanceof Error ? err.message : String(err));

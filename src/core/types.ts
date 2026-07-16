@@ -12,7 +12,7 @@
 // Pass definitions — matches AGENTS / PASS_LABELS dicts in Python cli.py
 // ---------------------------------------------------------------------------
 
-export const enum PipelinePass {
+export enum PipelinePass {
   Design             = 0,
   Contracts          = 1,
   TestGeneration     = 2,
@@ -55,6 +55,7 @@ export const SELF_CORRECTION_PASSES = new Set<PipelinePass>([
   PipelinePass.Refactor,
   PipelinePass.Security,
   PipelinePass.Observability,
+  PipelinePass.Documentation,
 ]);
 
 /** Passes where a git commit is made after the agent completes. */
@@ -68,8 +69,8 @@ export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
   PipelinePass.Documentation,
 ]);
 
-/** Default max self-correction retries — matches Python MAX_CORRECTION_RETRIES. */
-export const DEFAULT_MAX_CORRECTION_RETRIES = 2;
+/** Default max self-correction retries (3 retries → 4 total attempts per pass). */
+export const DEFAULT_MAX_CORRECTION_RETRIES = 3;
 
 // ---------------------------------------------------------------------------
 // Input source type — matches Python --source-type flag
@@ -93,7 +94,7 @@ export interface PipelineContext {
   /** If true, skip the human-in-the-loop gate after Pass 0. */
   skipHitl: boolean;
 
-  /** Maximum additional self-correction attempts (default 2 → 3 total). */
+  /** Maximum additional self-correction attempts (default 3 → 4 total). */
   maxCorrectionRetries: number;
 
   /** Pipeline semver string (e.g. "1.0.0"). */
@@ -200,4 +201,32 @@ export interface GitCommitResult {
 export interface FileChange {
   status: string;
   file: string;
+}
+
+export interface PassCompletedPayload {
+  files?: FileChange[];
+  attempts?: number;
+  [k: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Agent runner DTOs — the seam between orchestrator and agent invocations
+// ---------------------------------------------------------------------------
+
+export interface AgentArtefacts {
+  designMmd?: string;
+  specGherkin?: string;
+  specFile?: string;
+  errorLog?: string;
+}
+
+export interface AgentRunRequest {
+  pass: PipelinePass;
+  prompt: string;
+  artefacts: AgentArtefacts;
+  runId?: string;
+}
+
+export interface AgentRunResult {
+  output: string;
 }

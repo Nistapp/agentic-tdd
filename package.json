@@ -3,9 +3,20 @@
   "version": "0.1.0-Beta",
   "description": "An npx-executable, agentic TDD pipeline orchestration tool — 8-pass state machine for enterprise software development",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Digital-Assistant/agentic-tdd-node"
+  },
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
   },
   "bin": {
     "agentic-tdd": "./dist/cli/index.js"
@@ -13,13 +24,13 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc && npm run copy:agents",
-    "copy:agents": "mkdir -p dist/agent && cp -r src/agents/* dist/agent/",
+    "copy:agents": "mkdir -p dist/agents && cp -r src/agents/* dist/agents/ && echo '{\"type\":\"module\"}' > dist/package.json",
     "build:full": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build:full"
+    "prepublishOnly": "npm run lint && npm test && npm run build:full"
   },
   "keywords": [],
   "author": "",

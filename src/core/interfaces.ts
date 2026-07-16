@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, AgentRunRequest, AgentRunResult } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -91,20 +91,43 @@ export interface ICommandRunner {
    * self-correction loop can write a meaningful error log.
    */
   runTests(testCmd: string[]): Promise<TestRunResult>;
+}
 
+// ---------------------------------------------------------------------------
+// IAgentRunner — invokes an AI agent for a pipeline pass
+// ---------------------------------------------------------------------------
+
+export interface IAgentRunner {
   /**
-   * Execute the opencode agent invocation.
+   * Execute an agent run for the given pass.
    *
-   * The caller has already built the full argument array via
-   * ``buildOpencodeCommand``.  This contract only cares about spawning.
+   * The caller (orchestrator) has already decided which artefacts to attach
+   * and built the prompt. The runner is responsible for translating these
+   * into tool-specific invocation arguments and spawning the agent process.
    *
-   * Must stream opencode's stdout/stderr to the terminal (``stdio: 'inherit'``)
-   * so the developer can see progress in real time.
-   *
-   * @returns The combined stdout+stderr output for post-processing.
-   * @throws {Error} If opencode exits with a non-zero status.
+   * @returns The agent's combined stdout+stderr output.
+   * @throws {Error} If the agent exits with a non-zero status.
    */
-  runOpenCode(args: string[]): Promise<string>;
+  execute(request: AgentRunRequest): Promise<AgentRunResult>;
+}
+
+// ---------------------------------------------------------------------------
+// IOpencodeSpawner — low-level opencode process spawning (with watchdog)
+// ---------------------------------------------------------------------------
+
+export interface IOpencodeSpawner {
+  /**
+   * Spawn the opencode CLI with the given pre-built argument array.
+   *
+   * Implementations own process lifecycle concerns: stdout/stderr streaming,
+   * heartbeat watchdog, and hard timeout. The caller (OpenCodeAgentRunner)
+   * is responsible for argv assembly — this contract is purely about
+   * spawning and monitoring.
+   *
+   * @returns Combined stdout+stderr output.
+   * @throws {Error} If opencode exits non-zero or hits the hard timeout.
+   */
+  spawn(args: string[]): Promise<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,4 +144,58 @@ export interface IEventBus {
    * @returns An unsubscribe function that removes the listener.
    */
   on(kind: AgenticEventKind, handler: (event: AgenticEvent) => void): () => void;
+}
+
+// ---------------------------------------------------------------------------
+// IStateStore — persistence for pipeline session state (DEFERRED)
+// ---------------------------------------------------------------------------
+
+export interface IStateStore {
+  save(ctx: PipelineContext): Promise<void>;
+  load(): Promise<PipelineContext>;
+  delete(): Promise<void>;
+  exists(): Promise<boolean>;
+}
+
+// ---------------------------------------------------------------------------
+// ILogger — structured logging (no dependency on pino or process.stdout)
+// ---------------------------------------------------------------------------
+
+export interface ILogger {
+  debug(msgOrObj: string | object, msg?: string): void;
+  info(msgOrObj: string | object, msg?: string): void;
+  warn(msgOrObj: string | object, msg?: string): void;
+  error(msgOrObj: string | object, msg?: string): void;
+  child(bindings: Record<string, unknown>): ILogger;
+  /** Read-only intent: gates CLI flags like --print-logs/--log-level. */
+  level: string;
+}
+
+// ---------------------------------------------------------------------------
+// PipelineConfig — configuration values injected at construction time
+// ---------------------------------------------------------------------------
+
+export interface PipelineConfig {
+  readonly opencodeLogPath: string;
+  readonly apiKeySet: 'present' | 'missing';
+}
+
+// ---------------------------------------------------------------------------
+// ISelfCorrectionRunner — runs a self-correction guarded pass (passes 3-6)
+// ---------------------------------------------------------------------------
+
+export interface ISelfCorrectionRunner {
+  /**
+   * Execute a self-correction guarded pass.
+   *
+   * The caller (orchestrator) has already set `ctx.currentPass` to one of
+   * the SELF_CORRECTION_PASSES. The runner owns the full loop: agent
+   * invocation → test execution → context compaction → retry bounds.
+   *
+   * Emits: PASS_STARTED, TEST_RUN_STARTED, TEST_RUN_COMPLETED,
+   *        TEST_RUN_FAILED, SELF_CORRECTION_ATTEMPTED, PASS_COMPLETED.
+   *
+   * @throws {Error} If tests still fail after all retries are exhausted.
+   */
+  execute(ctx: PipelineContext): Promise<void>;
 }
