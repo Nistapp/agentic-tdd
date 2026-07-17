@@ -23,6 +23,7 @@ import {
 } from '../core/types.js';
 import type { PipelineContext, AgenticEvent } from '../core/types.js';
 import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
+import { attachTerminalListener } from './terminal-event-listener.js';
 import type { PipelineConfig } from '../core/interfaces.js';
 import type { HitlHandler } from '../core/orchestrator.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
@@ -90,85 +91,7 @@ function createHitlHandler(ctx: PipelineContext): HitlHandler {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Terminal event listener — subscribes to EventBus for structured logging
-// ---------------------------------------------------------------------------
 
-function attachTerminalListener(events: EventBus, renderer: TerminalRenderer): void {
-  const W = 68;
-  events.on('PIPELINE_STARTED', (evt: AgenticEvent) => {
-    loggers.core.info(`PIPELINE_STARTED: ${evt.message}`);
-  });
-
-  events.on('PASS_STARTED', (evt: AgenticEvent) => {
-    const p = evt.pass ?? 0;
-    const label = PASS_LABELS[p] ?? '';
-    const agents = [
-      'pass-0-design-agent', 'pass-1-contracts-agent', 'pass-2-test-generation-agent',
-      'pass-3-core-implementation-agent', 'pass-4-refactor-agent', 'pass-5-security-agent',
-      'pass-6-observability-agent', 'pass-7-documentation-agent',
-    ];
-    renderer.passHeader(`Pass ${p} -- ${label}  [${agents[p] ?? ''}]`);
-  });
-
-  events.on('PASS_COMPLETED', (evt: AgenticEvent) => {
-    const label = evt.pass !== undefined ? PASS_LABELS[evt.pass] : '';
-    renderer.passOk(`Pass ${evt.pass} -- ${label}`);
-
-    if (evt.payload) {
-      if (evt.payload.attempts !== undefined) {
-        console.log(`  Completed in ${evt.payload.attempts} attempt(s).\n`);
-      }
-      
-      const files = evt.payload.files as { status: string; file: string }[];
-      if (files && files.length > 0) {
-        console.log(`  Files modified:`);
-        for (const f of files) {
-          console.log(`    [${f.status}] ${f.file}`);
-        }
-        console.log('');
-      } else if (evt.pass && evt.pass >= PipelinePass.Refactor && evt.pass <= PipelinePass.Security) {
-        console.log(`  No files were changed.\n`);
-      }
-    }
-  });
-
-  events.on('TEST_RUN_STARTED', (evt: AgenticEvent) => {
-    console.log(`  ${evt.message}`);
-  });
-
-  events.on('TEST_RUN_COMPLETED', (evt: AgenticEvent) => {
-    console.log(`  ${evt.message}`);
-  });
-
-  events.on('TEST_RUN_FAILED', (evt: AgenticEvent) => {
-    console.log(`  ${evt.message}`);
-  });
-
-  events.on('SELF_CORRECTION_ATTEMPTED', (evt: AgenticEvent) => {
-    console.log(`  [compaction]  ${evt.message}`);
-  });
-
-  events.on('WARNING', (evt: AgenticEvent) => {
-    console.log(`  [WARN]  ${evt.message}`);
-  });
-
-  events.on('ERROR', (evt: AgenticEvent) => {
-    console.error(`  [FATAL]  ${evt.message}`);
-  });
-
-  events.on('PIPELINE_COMPLETED', (_: AgenticEvent) => {
-    console.log('');
-    console.log('┌' + '─'.repeat(W) + '┐');
-    console.log(`│  v${PIPELINE_VERSION} Pipeline complete -- all 8 passes ran successfully.`.padEnd(W + 1) + '│');
-    console.log('│' + ' '.repeat(W) + '│');
-    console.log('│  Git:  7 atomic commits created (Passes 1-7).'.padEnd(W + 1) + '│');
-    console.log('│  Next: git log --oneline  to review the commit trail.'.padEnd(W + 1) + '│');
-    console.log('│        Open a PR when satisfied.'.padEnd(W + 1) + '│');
-    console.log('└' + '─'.repeat(W) + '┘');
-    console.log('');
-  });
-}
 
 
 
@@ -293,7 +216,7 @@ program
       renderer.banner(ctx);
 
       const events = new EventBus();
-      attachTerminalListener(events, renderer);
+      attachTerminalListener(events, renderer, PIPELINE_VERSION);
 
       const cmdRunner = new CommandRunner();
       const hitlHandler = createHitlHandler(ctx);
@@ -432,7 +355,7 @@ program
 
     // --- Wire DI ---
     const events = new EventBus();
-    attachTerminalListener(events, renderer);
+    attachTerminalListener(events, renderer, PIPELINE_VERSION);
 
     const cmdRunner = new CommandRunner();
     const hitlHandler = createHitlHandler(ctx);
