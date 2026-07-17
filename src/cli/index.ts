@@ -3,7 +3,6 @@
 import { program } from 'commander';
 import { resolve, join, basename, extname } from 'node:path';
 import { cwd } from 'node:process';
-import { createInterface } from 'node:readline';
 import { config as loadDotEnv } from 'dotenv';
 import { readFile } from 'node:fs/promises';
 
@@ -25,7 +24,7 @@ import type { PipelineContext, AgenticEvent } from '../core/types.js';
 import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
 import { attachTerminalListener } from './terminal-event-listener.js';
 import type { PipelineConfig } from '../core/interfaces.js';
-import type { HitlHandler } from '../core/orchestrator.js';
+import { createHitlHandler } from './hitl-handler.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { loggers } from '../utils/logger.js';
 
@@ -52,49 +51,6 @@ async function readSpecFile(specPath: string, renderer: TerminalRenderer): Promi
     return ''; // unreachable
   }
 }
-
-// ---------------------------------------------------------------------------
-// HITL handler factory
-// ---------------------------------------------------------------------------
-
-function createHitlHandler(ctx: PipelineContext): HitlHandler {
-  const W = 68;
-  return async () => {
-    const mmd = ctx.designMmdPath;
-    const gh = ctx.specGherkinPath;
-    const max = W - 10;
-
-    const fmt = (p: string) => p.length > max ? '...' + p.slice(-(max - 3)) : p;
-
-    console.log('');
-    console.log('┌' + '─'.repeat(W) + '┐');
-    console.log('│  HUMAN-IN-THE-LOOP GATE (After Pass 0)                        │');
-    console.log('│  Review the design artefacts before any code is written.      │');
-    console.log('│' + ' '.repeat(W) + '│');
-    console.log(`│  1. Mermaid diagram  ->  ${fmt(mmd).padEnd(max)}│`);
-    console.log(`│  2. Gherkin spec     ->  ${fmt(gh).padEnd(max)}│`);
-    console.log('│' + ' '.repeat(W) + '│');
-    console.log('│  Tip: VS Code + \'Mermaid Preview\' extension to render .mmd    │');
-    console.log('│  Press Ctrl+C to abort -- no code will be written.             │');
-    console.log('└' + '─'.repeat(W) + '┘');
-    console.log('');
-
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
-    await new Promise<void>((resolve) => {
-      rl.question('  Press Enter to approve and advance to Pass 1 (Contracts)...  ', () => {
-        rl.close();
-        resolve();
-      });
-    });
-    rl.close();
-    console.log('\n  Design approved.  Continuing to Pass 1 (Contracts & Types)...\n');
-  };
-}
-
-
-
-
-
 // ---------------------------------------------------------------------------
 // Utility: compute artefact paths
 // ---------------------------------------------------------------------------
