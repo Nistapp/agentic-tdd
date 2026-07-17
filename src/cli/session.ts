@@ -6,7 +6,6 @@ import type { PipelineContext } from '../core/types.js';
 import type { IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import { getStateFilePath } from '../utils/paths.js';
 import { TerminalRenderer } from './terminal-renderer.js';
-import { validateAndResolveOptions } from './validators.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
 
@@ -33,7 +32,6 @@ export function computeArtefactPaths(featureName: string): ArtefactPaths {
 export async function abortSession(
   stateStore: IStateStore,
   git: IGitService,
-  _renderer: TerminalRenderer,
 ): Promise<never> {
   const ctx = await stateStore.load();
 

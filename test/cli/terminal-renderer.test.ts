@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TerminalRenderer, consoleWriter, fp } from '../../src/cli/terminal-renderer.js';
+import { TerminalRenderer, consoleWriter, PIPELINE_VERSION } from '../../src/cli/terminal-renderer.js';
 import type { TerminalWriter } from '../../src/cli/terminal-renderer.js';
 import type { PipelineContext } from '../../src/core/types.js';
 
@@ -45,30 +45,6 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     ...overrides,
   } as PipelineContext;
 }
-
-// ===========================================================================
-// fp
-// ===========================================================================
-
-describe('fp', () => {
-  it('returns string padded to max when short enough', () => {
-    const result = fp('hello', 10);
-    expect(result).toHaveLength(10);
-    expect(result).toBe('hello     ');
-  });
-
-  it('truncates with leading "..." when longer than max', () => {
-    const result = fp('this-is-a-very-long-string', 15);
-    expect(result).toHaveLength(15);
-    expect(result).toBe('...-long-string');
-  });
-
-  it('when longer than max, truncates body to max-3 then prepends "..."', () => {
-    const result = fp('abcdefghijklmno', 10);
-    expect(result).toHaveLength(10);
-    expect(result).toBe('...ijklmno');
-  });
-});
 
 // ===========================================================================
 // TerminalRenderer
@@ -155,7 +131,7 @@ describe('TerminalRenderer', () => {
       const w = makeWriter();
       new TerminalRenderer(w).banner(makeCtx());
       const out = w.logs.join('\n');
-      expect(out).toContain('v1.0.0');
+      expect(out).toContain(`v${PIPELINE_VERSION}`);
     });
 
     it('output contains ctx.specFileAbsPath', () => {

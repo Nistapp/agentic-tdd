@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import boxen from 'boxen';
 import { cwd } from 'node:process';
 
@@ -9,7 +10,8 @@ import {
 } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
 
-export const PIPELINE_VERSION = '1.0.0';
+const require = createRequire(import.meta.url);
+export const PIPELINE_VERSION: string = (require('../../package.json') as { version: string }).version;
 
 // ---------------------------------------------------------------------------
 // TerminalWriter — injected abstraction over console.*  (enables snapshot tests)
@@ -26,15 +28,6 @@ export const consoleWriter: TerminalWriter = {
   warn:  (msg) => console.warn(msg),
   error: (msg) => console.error(msg),
 };
-
-// ---------------------------------------------------------------------------
-// fp — path truncation utility (currently dead, retained for a future step)
-// ---------------------------------------------------------------------------
-
-export function fp(p: string, max: number): string {
-  if (p.length <= max) return p.padEnd(max);
-  return ('...' + p.slice(-(max - 3))).padEnd(max);
-}
 
 // ---------------------------------------------------------------------------
 // TerminalRenderer — all terminal presentation through one injectable class

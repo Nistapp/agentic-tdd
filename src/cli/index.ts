@@ -68,7 +68,7 @@ program
       }
 
       if (abort) {
-        await abortSession(stateStore, git, renderer);
+        await abortSession(stateStore, git);
       }
 
       await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION);
