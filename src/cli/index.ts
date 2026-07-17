@@ -6,26 +6,17 @@ import { cwd } from 'node:process';
 import { config as loadDotEnv } from 'dotenv';
 import { readFile } from 'node:fs/promises';
 
-import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { NodeFileSystem } from '../infrastructure/file-system.js';
 import { GitService } from '../infrastructure/git-service.js';
-import { CommandRunner } from '../infrastructure/command-runner.js';
-import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
-import { SelfCorrectionRunner } from '../core/runners/self-correction-runner.js';
-import { EventBus } from '../infrastructure/event-bus.js';
 import { JsonStateStore } from '../infrastructure/state-store.js';
-import { getStateFilePath, getOpencodeLogPath } from '../utils/paths.js';
+import { getStateFilePath } from '../utils/paths.js';
 import {
   PipelinePass,
-  PASS_LABELS,
   DEFAULT_MAX_CORRECTION_RETRIES,
 } from '../core/types.js';
-import type { PipelineContext, AgenticEvent } from '../core/types.js';
+import type { PipelineContext } from '../core/types.js';
 import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
-import { attachTerminalListener } from './terminal-event-listener.js';
-import type { PipelineConfig } from '../core/interfaces.js';
-import { createHitlHandler } from './hitl-handler.js';
-import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
+import { createPipelineServices } from './di-container.js';
 import { loggers } from '../utils/logger.js';
 
 process.on('uncaughtException', (err) => {
@@ -171,24 +162,13 @@ program
 
       renderer.banner(ctx);
 
-      const events = new EventBus();
-      attachTerminalListener(events, renderer, PIPELINE_VERSION);
-
-      const cmdRunner = new CommandRunner();
-      const hitlHandler = createHitlHandler(ctx);
-
-      const pipelineConfig: PipelineConfig = {
-        opencodeLogPath: getOpencodeLogPath(),
-        apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
-      };
-
-      const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
-
-      const selfCorrectionRunner = new SelfCorrectionRunner(
-        agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
-      );
-
-      const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
+      const { orchestrator } = createPipelineServices({
+        ctx,
+        fs,
+        git,
+        renderer,
+        version: PIPELINE_VERSION,
+      });
 
       try {
         await orchestrator.run(ctx, startPass);
@@ -310,24 +290,13 @@ program
     renderer.banner(ctx);
 
     // --- Wire DI ---
-    const events = new EventBus();
-    attachTerminalListener(events, renderer, PIPELINE_VERSION);
-
-    const cmdRunner = new CommandRunner();
-    const hitlHandler = createHitlHandler(ctx);
-
-    const pipelineConfig: PipelineConfig = {
-      opencodeLogPath: getOpencodeLogPath(),
-      apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
-    };
-
-    const agentRunner = new OpenCodeAgentRunner(fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner);
-
-    const selfCorrectionRunner = new SelfCorrectionRunner(
-      agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
-    );
-
-    const orchestrator = new PipelineOrchestrator(git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events, new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler);
+    const { orchestrator } = createPipelineServices({
+      ctx,
+      fs,
+      git,
+      renderer,
+      version: PIPELINE_VERSION,
+    });
 
     try {
       await orchestrator.run(ctx, PipelinePass.Design);
