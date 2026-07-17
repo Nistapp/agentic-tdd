@@ -222,4 +222,90 @@ describe('TerminalRenderer', () => {
       expect(w.errors.join('')).toContain('something went wrong');
     });
   });
+
+  describe('logAttemptCount', () => {
+    it('logs attempt count containing count number and "attempt"', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logAttemptCount(3);
+      expect(w.logs[0]).toContain('3');
+      expect(w.logs[0]).toContain('attempt');
+    });
+  });
+
+  describe('logChangedFiles', () => {
+    it('logs file list with status and filename', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logChangedFiles([{ status: 'M', file: 'foo.ts' }]);
+      const out = w.logs.join('\n');
+      expect(out).toContain('[M]');
+      expect(out).toContain('foo.ts');
+    });
+
+    it('logs nothing for empty files array', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logChangedFiles([]);
+      expect(w.logs.length).toBe(0);
+    });
+  });
+
+  describe('logNoChanges', () => {
+    it('logs "No files" message', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logNoChanges();
+      expect(w.logs[0]).toContain('No files');
+    });
+  });
+
+  describe('logTestStatus', () => {
+    it('logs the provided message', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logTestStatus('running tests');
+      expect(w.logs[0]).toContain('running tests');
+    });
+  });
+
+  describe('logCompaction', () => {
+    it('logs message with [compaction] prefix', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logCompaction('deleted error log');
+      expect(w.logs[0]).toContain('[compaction]');
+    });
+  });
+
+  describe('logWarnMessage', () => {
+    it('logs message with [WARN] prefix to w.log, not w.warn or w.error', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logWarnMessage('disk low');
+      expect(w.logs[0]).toContain('[WARN]');
+      expect(w.warns.length).toBe(0);
+      expect(w.errors.length).toBe(0);
+    });
+  });
+
+  describe('logErrorMessage', () => {
+    it('logs message with [FATAL] prefix to w.error, not w.log', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logErrorMessage('agent timeout');
+      expect(w.errors[0]).toContain('[FATAL]');
+      expect(w.logs.length).toBe(0);
+    });
+  });
+
+  describe('logPipelineComplete', () => {
+    it('output contains version and "all 8 passes" message', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logPipelineComplete('1.0.0');
+      const out = w.logs.join('\n');
+      expect(out).toContain('v1.0.0');
+      expect(out).toContain('all 8 passes');
+    });
+
+    it('routes output to w.log, not w.warn or w.error', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logPipelineComplete('1.0.0');
+      expect(w.logs.length).toBeGreaterThan(0);
+      expect(w.warns.length).toBe(0);
+      expect(w.errors.length).toBe(0);
+    });
+  });
 });

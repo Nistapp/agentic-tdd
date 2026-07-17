@@ -116,4 +116,54 @@ export class TerminalRenderer {
   gitInfo(msg: string): void {
     this.#w.log(`  [git]  ${msg}`);
   }
+
+  logAttemptCount(count: number): void {
+    this.#w.log(`  Completed in ${count} attempt(s).\n`);
+  }
+
+  logChangedFiles(files: ReadonlyArray<{ status: string; file: string }>): void {
+    if (files.length === 0) return;
+    this.#w.log(`  Files modified:`);
+    for (const f of files) {
+      this.#w.log(`    [${f.status}] ${f.file}`);
+    }
+    this.#w.log('');
+  }
+
+  logNoChanges(): void {
+    this.#w.log(`  No files were changed.\n`);
+  }
+
+  logTestStatus(msg: string): void {
+    this.#w.log(`  ${msg}`);
+  }
+
+  logCompaction(msg: string): void {
+    this.#w.log(`  [compaction]  ${msg}`);
+  }
+
+  logWarnMessage(msg: string): void {
+    this.#w.log(`  [WARN]  ${msg}`);
+  }
+
+  logErrorMessage(msg: string): void {
+    this.#w.error(`  [FATAL]  ${msg}`);
+  }
+
+  logPipelineComplete(version: string): void {
+    const body = [
+      `v${version} Pipeline complete — all 8 passes ran successfully.`,
+      '',
+      'Git:  7 atomic commits created (Passes 1–7).',
+      'Next: git log --oneline  to review the commit trail.',
+      '      Open a PR when satisfied.',
+    ].join('\n');
+    this.#w.log(
+      boxen(body, {
+        width:       this.#boxWidth,
+        borderStyle: 'single',
+        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+      }),
+    );
+  }
 }
