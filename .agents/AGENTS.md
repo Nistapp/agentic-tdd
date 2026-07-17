@@ -50,7 +50,6 @@ docs/
   roadmap.md
   debugging.md
 
-src/plan-to-refactor-orchestrator.md  # Active 10-step refactor plan
 ```
 
 ---
