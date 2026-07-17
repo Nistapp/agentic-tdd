@@ -108,6 +108,10 @@ export class TerminalRenderer {
     );
   }
 
+  log(msg: string): void {
+    this.#w.log(msg);
+  }
+
   fatal(msg: string): never {
     this.#w.error(`\n[FATAL]  ${msg}\n`);
     process.exit(1);

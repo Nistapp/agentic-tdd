@@ -196,6 +196,17 @@ describe('TerminalRenderer', () => {
     });
   });
 
+  describe('log', () => {
+    it('routes message to w.log', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).log('hello world');
+      expect(w.logs).toHaveLength(1);
+      expect(w.logs[0]).toBe('hello world');
+      expect(w.warns.length).toBe(0);
+      expect(w.errors.length).toBe(0);
+    });
+  });
+
   describe('fatal', () => {
     let exitSpy: ReturnType<typeof vi.spyOn>;
 
