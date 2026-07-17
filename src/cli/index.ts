@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
-import { resolve, join, basename, extname } from 'node:path';
+import { resolve, join } from 'node:path';
 import { cwd } from 'node:process';
 import { config as loadDotEnv } from 'dotenv';
-import { readFile } from 'node:fs/promises';
-
 import { NodeFileSystem } from '../infrastructure/file-system.js';
 import { GitService } from '../infrastructure/git-service.js';
 import { JsonStateStore } from '../infrastructure/state-store.js';
@@ -16,6 +14,7 @@ import {
 } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
 import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
+import { validateAndResolveOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
 import { loggers } from '../utils/logger.js';
 
@@ -29,19 +28,6 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-/**
- * Read the feature spec file at `specPath` and return its contents.
- * Exits immediately with a [FATAL] message if the file does not exist.
- */
-async function readSpecFile(specPath: string, renderer: TerminalRenderer): Promise<string> {
-  const abs = resolve(cwd(), specPath);
-  try {
-    return await readFile(abs, 'utf-8');
-  } catch {
-    renderer.fatal(`Spec file not found: '${abs}'`);
-    return ''; // unreachable
-  }
-}
 // ---------------------------------------------------------------------------
 // Utility: compute artefact paths
 // ---------------------------------------------------------------------------
@@ -85,7 +71,6 @@ program
   .option('--abort', 'Abort the active session and rewind Git history')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
-    const W = 68;
     // Load .env from CWD
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
 
@@ -187,75 +172,10 @@ program
       renderer.fatal('No active TDD session found. Nothing to resume or abort.');
     }
 
-    // -- New run: validate both required flags before doing any work
-    if (!options.featureDescFile) {
-      console.error('');
-      console.error('┌' + '─'.repeat(W) + '┐');
-      console.error('│  ✖  MISSING REQUIRED ARGUMENT: --feature-desc-file'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│  Point this flag at the markdown file that describes the      '.padEnd(W + 1) + '│');
-      console.error('│  feature you want the pipeline to implement.                  '.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│  Usage:'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│    agentic-tdd --feature-desc-file <path> --test-cmd <cmd>    '.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│  Examples:'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│    agentic-tdd --feature-desc-file specs/auth.md \\'.padEnd(W + 1) + '│');
-      console.error('│               --test-cmd "pytest"'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│    agentic-tdd --feature-desc-file specs/search.md \\'.padEnd(W + 1) + '│');
-      console.error('│               --test-cmd "npm test"'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('└' + '─'.repeat(W) + '┘');
-      console.error('');
-      process.exit(1);
-    }
-
-    // Resolve test command — required for the pipeline to know how to run tests
-    if (!options.testCmd) {
-      console.error('');
-      console.error('┌' + '─'.repeat(W) + '┐');
-      console.error('│  ✖  MISSING REQUIRED ARGUMENT: --test-cmd'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│  The test command is language-specific and must be provided   '.padEnd(W + 1) + '│');
-      console.error('│  explicitly so the pipeline knows how to run your test suite. '.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│  Examples by language / ecosystem:'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('│    Python  →  --test-cmd "pytest"'.padEnd(W + 1) + '│');
-      console.error('│    Python  →  --test-cmd "python -m pytest"'.padEnd(W + 1) + '│');
-      console.error('│    Node    →  --test-cmd "npm test"'.padEnd(W + 1) + '│');
-      console.error('│    Node    →  --test-cmd "npx vitest run"'.padEnd(W + 1) + '│');
-      console.error('│    Go      →  --test-cmd "go test ./..."'.padEnd(W + 1) + '│');
-      console.error('│    Java    →  --test-cmd "mvn test"'.padEnd(W + 1) + '│');
-      console.error('│    Java    →  --test-cmd "./gradlew test"'.padEnd(W + 1) + '│');
-      console.error('│    Ruby    →  --test-cmd "bundle exec rspec"'.padEnd(W + 1) + '│');
-      console.error('│    Rust    →  --test-cmd "cargo test"'.padEnd(W + 1) + '│');
-      console.error('│' + ' '.repeat(W) + '│');
-      console.error('└' + '─'.repeat(W) + '┘');
-      console.error('');
-      process.exit(1);
-    }
-
-    const skipHitl = Boolean(options.skipHitl);
-    const logLevel = String(options.logLevel ?? 'INFO');
-    const specFileAbsPath = resolve(cwd(), String(options.featureDescFile));
-    const baseBranch = options.baseBranch ? String(options.baseBranch) : undefined;
+    const opts = await validateAndResolveOptions(options, renderer);
     const sourceType = 'file';
 
-    // Read spec file — exits immediately if the file does not exist
-    const featureDescription = await readSpecFile(specFileAbsPath, renderer);
-
-
-    const testCmd = String(options.testCmd).split(/\s+/);
-
-    // Extract featureName from specFile
-    const featureName = basename(specFileAbsPath, extname(specFileAbsPath));
-
-    // Compute artefact paths
-    const paths = computeArtefactPaths(featureName);
+    const paths = computeArtefactPaths(opts.featureName);
 
     const git = new GitService();
     const originalBaseSha = await git.getCurrentCommitSha();
@@ -263,21 +183,21 @@ program
     // Ensure specs/ directory exists
     await fs.mkdir(paths.artefactDir);
 
-    console.log(`\n  Feature: ${featureName}`);
+    console.log(`\n  Feature: ${opts.featureName}`);
     console.log('  Agents will create/modify necessary files to implement the feature.\n');
 
     // --- Build pipeline context ---
     const ctx: PipelineContext = {
-      featureName,
-      testCmd,
-      skipHitl,
+      featureName: opts.featureName,
+      testCmd: opts.testCmd,
+      skipHitl: opts.skipHitl,
       maxCorrectionRetries: DEFAULT_MAX_CORRECTION_RETRIES,
       pipelineVersion: PIPELINE_VERSION,
       sourceType,
-      logLevel,
-      specFileAbsPath,
-      featureDescription,
-      baseBranch,
+      logLevel: opts.logLevel,
+      specFileAbsPath: opts.specFileAbsPath,
+      featureDescription: opts.featureDescription,
+      baseBranch: opts.baseBranch,
       originalBaseSha,
       ...paths,
     };
