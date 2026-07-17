@@ -19,11 +19,10 @@ import { getStateFilePath, getOpencodeLogPath } from '../utils/paths.js';
 import {
   PipelinePass,
   PASS_LABELS,
-  SELF_CORRECTION_PASSES,
-  GIT_COMMIT_PASSES,
   DEFAULT_MAX_CORRECTION_RETRIES,
 } from '../core/types.js';
 import type { PipelineContext, AgenticEvent } from '../core/types.js';
+import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
 import type { PipelineConfig } from '../core/interfaces.js';
 import type { HitlHandler } from '../core/orchestrator.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
@@ -39,97 +38,18 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-const PIPELINE_VERSION = '1.0.0';
-const W = 68;
-
-// ---------------------------------------------------------------------------
-// Terminal helpers — mirror Python _banner / _pass_header / _pass_ok / etc.
-// ---------------------------------------------------------------------------
-
-function banner(ctx: PipelineContext): void {
-  const testStr = ctx.testCmd.join(' ');
-  const hitl = ctx.skipHitl ? 'disabled (--skip-hitl)' : 'enabled';
-  const source = ctx.specFileAbsPath;
-  console.log('');
-  console.log('┌' + '─'.repeat(W) + '┐');
-  console.log(`│  agentic-tdd  •  v${PIPELINE_VERSION} Pipeline  •  8-Pass State Machine`.padEnd(W + 1) + '│');
-  console.log('└' + '─'.repeat(W) + '┘');
-  console.log('');
-  console.log(`  Input source : ${source}`);
-  console.log(`  Source type  : ${ctx.sourceType}`);
-  console.log(`  Test cmd     : ${testStr}`);
-  console.log(`  HITL gate    : ${hitl}`);
-  console.log(`  Max retries  : ${ctx.maxCorrectionRetries} (per guarded pass)`);
-  console.log(`  CWD          : ${cwd()}`);
-  console.log('');
-  const artefactsStr = 'specs/<feature>.mmd, specs/<feature>.gherkin (dynamic)';
-  console.log(`  Artefacts    : ${artefactsStr}`);
-  console.log('');
-  console.log('  Cache strategy: Static Prefix  +  Context Compaction');
-  console.log('');
-  console.log('  Pass schedule:');
-  const passes = [0, 1, 2, 3, 4, 5, 6, 7] as PipelinePass[];
-  for (const pass of passes) {
-    const label = PASS_LABELS[pass];
-    let gate = '  <- HITL gate';
-    if (SELF_CORRECTION_PASSES.has(pass)) gate = '  <- self-correction + git commit';
-    else if (GIT_COMMIT_PASSES.has(pass)) gate = '  <- git commit';
-    console.log(`    ${pass}  ${label.padEnd(36)}${gate}`);
-  }
-  console.log('');
-}
-
-function passHeader(label: string): void {
-  console.log('');
-  console.log('━'.repeat(W));
-  console.log(`  ${label}`);
-  console.log('━'.repeat(W));
-  console.log('');
-}
-
-function passOk(label: string): void {
-  console.log(`\n  ✓  ${label} — complete.\n`);
-}
-
-function warnBox(lines: string[]): void {
-  console.warn('');
-  console.warn('┌' + '─'.repeat(W) + '┐');
-  console.warn('│  ⚠  WARNING'.padEnd(W + 1) + '│');
-  console.warn('│' + ' '.repeat(W) + '│');
-  for (const line of lines) {
-    console.warn(('│  ' + line).padEnd(W + 1) + '│');
-  }
-  console.warn('│' + ' '.repeat(W) + '│');
-  console.warn('└' + '─'.repeat(W) + '┘');
-  console.warn('');
-}
-
-function fatal(msg: string): void {
-  console.error(`\n[FATAL]  ${msg}\n`);
-  process.exit(1);
-}
-
 /**
  * Read the feature spec file at `specPath` and return its contents.
  * Exits immediately with a [FATAL] message if the file does not exist.
  */
-async function readSpecFile(specPath: string): Promise<string> {
+async function readSpecFile(specPath: string, renderer: TerminalRenderer): Promise<string> {
   const abs = resolve(cwd(), specPath);
   try {
     return await readFile(abs, 'utf-8');
   } catch {
-    fatal(`Spec file not found: '${abs}'`);
-    return ''; // unreachable — fatal() calls process.exit(1)
+    renderer.fatal(`Spec file not found: '${abs}'`);
+    return ''; // unreachable
   }
-}
-
-function gitInfo(msg: string): void {
-  console.log(`  [git]  ${msg}`);
-}
-
-function fp(p: string, max: number): string {
-  if (p.length <= max) return p.padEnd(max);
-  return ('...' + p.slice(-(max - 3))).padEnd(max);
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +57,7 @@ function fp(p: string, max: number): string {
 // ---------------------------------------------------------------------------
 
 function createHitlHandler(ctx: PipelineContext): HitlHandler {
+  const W = 68;
   return async () => {
     const mmd = ctx.designMmdPath;
     const gh = ctx.specGherkinPath;
@@ -173,7 +94,8 @@ function createHitlHandler(ctx: PipelineContext): HitlHandler {
 // Terminal event listener — subscribes to EventBus for structured logging
 // ---------------------------------------------------------------------------
 
-function attachTerminalListener(events: EventBus): void {
+function attachTerminalListener(events: EventBus, renderer: TerminalRenderer): void {
+  const W = 68;
   events.on('PIPELINE_STARTED', (evt: AgenticEvent) => {
     loggers.core.info(`PIPELINE_STARTED: ${evt.message}`);
   });
@@ -186,12 +108,12 @@ function attachTerminalListener(events: EventBus): void {
       'pass-3-core-implementation-agent', 'pass-4-refactor-agent', 'pass-5-security-agent',
       'pass-6-observability-agent', 'pass-7-documentation-agent',
     ];
-    passHeader(`Pass ${p} -- ${label}  [${agents[p] ?? ''}]`);
+    renderer.passHeader(`Pass ${p} -- ${label}  [${agents[p] ?? ''}]`);
   });
 
   events.on('PASS_COMPLETED', (evt: AgenticEvent) => {
     const label = evt.pass !== undefined ? PASS_LABELS[evt.pass] : '';
-    passOk(`Pass ${evt.pass} -- ${label}`);
+    renderer.passOk(`Pass ${evt.pass} -- ${label}`);
 
     if (evt.payload) {
       if (evt.payload.attempts !== undefined) {
@@ -292,6 +214,8 @@ program
   .option('--resume', 'Resume an active Agentic TDD session')
   .option('--abort', 'Abort the active session and rewind Git history')
   .action(async (options: Record<string, unknown>) => {
+    const renderer = new TerminalRenderer();
+    const W = 68;
     // Load .env from CWD
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
 
@@ -305,11 +229,11 @@ program
     const abort = Boolean(options.abort);
 
     if (resume && abort) {
-      fatal('Cannot use --resume and --abort together.');
+      renderer.fatal('Cannot use --resume and --abort together.');
     }
 
     if (!process.env.OPENROUTER_API_KEY) {
-      fatal('OPENROUTER_API_KEY is not set.\n  Add it to your .env file:  OPENROUTER_API_KEY=sk-or-...');
+      renderer.fatal('OPENROUTER_API_KEY is not set.\n  Add it to your .env file:  OPENROUTER_API_KEY=sk-or-...');
     }
 
     const fs = new NodeFileSystem();
@@ -321,7 +245,7 @@ program
     // ---------------------------------------------------------------------
     if (stateExists) {
       if (!resume && !abort) {
-        fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
+        renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
       }
 
       if (abort) {
@@ -366,10 +290,10 @@ program
       const skipHitl = Boolean(ctx.skipHitl);
       const logLevel = String(ctx.logLevel ?? 'INFO');
 
-      banner(ctx);
+      renderer.banner(ctx);
 
       const events = new EventBus();
-      attachTerminalListener(events);
+      attachTerminalListener(events, renderer);
 
       const cmdRunner = new CommandRunner();
       const hitlHandler = createHitlHandler(ctx);
@@ -392,7 +316,7 @@ program
         await stateStore.delete();
         process.exit(0);
       } catch (err) {
-        fatal(err instanceof Error ? err.message : String(err));
+        renderer.fatal(err instanceof Error ? err.message : String(err));
       }
       return;
     }
@@ -401,7 +325,7 @@ program
     // Branch: No state file
     // ---------------------------------------------------------------------
     if (resume || abort) {
-      fatal('No active TDD session found. Nothing to resume or abort.');
+      renderer.fatal('No active TDD session found. Nothing to resume or abort.');
     }
 
     // -- New run: validate both required flags before doing any work
@@ -463,7 +387,7 @@ program
     const sourceType = 'file';
 
     // Read spec file — exits immediately if the file does not exist
-    const featureDescription = await readSpecFile(specFileAbsPath);
+    const featureDescription = await readSpecFile(specFileAbsPath, renderer);
 
 
     const testCmd = String(options.testCmd).split(/\s+/);
@@ -504,11 +428,11 @@ program
     console.log(`  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${getStateFilePath()}.\n`);
 
     // --- Display banner ---
-    banner(ctx);
+    renderer.banner(ctx);
 
     // --- Wire DI ---
     const events = new EventBus();
-    attachTerminalListener(events);
+    attachTerminalListener(events, renderer);
 
     const cmdRunner = new CommandRunner();
     const hitlHandler = createHitlHandler(ctx);
@@ -531,7 +455,7 @@ program
       await stateStore.delete();
       process.exit(0);
     } catch (err) {
-      fatal(err instanceof Error ? err.message : String(err));
+      renderer.fatal(err instanceof Error ? err.message : String(err));
     }
   });
 
