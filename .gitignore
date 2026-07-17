@@ -11,7 +11,7 @@ dist/
 
 # Pipeline artifacts (transient — deleted by Context Compaction on success)
 .opencode_error.log
-session*
+session-*
 
 # opencode internals
 .opencode/node_modules/
