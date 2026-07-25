@@ -72,6 +72,12 @@ export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
 /** Default max self-correction retries (3 retries → 4 total attempts per pass). */
 export const DEFAULT_MAX_CORRECTION_RETRIES = 3;
 
+/** Passes that trigger a human-in-the-loop gate for manual review. */
+export const HITL_GATE_PASSES = new Set<PipelinePass>([
+  PipelinePass.Design,
+  PipelinePass.TestGeneration,
+]);
+
 // ---------------------------------------------------------------------------
 // Input source type — matches Python --source-type flag
 // ---------------------------------------------------------------------------
@@ -91,7 +97,7 @@ export interface PipelineContext {
   /** Fully-resolved test command as an argv array. */
   testCmd: string[];
 
-  /** If true, skip the human-in-the-loop gate after Pass 0. */
+  /** If true, skip the human-in-the-loop gate after Pass 0 (Design) and Pass 2 (TestGeneration). */
   skipHitl: boolean;
 
   /** Maximum additional self-correction attempts (default 3 → 4 total). */
@@ -201,6 +207,11 @@ export interface GitCommitResult {
 export interface FileChange {
   status: string;
   file: string;
+}
+
+export interface HitlPayload {
+  files?: FileChange[];
+  [k: string]: unknown;
 }
 
 export interface PassCompletedPayload {
