@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, ISelfCorrectionRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
-import type { PipelineContext, AgenticEvent, AgentRunRequest } from './types.js';
+import type { PipelineContext, AgenticEvent, AgentRunRequest, FileChange } from './types.js';
 import {
   PipelinePass,
   PASS_LABELS,
   GIT_COMMIT_PASSES,
 } from './types.js';
-import type { PassCompletedPayload } from './types.js';
+import type { PassCompletedPayload, HitlPayload } from './types.js';
 // DEFERRED: StateFile — see docs/statefile-design.md
 
 import { sanitizeLogPayload } from './log-sanitizer.js';
@@ -16,7 +16,7 @@ import { getAgentContextPayload, buildArtefacts } from './runners/shared.js';
 // PipelineOrchestrator — Pure-DI 8-pass state machine
 // ---------------------------------------------------------------------------
 
-export type HitlHandler = () => Promise<void>;
+export type HitlHandler = (pass?: PipelinePass, files?: FileChange[]) => Promise<void>;
 
 export class PipelineOrchestrator {
   readonly #git: IGitService;
@@ -84,12 +84,7 @@ export class PipelineOrchestrator {
         await this.#runPass0(ctx);
 
         if (!ctx.skipHitl) {
-          this.#emit(
-            'HITL_REQUIRED',
-            `Review ${ctx.designMmdPath} and ${ctx.specGherkinPath} before proceeding.`,
-            ctx, //TODO: we should probably print ctx when debug is turned on
-          );
-          await this.#onHitl(); //TODO: We need to commit final to git and create the 'state file' for resume ?
+          await this.#awaitHitl(ctx, PipelinePass.Design, []);
         }
       }
 
@@ -109,8 +104,12 @@ export class PipelineOrchestrator {
         ctx.currentPass = PipelinePass.TestGeneration;
         ctx.currentAttempt = 1;
         this.#passLogger = this.#childLogger(ctx, PipelinePass.TestGeneration, 1);
-        await this.#runPass2(ctx);
-        await this.#maybeCommitTestFile(ctx);
+        const pass2Files = await this.#runPass2(ctx);
+        await this.#maybeCommit(ctx);
+
+        if (!ctx.skipHitl) {
+          await this.#awaitHitl(ctx, PipelinePass.TestGeneration, pass2Files);
+        }
       }
 
       // Pass 3 — Core Implementation
@@ -193,7 +192,7 @@ export class PipelineOrchestrator {
     await this.#ensureNonEmptyArtefacts(ctx);
   }
 
-  async #runSimplePass(ctx: PipelineContext): Promise<void> {
+  async #runSimplePass(ctx: PipelineContext): Promise<FileChange[]> {
     this.#emitPassStarted(ctx);
     this.#passLogger.info(`Entering Pass ${ctx.currentPass} [Attempt 1]`);
     const prompt = getAgentContextPayload(ctx);
@@ -207,16 +206,17 @@ export class PipelineOrchestrator {
     await this.#agentRunner.execute(agentRequest);
     const changes = await this.#git.getPendingChanges();
     this.#emitPassCompleted(ctx, { files: changes });
+    return changes;
   }
 
-  async #runPass1(ctx: PipelineContext): Promise<void> {
+  async #runPass1(ctx: PipelineContext): Promise<FileChange[]> {
     //TODO: where are we doing git commit or writing to Statefile ?
-    await this.#runSimplePass(ctx);
+    return await this.#runSimplePass(ctx);
   }
 
-  async #runPass2(ctx: PipelineContext): Promise<void> {
+  async #runPass2(ctx: PipelineContext): Promise<FileChange[]> {
     //REMARK: Looks like Statefile has not been implemented at all
-    await this.#runSimplePass(ctx);
+    return await this.#runSimplePass(ctx);
   }
 
   async #runPass3(ctx: PipelineContext): Promise<void> {
@@ -269,12 +269,23 @@ export class PipelineOrchestrator {
     );
   }
 
-  async #maybeCommitTestFile(ctx: PipelineContext): Promise<void> {
+  async #maybeCommitHumanEdits(ctx: PipelineContext, pass: PipelinePass): Promise<void> {
+    if (!(await this.#git.isDirty())) return;
+    const changes = await this.#git.getPendingChanges();
+    const fileList = changes.map((c) => `  [${c.status}] ${c.file}`).join('\n');
+    this.#passLogger.info(`HITL human edits detected for Pass ${pass}:\n${fileList}`);
     await this.#git.commit(
       ['.'],
-      `chore(ai): completed Pass ${PipelinePass.TestGeneration} -- ${PASS_LABELS[PipelinePass.TestGeneration]}`,
+      `chore(human): user refinements after Pass ${pass} -- ${PASS_LABELS[pass]} HITL`,
     );
-  } // TODO: Check if this is even required once we fix the issues of git commit and statefile. We do not need to generate if tests already exist.
+  }
+
+  async #awaitHitl(ctx: PipelineContext, pass: PipelinePass, files: FileChange[]): Promise<void> {
+    const payload: HitlPayload = { files };
+    this.#emit('HITL_REQUIRED', `Review generated artefacts for Pass ${pass} before proceeding.`, ctx, payload);
+    await this.#onHitl(pass, files);
+    await this.#maybeCommitHumanEdits(ctx, pass);
+  }
 
   async #ensureNonEmptyArtefacts(ctx: PipelineContext): Promise<void> {
     const mmdContent = (await this.#fs.readFile(ctx.designMmdPath)).trim();
