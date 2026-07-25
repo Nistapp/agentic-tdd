@@ -3,7 +3,8 @@ import {
   createHitlHandler,
   type ReadlineFactory,
 } from '../../src/cli/hitl-handler.js';
-import type { PipelineContext } from '../../src/core/types.js';
+import type { PipelineContext, FileChange } from '../../src/core/types.js';
+import { PipelinePass } from '../../src/core/types.js';
 
 function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
   return {
@@ -22,9 +23,8 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     designMmdPath: '/workspace/specs/auth.mmd',
     specGherkinPath: '/workspace/specs/auth.gherkin',
     errorLogPath: '/workspace/specs/.opencode_error.log',
-    testFilePath: '/workspace/test/auth.test.ts',
     ...overrides,
-  } as PipelineContext;
+  };
 }
 
 function makeRl(onQuestion: (s: string) => void): ReadlineFactory {
@@ -122,5 +122,66 @@ describe('createHitlHandler', () => {
   it('defaults readline and write to node built-ins when not injected', () => {
     const handler = createHitlHandler(makeCtx());
     expect(typeof handler).toBe('function');
+  });
+});
+
+describe('createHitlHandler — Pass 2 (TestGeneration)', () => {
+  it('outputs the gate box with file list for TestGeneration', async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {});
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    await handler(PipelinePass.TestGeneration, [
+      { status: 'A', file: 'test/auth/login.test.ts' },
+      { status: 'A', file: 'test/auth/token.test.ts' },
+    ]);
+
+    const combined = writes.join('\n');
+
+    expect(combined).toContain('HUMAN-IN-THE-LOOP GATE (After Pass 2: Test Generation)');
+    expect(combined).toContain('test/auth/login.test.ts');
+    expect(combined).toContain('test/auth/token.test.ts');
+    expect(combined).toContain('advance to Pass 3 (Core Implementation)');
+    expect(combined).toContain('Test suite approved');
+  });
+
+  it('does NOT contain "After Pass 3" (numbered with enum value, not 1-based)', async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {});
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    await handler(PipelinePass.TestGeneration, []);
+
+    const combined = writes.join('\n');
+    expect(combined).not.toContain('After Pass 3');
+    expect(combined).toContain('After Pass 2');
+  });
+
+  it('shows "(No files detected)" when file list is empty', async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {});
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    await handler(PipelinePass.TestGeneration, []);
+
+    const combined = writes.join('\n');
+    expect(combined).toContain('No files detected');
+  });
+
+  it('shows Pass 0 design gate when called with no arguments (back-compat)', async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {});
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    await handler();
+
+    const combined = writes.join('\n');
+    expect(combined).toContain('HUMAN-IN-THE-LOOP GATE (After Pass 0)');
+    expect(combined).toContain('Mermaid diagram');
+    expect(combined).toContain('Gherkin spec');
   });
 });

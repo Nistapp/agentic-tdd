@@ -1,8 +1,10 @@
 import { PipelineOrchestrator } from '../src/core/orchestrator.js';
+import type { HitlHandler } from '../src/core/orchestrator.js';
 import { PipelinePass, SELF_CORRECTION_PASSES } from '../src/core/types.js';
 import type {
   PipelineContext,
   AgenticEvent,
+  FileChange,
 } from '../src/core/types.js';
 import type {
   IGitService,
@@ -86,7 +88,7 @@ interface Mocks {
   events: IEventBus;
   config: PipelineConfig;
   logger: StubLogger;
-  hitl: () => Promise<void>;
+  hitl: HitlHandler;
   emittedEvents: AgenticEvent[];
 }
 
@@ -229,8 +231,72 @@ describe('PipelineOrchestrator', () => {
 
       await orch.run(makeContext({ skipHitl: false }));
 
-      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED')).toHaveLength(1);
-      expect(m.hitl).toHaveBeenCalledTimes(1);
+      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED')).toHaveLength(2);
+      expect(m.hitl).toHaveBeenCalledTimes(2);
+    });
+
+    it('calls hitl handler with correct pass and files for Pass 0 and Pass 2', async () => {
+      const m = makeMocks();
+      const testFiles: FileChange[] = [
+        { status: 'A', file: 'test/foo.test.ts' },
+        { status: 'A', file: 'test/bar.test.ts' },
+      ];
+      (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: false }));
+
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.Design, []);
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.TestGeneration, testFiles);
+    });
+
+    it('creates human commit when git is dirty after HITL for Pass 2', async () => {
+      const m = makeMocks();
+      (m.git.isDirty as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+      (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'M', file: 'test/foo.test.ts' },
+      ]);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: false }));
+
+      const humanCommit = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call: unknown[]) => (call[1] as string).includes('chore(human)'),
+      );
+      expect(humanCommit).toBeTruthy();
+    });
+
+    it('does NOT create human commit when git is clean after HITL', async () => {
+      const m = makeMocks();
+      (m.git.isDirty as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: false }));
+
+      const humanCommits = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (call: unknown[]) => (call[1] as string).includes('chore(human)'),
+      );
+      expect(humanCommits).toHaveLength(0);
+    });
+
+    it('commits AI test files before calling hitl handler for Pass 2', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const ctx = makeContext({ skipHitl: false });
+
+      await orch.run(ctx);
+
+      const calls = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls;
+      const pass2AiCommitIndex = calls.findIndex(
+        (call: unknown[]) => (call[1] as string).includes('completed Pass 2'),
+      );
+      const hitlCalls = (m.hitl as ReturnType<typeof vi.fn>).mock.calls;
+      const pass2HitlIndex = hitlCalls.findIndex(
+        (call: unknown[]) => call[0] === PipelinePass.TestGeneration,
+      );
+
+      expect(pass2AiCommitIndex).not.toBe(-1);
+      expect(pass2HitlIndex).not.toBe(-1);
     });
 
     it('includes design artefact, Gherkin spec, and spec file in Pass 0 agent request', async () => {
