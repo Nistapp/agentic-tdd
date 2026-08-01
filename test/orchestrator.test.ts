@@ -39,6 +39,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     designMmdPath: `${specsDir}/my_module.mmd`,
     specGherkinPath: `${specsDir}/my_module.gherkin`,
     errorLogPath: `${srcDir}/.opencode_error.log`,
+    history: {},
     ...overrides,
   };
 }
@@ -162,7 +163,7 @@ describe('PipelineOrchestrator', () => {
   describe('Happy Path — all 8 passes succeed', () => {
     it('calls agentRunner.execute for non-guarded passes and delegates to selfCorrectionRunner for guarded ones', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx);
@@ -176,7 +177,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits PIPELINE_STARTED and PIPELINE_COMPLETED', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -187,7 +188,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits PASS_STARTED and PASS_COMPLETED for non-guarded passes (0, 1, 2)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
       console.log(m.emittedEvents.filter(e => e.kind === 'PASS_STARTED').map(e => e.pass));
@@ -198,7 +199,7 @@ describe('PipelineOrchestrator', () => {
 
     it('delegates to selfCorrectionRunner for each self-correction pass', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -208,7 +209,7 @@ describe('PipelineOrchestrator', () => {
 
     it('calls git.commit for passes 1–7 (7 commits)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -218,7 +219,7 @@ describe('PipelineOrchestrator', () => {
 
     it('does NOT emit HITL_REQUIRED when skipHitl is true', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -227,7 +228,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits HITL_REQUIRED and calls hitl handler when skipHitl is false', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -242,7 +243,7 @@ describe('PipelineOrchestrator', () => {
         { status: 'A', file: 'test/bar.test.ts' },
       ];
       (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -256,7 +257,7 @@ describe('PipelineOrchestrator', () => {
       (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'M', file: 'test/foo.test.ts' },
       ]);
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -269,7 +270,7 @@ describe('PipelineOrchestrator', () => {
     it('does NOT create human commit when git is clean after HITL', async () => {
       const m = makeMocks();
       (m.git.isDirty as ReturnType<typeof vi.fn>).mockResolvedValue(false);
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -281,7 +282,7 @@ describe('PipelineOrchestrator', () => {
 
     it('commits AI test files before calling hitl handler for Pass 2', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: false });
 
       await orch.run(ctx);
@@ -301,7 +302,7 @@ describe('PipelineOrchestrator', () => {
 
     it('includes design artefact, Gherkin spec, and spec file in Pass 0 agent request', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -318,7 +319,7 @@ describe('PipelineOrchestrator', () => {
 
     it('characterization: event kind sequence for full 8-pass happy path', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -341,7 +342,7 @@ describe('PipelineOrchestrator', () => {
     it('runs Pass 0 and handles design artefacts', async () => {
       const m = makeMocks();
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -358,7 +359,7 @@ describe('PipelineOrchestrator', () => {
   describe('Self-Correction delegation', () => {
     it('delegates to selfCorrectionRunner for passes 3-7, which handles the loop internally', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -374,7 +375,7 @@ describe('PipelineOrchestrator', () => {
         new Error('FAILED after 4 attempt(s). The test suite still fails after 3 self-correction retries.'),
       );
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await expect(
         orch.run(makeContext({ skipHitl: true, maxCorrectionRetries: 3 })),
@@ -387,7 +388,7 @@ describe('PipelineOrchestrator', () => {
   describe('Event payload accuracy', () => {
     it('passes currentPass and passLabel on every event', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -402,7 +403,7 @@ describe('PipelineOrchestrator', () => {
   describe('Pass 2 commits all changes', () => {
     it('commits all changes after Pass 2 completes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -417,7 +418,7 @@ describe('PipelineOrchestrator', () => {
   describe('Rebase Pattern — resume with startPass', () => {
     it('runs only passes from startPass onwards (Pass 3 resume)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.CoreImplementation); // start at Pass 3
@@ -430,7 +431,7 @@ describe('PipelineOrchestrator', () => {
 
     it('runs only Pass 7 when starting at Documentation', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.selfCorrectionRunner, m.events, m.logger, m.config, undefined, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.Documentation);

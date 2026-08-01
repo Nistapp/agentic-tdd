@@ -69,6 +69,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     designMmdPath: `${specsDir}/my_module.mmd`,
     specGherkinPath: `${specsDir}/my_module.gherkin`,
     errorLogPath: `${srcDir}/.opencode_error.log`,
+    history: {},
     currentPass: PipelinePass.CoreImplementation,
     currentAttempt: 1,
     runId: 'test-run-id',

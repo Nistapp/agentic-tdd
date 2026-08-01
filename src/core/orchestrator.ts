@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, ISelfCorrectionRunner, IEventBus, ILogger, PipelineConfig } from './interfaces.js';
+import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, ISelfCorrectionRunner, IEventBus, ILogger, IStateStore, PipelineConfig } from './interfaces.js';
 import type { PipelineContext, AgenticEvent, AgentRunRequest, FileChange } from './types.js';
 import {
   PipelinePass,
   PASS_LABELS,
   GIT_COMMIT_PASSES,
 } from './types.js';
-import type { PassCompletedPayload, HitlPayload } from './types.js';
-// DEFERRED: StateFile — see docs/statefile-design.md
+import type { PassCompletedPayload, HitlPayload, PassHistory } from './types.js';
 
 import { sanitizeLogPayload } from './log-sanitizer.js';
 import { getAgentContextPayload, buildArtefacts } from './runners/shared.js';
@@ -27,6 +26,7 @@ export class PipelineOrchestrator {
   readonly #events: IEventBus;
   readonly #logger: ILogger;
   readonly #config: PipelineConfig;
+  readonly #stateStore: IStateStore | undefined;
   readonly #onHitl: HitlHandler;
   #passLogger: ILogger;
 
@@ -39,6 +39,7 @@ export class PipelineOrchestrator {
     events: IEventBus,
     logger: ILogger,
     config: PipelineConfig,
+    stateStore?: IStateStore,
     onHitl: HitlHandler = () => Promise.resolve(),
   ) {
     this.#git = git;
@@ -49,6 +50,7 @@ export class PipelineOrchestrator {
     this.#events = events;
     this.#logger = logger;
     this.#config = config;
+    this.#stateStore = stateStore;
     this.#onHitl = onHitl;
     this.#passLogger = logger;
   }
@@ -69,6 +71,7 @@ export class PipelineOrchestrator {
     this.#emit('PIPELINE_STARTED', `Starting pipeline v${ctx.pipelineVersion}`, ctx);
 
     ctx.runId = randomUUID();
+    ctx.history = ctx.history ?? {};
 
     try {
       // Clean up any stale error log from a previous failed run
@@ -83,20 +86,23 @@ export class PipelineOrchestrator {
         this.#passLogger = this.#childLogger(ctx, PipelinePass.Design, 1);
         await this.#runPass0(ctx);
 
+        await this.#savePassState(ctx, 'completed', [
+          ctx.designMmdPath,
+          ctx.specGherkinPath,
+        ]);
+
         if (!ctx.skipHitl) {
           await this.#awaitHitl(ctx, PipelinePass.Design, []);
         }
       }
 
       // Pass 1 — Contracts, commit target
-      if (startPass <= PipelinePass.Contracts) { //check if we are saving startPass to file. Consider renaming this variable.
+      if (startPass <= PipelinePass.Contracts) {
         ctx.currentPass = PipelinePass.Contracts;
         ctx.currentAttempt = 1;
         this.#passLogger = this.#childLogger(ctx, PipelinePass.Contracts, 1);
-        await this.#runPass1(ctx); // TODO: what does ctx contain ?
-        await this.#maybeCommit(ctx); //Review: why maybe ? In what situation will we not have git commit ?
-        // TODO: not sure if we decided to implement a state file. If so, I will assume that we need to write something to statefile.
-        //        This state file need not be committed to git I think.
+        await this.#runPass1(ctx);
+        await this.#maybeCommit(ctx);
       }
 
       // Pass 2 — Test generation, commit test file
@@ -160,6 +166,14 @@ export class PipelineOrchestrator {
       this.#emit('PIPELINE_COMPLETED', 'All 8 passes completed successfully.', ctx);
       return true;
     } catch (err) {
+      if (ctx.currentPass !== undefined) {
+        await this.#savePassState(
+          ctx,
+          'failed',
+          [],
+          err instanceof Error ? err.message : String(err),
+        );
+      }
       this.#emit('ERROR', err instanceof Error ? err.message : String(err), ctx);
       throw err;
     }
@@ -210,12 +224,10 @@ export class PipelineOrchestrator {
   }
 
   async #runPass1(ctx: PipelineContext): Promise<FileChange[]> {
-    //TODO: where are we doing git commit or writing to Statefile ?
     return await this.#runSimplePass(ctx);
   }
 
   async #runPass2(ctx: PipelineContext): Promise<FileChange[]> {
-    //REMARK: Looks like Statefile has not been implemented at all
     return await this.#runSimplePass(ctx);
   }
 
@@ -260,13 +272,51 @@ export class PipelineOrchestrator {
     this.#emit('PASS_COMPLETED', `Completed Pass ${ctx.currentPass}`, ctx, payload);
   }
 
+  async #savePassState(
+    ctx: PipelineContext,
+    status: PassHistory['status'],
+    files: string[],
+    lastError?: string,
+  ): Promise<void> {
+    if (!this.#stateStore) return;
+
+    const pass = ctx.currentPass!;
+    const existing = ctx.history[pass];
+    ctx.history[pass] = {
+      status,
+      filesTouched: files,
+      attempts: ctx.currentAttempt ?? 1,
+      commitHash: existing?.commitHash,
+      lastError,
+    };
+    await this.#stateStore.save(ctx);
+  }
+
   async #maybeCommit(ctx: PipelineContext): Promise<void> {
     const pass = ctx.currentPass!;
     if (!GIT_COMMIT_PASSES.has(pass)) return;
+
+    const filesTouched = await this.#git.getPendingChanges();
+
+    await this.#savePassState(ctx, 'completed', filesTouched.map((c) => c.file));
+
+    const stagePaths = ['.'];
+    if (this.#stateStore) {
+      stagePaths.push(this.#stateStore.path);
+    }
     await this.#git.commit(
-      ['.'],
+      stagePaths,
       `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]}`,
     );
+
+    if (this.#stateStore) {
+      const headHash = await this.#git.getCurrentCommitSha();
+      const entry = ctx.history[pass];
+      if (entry) {
+        entry.commitHash = headHash;
+      }
+      await this.#stateStore.save(ctx);
+    }
   }
 
   async #maybeCommitHumanEdits(ctx: PipelineContext, pass: PipelinePass): Promise<void> {
