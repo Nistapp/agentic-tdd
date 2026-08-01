@@ -8,31 +8,31 @@ import { getStateFilePath } from '../utils/paths.js';
 export class JsonStateStore implements IStateStore {
   readonly #fs: IFileSystem;
   readonly #workDir: string;
+  readonly path: string;
 
-  constructor(fs: IFileSystem, workDir?: string) {
+  constructor(fs: IFileSystem, featureName: string, workDir?: string) {
     this.#fs = fs;
     this.#workDir = workDir ?? cwd();
+    this.path = getStateFilePath(featureName, this.#workDir);
   }
 
   async save(ctx: PipelineContext): Promise<void> {
-    const path = getStateFilePath(this.#workDir);
-    await this.#fs.mkdir(dirname(path));
-    await this.#fs.writeFile(path, JSON.stringify(ctx, null, 2));
+    const tmp = this.path + '.tmp';
+    await this.#fs.mkdir(dirname(this.path));
+    await this.#fs.writeFile(tmp, JSON.stringify(ctx, null, 2));
+    await this.#fs.renameFile(tmp, this.path);
   }
 
   async load(): Promise<PipelineContext> {
-    const path = getStateFilePath(this.#workDir);
-    const raw = await this.#fs.readFile(path);
+    const raw = await this.#fs.readFile(this.path);
     return JSON.parse(raw) as PipelineContext;
   }
 
   async delete(): Promise<void> {
-    const path = getStateFilePath(this.#workDir);
-    await this.#fs.deleteFile(path);
+    await this.#fs.deleteFile(this.path);
   }
 
   async exists(): Promise<boolean> {
-    const path = getStateFilePath(this.#workDir);
-    return this.#fs.exists(path);
+    return this.#fs.exists(this.path);
   }
 }
