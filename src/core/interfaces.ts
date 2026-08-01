@@ -147,10 +147,13 @@ export interface IEventBus {
 }
 
 // ---------------------------------------------------------------------------
-// IStateStore — persistence for pipeline session state (DEFERRED)
+// IStateStore — persistence for pipeline session state
 // ---------------------------------------------------------------------------
 
 export interface IStateStore {
+  /** Absolute path to the state file managed by this store. */
+  readonly path: string;
+
   save(ctx: PipelineContext): Promise<void>;
   load(): Promise<PipelineContext>;
   delete(): Promise<void>;

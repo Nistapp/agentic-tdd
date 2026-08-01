@@ -85,6 +85,23 @@ export const HITL_GATE_PASSES = new Set<PipelinePass>([
 export type SourceType = 'file' | 'string' | 'github';
 
 // ---------------------------------------------------------------------------
+// PassHistory — append-only record of per-pass progress, files, and errors
+// ---------------------------------------------------------------------------
+
+export interface PassHistory {
+  status: 'completed' | 'failed' | 'aborted';
+  filesTouched: string[];
+  attempts: number;
+  lastError?: string;
+  /**
+   * The commit hash is only known after the git commit. It is written to the
+   * state file immediately post-commit (dirty in working tree) and committed
+   * as part of the next pass's atomic commit.
+   */
+  commitHash?: string;
+}
+
+// ---------------------------------------------------------------------------
 // PipelineContext — the state object threaded through every pass
 // ---------------------------------------------------------------------------
 
@@ -136,6 +153,13 @@ export interface PipelineContext {
   runId?: string;
   currentPass?: PipelinePass;
   currentAttempt?: number;
+
+  /**
+   * Append-only history indexed by Pass number (0-7).
+   * Initialised as `{}` at the start of `PipelineOrchestrator.run()`.
+   * Populated after each pass completes or fails.
+   */
+  history: Partial<Record<PipelinePass, PassHistory>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,6 +245,16 @@ export interface PassCompletedPayload {
 }
 
 // ---------------------------------------------------------------------------
+// ContextFiles — categorised source files for agent context injection
+// ---------------------------------------------------------------------------
+
+export interface ContextFiles {
+  contracts: string[];
+  tests: string[];
+  implementation: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Agent runner DTOs — the seam between orchestrator and agent invocations
 // ---------------------------------------------------------------------------
 
@@ -229,6 +263,7 @@ export interface AgentArtefacts {
   specGherkin?: string;
   specFile?: string;
   errorLog?: string;
+  contextFiles?: ContextFiles;
 }
 
 export interface AgentRunRequest {

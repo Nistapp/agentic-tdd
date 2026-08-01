@@ -1,8 +1,18 @@
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
-export function getStateFilePath(workDir?: string): string {
-  return join(workDir ?? cwd(), '.opencode', 'active-run.json');
+export function sanitizeFilename(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9._/-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+export function getStateFilePath(featureName: string, workDir?: string): string {
+  const safe = sanitizeFilename(featureName);
+  return join(workDir ?? cwd(), '.opencode', `state-${safe}.json`);
 }
 
 export function getLogDir(workDir?: string): string {
