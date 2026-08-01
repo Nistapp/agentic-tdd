@@ -119,13 +119,21 @@ stateDiagram-v2
 ```
 
 
-### Three Cost-Critical Invariants
+### Summary of problems addressed
 
-| Invariant | What it does |
-|---|---|
-| **Static Prefix** | Files are attached in a locked order (`design.mmd` → `spec.gherkin` → source code). Every pass shares the same cacheable prefix → ~90% discount on input tokens. |
-| **Context Compaction** | Error logs are written to `.opencode_error.log`, then deleted the moment tests pass. No debugging context bleeds across passes. |
-| **Single-Model Lock** | Model is declared in each agent's YAML frontmatter — never overridden by the orchestrator. Cache pool stays intact. |
+| Problem                                    | Coverage by harness | Harness coverage / mechanism                                                                | Notes                                                                   |
+| ------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Reliability & failure rates                | Partially           | Deterministic sandboxing, strict pass gates, atomic commits, model routing, quota controls. | Reduces blast radius and improves recovery, but model errors still exist.    |
+| Code quality & maintainability             | Yes                 | 8-pass pipeline, TDD, refactor pass, scope guardrails, atomic commits.                      | Directly targets spaghetti code and unreadable cross-cutting changes.        |
+| Specification drift                        | Planned                 | Artifact-driven development, mandatory spec sync, Pass 7 documentation sync.                | Specs are treated as source of truth and kept in lockstep with code.         |
+| Security vulnerabilities                   | Partially/Ongoing           | Security pass, DLP/PII masking, Semgrep hard-fail gates.                                    | Strong baseline, but deeper whole-repo analysis is still needed.             |
+| Architectural / legacy context             | Partially           | codebase-memory-mcp (or similar MCP based semantic indexing), Pass 0 context retrieval, human approval of design artifacts.      | Improves codebase awareness, but large refactors still need human oversight. |
+| Process bottlenecks / duplicate PRs        | Partially           | Atomic commits per pass, existing-context retrieval, CI gates before PR.                    | Helps review flow, but approval latency remains a tradeoff.                  |
+| Observability & auditability               | Yes                 | Central telemetry, traceability links between code, tests, diagrams, and commits.           | Useful for compliance, debugging, and post-incident analysis.                |
+| Benchmarking / measurement                 | No                  | No formal held-out benchmark or acceptance metric defined in the framework.                 | Needs explicit internal evals and pass/fail thresholds.                      |
+| Prompt injection / agent scope creep       | Yes                 | XML prompts, strict scope locking, write permissions by pass.                               | Strong guardrail against agent trampling and instruction leakage.            |
+| Semantic correctness / hidden logic errors | Partially           | Executable specs plus TDD and repeated verification gates.                                  | Better than ad-hoc coding, but still depends on test quality.                |
+| Org rollout / pilot-to-production gap      | Partially           | Budgeting, model independence, workflow governance.                                         | Helps scale technically, but change management is still external.            |
 
 ---
 
@@ -162,8 +170,11 @@ npm link
 ### 4. Configure your API key
 
 ```bash
-cp .env.example .env
+$ cp .env.example .env
 # Edit .env and add your OPENROUTER_API_KEY
+# something like "export OPENROUTER_API_KEY=sk-or-v1-............................."
+
+$ source .env
 ```
 
 ### 6. Run against your own file
