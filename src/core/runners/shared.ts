@@ -1,7 +1,11 @@
 import type { PipelineContext, AgentArtefacts } from '../types.js';
 import type { IFileSystem, ILogger } from '../interfaces.js';
+import { buildContextFiles } from '../context-builder.js';
 
 export function getAgentContextPayload(ctx: PipelineContext, meta: Record<string, unknown> = {}): string {
+  const currentPass = ctx.currentPass;
+  const contextFiles = currentPass !== undefined ? buildContextFiles(ctx, currentPass) : { contracts: [], tests: [], implementation: [] };
+
   const payload = {
     featureName: ctx.featureName,
     featureDescription: ctx.featureDescription,
@@ -11,6 +15,7 @@ export function getAgentContextPayload(ctx: PipelineContext, meta: Record<string
       specGherkin: ctx.specGherkinPath,
       errorLog: ctx.errorLogPath,
     },
+    contextFiles,
     meta,
   };
   return JSON.stringify(payload, null, 2);
@@ -43,6 +48,10 @@ export async function buildArtefacts(
   }
   if (errorLog) {
     artefacts.errorLog = errorLog;
+  }
+
+  if (ctx.currentPass !== undefined) {
+    artefacts.contextFiles = buildContextFiles(ctx, ctx.currentPass);
   }
 
   return artefacts;
