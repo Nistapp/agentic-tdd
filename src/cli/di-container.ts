@@ -14,7 +14,7 @@ import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
 import { loggers } from '../utils/logger.js';
 
-import type { PipelineConfig, IFileSystem, IGitService } from '../core/interfaces.js';
+import type { PipelineConfig, IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import type { PipelineContext } from '../core/types.js';
 import type { TerminalRenderer } from './terminal-renderer.js';
 
@@ -27,6 +27,7 @@ export interface ContainerOptions {
   git: IGitService;
   renderer: TerminalRenderer;
   version: string;
+  stateStore?: IStateStore;
 }
 
 export interface PipelineServices {
@@ -34,7 +35,7 @@ export interface PipelineServices {
 }
 
 export function createPipelineServices(opts: ContainerOptions): PipelineServices {
-  const { ctx, fs, git, renderer, version } = opts;
+  const { ctx, fs, git, renderer, version, stateStore } = opts;
 
   const events = new EventBus();
   attachTerminalListener(events, renderer, version);
@@ -57,7 +58,7 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
 
   const orchestrator = new PipelineOrchestrator(
     git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events,
-    new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler,
+    new PinoLoggerAdapter(loggers.core), pipelineConfig, stateStore, hitlHandler,
   );
 
   return { orchestrator };

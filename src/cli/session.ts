@@ -4,7 +4,6 @@ import { cwd } from 'node:process';
 import { PipelinePass, DEFAULT_MAX_CORRECTION_RETRIES } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
 import type { IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
-import { getStateFilePath } from '../utils/paths.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
@@ -63,11 +62,26 @@ export async function resumeSession(
   await git.resetWorkingTree();
   console.log('\n  Resume: working tree cleaned.\n');
 
-  const lastCompletedPass = await git.getLastCompletedPass();
-  const startPass =
-    lastCompletedPass !== null
-      ? ((lastCompletedPass + 1) as PipelinePass)
-      : PipelinePass.Design;
+  let startPass: PipelinePass;
+  let lastCompletedPass: number | null = null;
+
+  if (ctx.currentPass !== undefined && Object.keys(ctx.history).length > 0) {
+    const entry = ctx.history[ctx.currentPass];
+    if (entry?.status === 'completed') {
+      lastCompletedPass = ctx.currentPass;
+      startPass = (ctx.currentPass + 1) as PipelinePass;
+    } else if (entry?.status === 'failed') {
+      startPass = ctx.currentPass;
+    } else {
+      startPass = ctx.currentPass;
+    }
+  } else {
+    lastCompletedPass = await git.getLastCompletedPass();
+    startPass =
+      lastCompletedPass !== null
+        ? ((lastCompletedPass + 1) as PipelinePass)
+        : PipelinePass.Design;
+  }
 
   if (startPass > PipelinePass.Documentation) {
     await stateStore.delete();
@@ -89,6 +103,7 @@ export async function resumeSession(
     git,
     renderer,
     version,
+    stateStore,
   });
 
   try {
@@ -130,12 +145,13 @@ export async function startNewSession(
     featureDescription: options.featureDescription,
     baseBranch: options.baseBranch,
     originalBaseSha,
+    history: {},
     ...paths,
   };
 
   await stateStore.save(ctx);
   console.log(
-    `  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${getStateFilePath()}.\n`,
+    `  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${stateStore.path}.\n`,
   );
 
   renderer.banner(ctx);
@@ -146,6 +162,7 @@ export async function startNewSession(
     git,
     renderer,
     version,
+    stateStore,
   });
 
   try {

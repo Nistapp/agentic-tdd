@@ -46,28 +46,9 @@ export async function validateAndResolveOptions(
   }
 
   if (!options.testCmd) {
-    console.error('');
-    console.error('┌' + '─'.repeat(W) + '┐');
-    console.error('│  ✖  MISSING REQUIRED ARGUMENT: --test-cmd'.padEnd(W + 1) + '│');
-    console.error('│' + ' '.repeat(W) + '│');
-    console.error('│  The test command is language-specific and must be provided   '.padEnd(W + 1) + '│');
-    console.error('│  explicitly so the pipeline knows how to run your test suite. '.padEnd(W + 1) + '│');
-    console.error('│' + ' '.repeat(W) + '│');
-    console.error('│  Examples by language / ecosystem:'.padEnd(W + 1) + '│');
-    console.error('│' + ' '.repeat(W) + '│');
-    console.error('│    Python  →  --test-cmd "pytest"'.padEnd(W + 1) + '│');
-    console.error('│    Python  →  --test-cmd "python -m pytest"'.padEnd(W + 1) + '│');
-    console.error('│    Node    →  --test-cmd "npm test"'.padEnd(W + 1) + '│');
-    console.error('│    Node    →  --test-cmd "npx vitest run"'.padEnd(W + 1) + '│');
-    console.error('│    Go      →  --test-cmd "go test ./..."'.padEnd(W + 1) + '│');
-    console.error('│    Java    →  --test-cmd "mvn test"'.padEnd(W + 1) + '│');
-    console.error('│    Java    →  --test-cmd "./gradlew test"'.padEnd(W + 1) + '│');
-    console.error('│    Ruby    →  --test-cmd "bundle exec rspec"'.padEnd(W + 1) + '│');
-    console.error('│    Rust    →  --test-cmd "cargo test"'.padEnd(W + 1) + '│');
-    console.error('│' + ' '.repeat(W) + '│');
-    console.error('└' + '─'.repeat(W) + '┘');
-    console.error('');
-    process.exit(1);
+    console.log(
+      '  Note: --test-cmd not provided. It will be loaded from the state file on resume.',
+    );
   }
 
   const specFileAbsPath = resolve(cwd(), String(options.featureDescFile));
@@ -80,7 +61,7 @@ export async function validateAndResolveOptions(
     throw new Error('unreachable');
   }
 
-  const testCmd = String(options.testCmd).split(/\s+/);
+  const testCmd = options.testCmd ? String(options.testCmd).split(/\s+/) : [];
   const featureName = basename(specFileAbsPath, extname(specFileAbsPath));
 
   return {

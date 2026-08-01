@@ -29,8 +29,6 @@ process.on('unhandledRejection', (reason) => {
 // Command-line setup
 // ---------------------------------------------------------------------------
 
-// DEFERRED: StateFile — see docs/statefile-design.md
-
 program
   .name('agentic-tdd')
   .description('Agentic TDD pipeline orchestration tool')
@@ -59,12 +57,13 @@ program
 
     const fs = new NodeFileSystem();
     const git = new GitService();
-    const stateStore = new JsonStateStore(fs);
-    const stateExists = await stateStore.exists();
+    const opts = await validateAndResolveOptions(options, renderer);
+    const stateStore = new JsonStateStore(fs, opts.featureName);
 
-    if (stateExists) {
-      if (!resume && !abort) {
-        renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
+    if (resume || abort) {
+      const stateExists = await stateStore.exists();
+      if (!stateExists) {
+        renderer.fatal('No active TDD session found. Nothing to resume or abort.');
       }
 
       if (abort) {
@@ -75,11 +74,11 @@ program
       return;
     }
 
-    if (resume || abort) {
-      renderer.fatal('No active TDD session found. Nothing to resume or abort.');
+    const stateExists = await stateStore.exists();
+    if (stateExists) {
+      renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
     }
 
-    const opts = await validateAndResolveOptions(options, renderer);
     await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION);
   });
 
