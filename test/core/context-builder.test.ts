@@ -74,22 +74,22 @@ describe('buildContextFiles', () => {
     expect(result.contracts).toEqual([]);
   });
 
-  it('returns tests and implementation for Pass 5 (Security)', () => {
-    const ctx = makeContext({
-      [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
-      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
-    });
-    const result = buildContextFiles(ctx, PipelinePass.Security);
-    expect(result.tests).toEqual(['test/user.test.ts']);
-    expect(result.implementation).toEqual(['src/models/user.ts']);
-  });
-
-  it('returns tests and implementation for Pass 6 (Observability)', () => {
+  it('returns tests and implementation for Pass 5 (Observability)', () => {
     const ctx = makeContext({
       [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
       [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
     });
     const result = buildContextFiles(ctx, PipelinePass.Observability);
+    expect(result.tests).toEqual(['test/user.test.ts']);
+    expect(result.implementation).toEqual(['src/models/user.ts']);
+  });
+
+  it('returns tests and implementation for Pass 6 (Security)', () => {
+    const ctx = makeContext({
+      [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+    });
+    const result = buildContextFiles(ctx, PipelinePass.Security);
     expect(result.tests).toEqual(['test/user.test.ts']);
     expect(result.implementation).toEqual(['src/models/user.ts']);
   });

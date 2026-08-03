@@ -418,8 +418,8 @@ describe('Pipeline Machine', () => {
       expect(getInitialStateForPass(PipelinePass.TestGeneration)).toBe('pass_2_test_generation');
       expect(getInitialStateForPass(PipelinePass.CoreImplementation)).toBe('pass_3_core_implementation');
       expect(getInitialStateForPass(PipelinePass.Refactor)).toBe('pass_4_refactor');
-      expect(getInitialStateForPass(PipelinePass.Security)).toBe('pass_5_security');
-      expect(getInitialStateForPass(PipelinePass.Observability)).toBe('pass_6_observability');
+      expect(getInitialStateForPass(PipelinePass.Observability)).toBe('pass_5_observability');
+      expect(getInitialStateForPass(PipelinePass.Security)).toBe('pass_6_security');
       expect(getInitialStateForPass(PipelinePass.Documentation)).toBe('pass_7_documentation');
     });
   });

@@ -344,8 +344,8 @@ describe('PACKAGE_AGENTS_DIR', () => {
       'pass-2-test-generation-agent.md',
       'pass-3-core-implementation-agent.md',
       'pass-4-refactor-agent.md',
-      'pass-5-security-agent.md',
-      'pass-6-observability-agent.md',
+      'pass-5-observability-agent.md',
+      'pass-6-security-agent.md',
       'pass-7-documentation-agent.md',
     ];
 
