@@ -113,7 +113,7 @@ codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
 
 > [!TIP]
 > After any significant code change, call
-> `index_repository(repo_path="/home/kc/Projects/UDAN/agentic-compress-before-github--6Jun26/agentic-tdd")`
+> `index_repository(repo_path=".")`
 > to keep the index fresh before querying.
 
 ### File Reading Policy
