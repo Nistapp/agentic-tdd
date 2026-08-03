@@ -90,6 +90,64 @@ describe('JsonStateStore', () => {
     expect(loaded.history[1]?.attempts).toBe(1);
   });
 
+  it('round-trips xstateSnapshot through save/load', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'snapshot-roundtrip', workDir);
+
+    const snapshot: Record<string, unknown> = {
+      status: 'done',
+      value: 'pipeline_complete',
+      context: {
+        featureName: 'snapshot-roundtrip',
+        history: { 0: { status: 'completed', filesTouched: ['a.txt'], attempts: 1 } },
+      },
+    };
+
+    const ctx = makeContext({
+      featureName: 'snapshot-roundtrip',
+      xstateSnapshot: snapshot,
+    });
+
+    await store.save(ctx);
+    const loaded = await store.load();
+
+    expect(loaded.xstateSnapshot).toBeDefined();
+    expect(loaded.xstateSnapshot).toEqual(snapshot);
+
+    const json = JSON.stringify(loaded.xstateSnapshot);
+    expect(() => JSON.parse(json)).not.toThrow();
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    expect(parsed.status).toBe('done');
+    expect(parsed.value).toBe('pipeline_complete');
+  });
+
+  it('round-trips xstateSnapshot through save/load when context overwritten', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'snapshot-overwrite', workDir);
+
+    const firstSnapshot: Record<string, unknown> = {
+      status: 'active',
+      value: 'pass_0',
+      context: { featureName: 'first' },
+    };
+
+    const secondSnapshot: Record<string, unknown> = {
+      status: 'done',
+      value: 'pipeline_complete',
+      context: { featureName: 'second' },
+    };
+
+    let ctx = makeContext({ featureName: 'first', xstateSnapshot: firstSnapshot });
+    await store.save(ctx);
+
+    ctx = makeContext({ featureName: 'second', xstateSnapshot: secondSnapshot });
+    await store.save(ctx);
+
+    const loaded = await store.load();
+    expect(loaded.featureName).toBe('second');
+    expect(loaded.xstateSnapshot).toEqual(secondSnapshot);
+  });
+
   it('load throws when state file does not exist', async () => {
     const fs = new NodeFileSystem();
     const store = new JsonStateStore(fs, 'ghost', workDir);
