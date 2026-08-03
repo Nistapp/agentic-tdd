@@ -183,22 +183,3 @@ export interface PipelineConfig {
   readonly apiKeySet: 'present' | 'missing';
 }
 
-// ---------------------------------------------------------------------------
-// ISelfCorrectionRunner — runs a self-correction guarded pass (passes 3-6)
-// ---------------------------------------------------------------------------
-
-export interface ISelfCorrectionRunner {
-  /**
-   * Execute a self-correction guarded pass.
-   *
-   * The caller (orchestrator) has already set `ctx.currentPass` to one of
-   * the SELF_CORRECTION_PASSES. The runner owns the full loop: agent
-   * invocation → test execution → context compaction → retry bounds.
-   *
-   * Emits: PASS_STARTED, TEST_RUN_STARTED, TEST_RUN_COMPLETED,
-   *        TEST_RUN_FAILED, SELF_CORRECTION_ATTEMPTED, PASS_COMPLETED.
-   *
-   * @throws {Error} If tests still fail after all retries are exhausted.
-   */
-  execute(ctx: PipelineContext): Promise<void>;
-}

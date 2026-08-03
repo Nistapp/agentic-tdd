@@ -160,6 +160,14 @@ export interface PipelineContext {
    * Populated after each pass completes or fails.
    */
   history: Partial<Record<PipelinePass, PassHistory>>;
+
+  /**
+   * Persisted XState v5 actor snapshot (`getPersistedSnapshot()` output).
+   * Written by the orchestrator after each pass so `--resume` can reboot the
+   * pipeline machine losslessly via `createActor(machine, { snapshot })`.
+   * Opaque to the core layer — never imported from `xstate` here.
+   */
+  xstateSnapshot?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -213,6 +221,28 @@ export interface AgenticEvent {
   /** Optional opaque payload for UI-relevant data. */
   payload?: Record<string, unknown>;
 }
+
+// ---------------------------------------------------------------------------
+// PipelineMachineEvent — in-bound events fed to the XState v5 actor (Phase 1+)
+//
+// Distinct from AgenticEvent (above), which is the *out-bound* UI event bus.
+// PipelineMachineEvent are the input events that drive state transitions
+// inside the pipeline actor; AgenticEvent are what the actor emits to
+// external listeners.  Do not conflate the two.
+// ---------------------------------------------------------------------------
+
+export type PipelineMachineEvent =
+  | { type: 'START_PIPELINE'; startPass: PipelinePass }
+  | { type: 'AGENT_SUCCESS'; pass: PipelinePass }
+  | { type: 'AGENT_FAILED'; pass: PipelinePass; error: string }
+  | { type: 'TEST_PASSED'; pass: PipelinePass }
+  | { type: 'TEST_FAILED'; pass: PipelinePass; output: string }
+  | { type: 'SELF_CORRECTION_RETRY'; pass: PipelinePass; attempt: number }
+  | { type: 'HITL_APPROVE'; pass: PipelinePass }
+  | { type: 'HITL_REJECT'; pass: PipelinePass }
+  | { type: 'HITL_REWIND'; pass: PipelinePass }
+  | { type: 'COMMIT_SUCCESS'; pass: PipelinePass; commitHash: string }
+  | { type: 'COMMIT_FAILED'; pass: PipelinePass; error: string };
 
 // ---------------------------------------------------------------------------
 // Result types for the DI services (so callers don't work with raw primitives)
