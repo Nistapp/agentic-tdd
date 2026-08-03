@@ -78,8 +78,8 @@ export function getInitialStateForPass(startPass: PipelinePass): string {
     2: 'pass_2_test_generation',
     3: 'pass_3_core_implementation',
     4: 'pass_4_refactor',
-    5: 'pass_5_security',
-    6: 'pass_6_observability',
+    5: 'pass_5_observability',
+    6: 'pass_6_security',
     7: 'pass_7_documentation',
   };
   const state = map[startPass];
@@ -369,8 +369,8 @@ export function createPipelineMachine(services: {
           { guard: 'atPass2', target: 'pass_2_test_generation' },
           { guard: 'atPass3', target: 'pass_3_core_implementation' },
           { guard: 'atPass4', target: 'pass_4_refactor' },
-          { guard: 'atPass5', target: 'pass_5_security' },
-          { guard: 'atPass6', target: 'pass_6_observability' },
+          { guard: 'atPass5', target: 'pass_5_observability' },
+          { guard: 'atPass6', target: 'pass_6_security' },
           { guard: 'atPass7', target: 'pass_7_documentation' },
         ],
       },
@@ -604,7 +604,7 @@ export function createPipelineMachine(services: {
         },
       },
 
-      pass_5_security: {
+      pass_5_observability: {
         entry: assign({
           ctx: ({ context }: { context: PipelineMachineContext }) => ({
             ...context.ctx,
@@ -647,7 +647,7 @@ export function createPipelineMachine(services: {
         },
       },
 
-      pass_6_observability: {
+      pass_6_security: {
         entry: assign({
           ctx: ({ context }: { context: PipelineMachineContext }) => ({
             ...context.ctx,
@@ -743,8 +743,8 @@ export function createPipelineMachine(services: {
             { guard: 'afterPass1', target: 'pass_2_test_generation' },
             { guard: 'afterPass2', target: 'pass_3_core_implementation' },
             { guard: 'afterPass3', target: 'pass_4_refactor' },
-            { guard: 'afterPass4', target: 'pass_5_security' },
-            { guard: 'afterPass5', target: 'pass_6_observability' },
+            { guard: 'afterPass4', target: 'pass_5_observability' },
+            { guard: 'afterPass5', target: 'pass_6_security' },
             { guard: 'afterPass6', target: 'pass_7_documentation' },
             { guard: 'afterPass7', target: 'pipeline_complete' },
           ],

@@ -18,8 +18,8 @@ export enum PipelinePass {
   TestGeneration     = 2,
   CoreImplementation = 3,
   Refactor           = 4,
-  Security           = 5,
-  Observability      = 6,
+  Observability      = 5,
+  Security           = 6,
   Documentation      = 7,
 }
 
@@ -29,8 +29,8 @@ export const AGENT_NAMES: Record<PipelinePass, string> = {
   [PipelinePass.TestGeneration]:     'pass-2-test-generation-agent',
   [PipelinePass.CoreImplementation]: 'pass-3-core-implementation-agent',
   [PipelinePass.Refactor]:           'pass-4-refactor-agent',
-  [PipelinePass.Security]:           'pass-5-security-agent',
-  [PipelinePass.Observability]:      'pass-6-observability-agent',
+  [PipelinePass.Observability]:      'pass-5-observability-agent',
+  [PipelinePass.Security]:           'pass-6-security-agent',
   [PipelinePass.Documentation]:      'pass-7-documentation-agent',
 };
 
@@ -40,8 +40,8 @@ export const PASS_LABELS: Record<PipelinePass, string> = {
   [PipelinePass.TestGeneration]:     'Test Generation (Red Phase)',
   [PipelinePass.CoreImplementation]: 'Core Implementation (Green Phase)',
   [PipelinePass.Refactor]:           'Refactor & Optimise',
-  [PipelinePass.Security]:           'Security Hardening',
   [PipelinePass.Observability]:      'Observability & Logging',
+  [PipelinePass.Security]:           'Security Hardening',
   [PipelinePass.Documentation]:      'Documentation',
 };
 
