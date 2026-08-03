@@ -22,7 +22,6 @@ import type {
   ILogger,
   IStateStore,
 } from '../interfaces.js';
-import type { HitlHandler } from '../orchestrator.js';
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
 import { sanitizeLogPayload } from '../log-sanitizer.js';
@@ -101,7 +100,6 @@ export function createPipelineMachine(services: {
   events: IEventBus;
   logger: ILogger;
   stateStore?: IStateStore;
-  onHitl?: HitlHandler;
 }) {
   const {
     agentRunner,
@@ -111,7 +109,6 @@ export function createPipelineMachine(services: {
     events,
     logger,
     stateStore,
-    onHitl: onHitlCb,
   } = services;
   const emit = makeEmit(events);
 
@@ -196,39 +193,32 @@ export function createPipelineMachine(services: {
         },
       ),
 
-      callOnHitl: fromPromise<void, { pass: PipelinePass }>(
-        async ({ input }) => {
-          const { pass } = input;
-          if (!onHitlCb) return;
+      prepareHitl: fromPromise<
+        { pass: PipelinePass; files: FileChange[] },
+        { pass: PipelinePass }
+      >(async ({ input }) => {
+        const files = await git.getPendingChanges();
+        return { pass: input.pass, files };
+      }),
 
-          const files = await git.getPendingChanges();
-          const dummyCtx: PipelineContext = {
-            featureName: '',
-            testCmd: [],
-            skipHitl: false,
-            maxCorrectionRetries: 3,
-            pipelineVersion: '1.0.0',
-            sourceType: 'file',
-            logLevel: 'INFO',
-            artefactDir: '',
-            designMmdPath: '',
-            specGherkinPath: '',
-            errorLogPath: '',
-            history: {},
-            currentPass: pass,
-            currentAttempt: 1,
-          };
-
-          emit(
-            'HITL_REQUIRED',
-            `Review generated artefacts for Pass ${pass} before proceeding.`,
-            dummyCtx,
-            { files } satisfies HitlPayload,
+      rewindToPassStart: fromPromise<
+        void,
+        { ctx: PipelineContext; pass: PipelinePass }
+      >(async ({ input }) => {
+        const { ctx, pass } = input;
+        const targetSha: string | undefined =
+          pass === 0
+            ? ctx.originalBaseSha
+            : ctx.history[(pass - 1) as PipelinePass]?.commitHash;
+        if (!targetSha) {
+          throw new Error(
+            `Cannot rewind Pass ${pass}: no previous commit SHA available. ` +
+              `Ensure the previous pass completed successfully.`,
           );
-
-          await onHitlCb(pass, files);
-        },
-      ),
+        }
+        await git.abortToSha(targetSha);
+        await git.resetWorkingTree();
+      }),
 
       doAtomicCommit: fromPromise<void, { ctx: PipelineContext }>(
         async ({ input }) => {
@@ -299,6 +289,42 @@ export function createPipelineMachine(services: {
       ) => {
         emit('ERROR', params.error, context.ctx);
       },
+
+      emitHitlRequired: (
+        { context }: { context: PipelineMachineContext },
+        params: { pass: PipelinePass; files: FileChange[] },
+      ) => {
+        emit(
+          'HITL_REQUIRED',
+          `Review generated artefacts for Pass ${params.pass} before proceeding.`,
+          context.ctx,
+          { files: params.files } satisfies HitlPayload,
+        );
+      },
+
+      emitPipelinePaused: ({
+        context,
+      }: {
+        context: PipelineMachineContext;
+      }) => {
+        emit(
+          'PIPELINE_PAUSED',
+          'Pipeline paused at inter-pass boundary. Run with --resume to continue.',
+          context.ctx,
+        );
+      },
+
+      emitPipelineResumed: ({
+        context,
+      }: {
+        context: PipelineMachineContext;
+      }) => {
+        emit(
+          'PIPELINE_RESUMED',
+          'Pipeline resumed from paused state.',
+          context.ctx,
+        );
+      },
     },
 
     guards: {
@@ -328,6 +354,9 @@ export function createPipelineMachine(services: {
 
       skipHitl: ({ context }: { context: PipelineMachineContext }) =>
         context.ctx.skipHitl,
+
+      isPauseRequested: ({ context }: { context: PipelineMachineContext }) =>
+        context.ctx.pauseRequested === true,
 
       afterPass1: ({ context }: { context: PipelineMachineContext }) =>
         context.ctx.currentPass === 1,
@@ -361,6 +390,16 @@ export function createPipelineMachine(services: {
     }),
     initial: '__begin',
     entry: 'emitPipelineStarted',
+    on: {
+      PAUSE: {
+        actions: assign({
+          ctx: ({ context }: { context: PipelineMachineContext }) => ({
+            ...context.ctx,
+            pauseRequested: true,
+          }),
+        }),
+      },
+    },
     states: {
       __begin: {
         always: [
@@ -390,7 +429,7 @@ export function createPipelineMachine(services: {
           }),
           onDone: [
             { guard: 'skipHitl', target: 'pass_1_contracts' },
-            { target: 'awaiting_hitl_pass_0' },
+            { target: 'preparing_hitl_pass_0' },
           ],
           onError: {
             target: 'pipeline_failed',
@@ -409,11 +448,55 @@ export function createPipelineMachine(services: {
         },
       },
 
-      awaiting_hitl_pass_0: {
+      preparing_hitl_pass_0: {
         invoke: {
-          src: 'callOnHitl',
+          src: 'prepareHitl',
           input: () => ({ pass: 0 as PipelinePass }),
-          onDone: 'pass_1_contracts',
+          onDone: {
+            target: 'awaiting_hitl_pass_0',
+            actions: [
+              {
+                type: 'emitHitlRequired',
+                params: ({ event }: { event: { output: { pass: PipelinePass; files: FileChange[] } } }) => ({
+                  pass: event.output.pass,
+                  files: event.output.files,
+                }),
+              },
+            ],
+          },
+          onError: {
+            target: 'pipeline_failed',
+            actions: [
+              {
+                type: 'emitPipelineError',
+                params: ({ event }: { event: { error: unknown } }) => ({
+                  error:
+                    event.error instanceof Error
+                      ? event.error.message
+                      : String(event.error),
+                }),
+              },
+            ],
+          },
+        },
+      },
+
+      awaiting_hitl_pass_0: {
+        on: {
+          HITL_APPROVE: 'pass_1_contracts',
+          HITL_REWIND: 'rewinding_pass_0',
+          HITL_REJECT: 'pipeline_failed',
+        },
+      },
+
+      rewinding_pass_0: {
+        invoke: {
+          src: 'rewindToPassStart',
+          input: ({ context }: { context: PipelineMachineContext }) => ({
+            ctx: context.ctx,
+            pass: 0 as PipelinePass,
+          }),
+          onDone: 'pass_0_design',
           onError: {
             target: 'pipeline_failed',
             actions: [
@@ -477,7 +560,7 @@ export function createPipelineMachine(services: {
           }),
           onDone: [
             { guard: 'skipHitl', target: 'committing' },
-            { target: 'awaiting_hitl_pass_2' },
+            { target: 'preparing_hitl_pass_2' },
           ],
           onError: {
             target: 'pipeline_failed',
@@ -496,11 +579,55 @@ export function createPipelineMachine(services: {
         },
       },
 
-      awaiting_hitl_pass_2: {
+      preparing_hitl_pass_2: {
         invoke: {
-          src: 'callOnHitl',
+          src: 'prepareHitl',
           input: () => ({ pass: 2 as PipelinePass }),
-          onDone: 'committing',
+          onDone: {
+            target: 'awaiting_hitl_pass_2',
+            actions: [
+              {
+                type: 'emitHitlRequired',
+                params: ({ event }: { event: { output: { pass: PipelinePass; files: FileChange[] } } }) => ({
+                  pass: event.output.pass,
+                  files: event.output.files,
+                }),
+              },
+            ],
+          },
+          onError: {
+            target: 'pipeline_failed',
+            actions: [
+              {
+                type: 'emitPipelineError',
+                params: ({ event }: { event: { error: unknown } }) => ({
+                  error:
+                    event.error instanceof Error
+                      ? event.error.message
+                      : String(event.error),
+                }),
+              },
+            ],
+          },
+        },
+      },
+
+      awaiting_hitl_pass_2: {
+        on: {
+          HITL_APPROVE: 'committing',
+          HITL_REWIND: 'rewinding_pass_2',
+          HITL_REJECT: 'pipeline_failed',
+        },
+      },
+
+      rewinding_pass_2: {
+        invoke: {
+          src: 'rewindToPassStart',
+          input: ({ context }: { context: PipelineMachineContext }) => ({
+            ctx: context.ctx,
+            pass: 2 as PipelinePass,
+          }),
+          onDone: 'pass_2_test_generation',
           onError: {
             target: 'pipeline_failed',
             actions: [
@@ -739,15 +866,7 @@ export function createPipelineMachine(services: {
           input: ({ context }: { context: PipelineMachineContext }) => ({
             ctx: context.ctx,
           }),
-          onDone: [
-            { guard: 'afterPass1', target: 'pass_2_test_generation' },
-            { guard: 'afterPass2', target: 'pass_3_core_implementation' },
-            { guard: 'afterPass3', target: 'pass_4_refactor' },
-            { guard: 'afterPass4', target: 'pass_5_observability' },
-            { guard: 'afterPass5', target: 'pass_6_security' },
-            { guard: 'afterPass6', target: 'pass_7_documentation' },
-            { guard: 'afterPass7', target: 'pipeline_complete' },
-          ],
+          onDone: 'evaluating_next_pass',
           onError: {
             target: 'pipeline_failed',
             actions: [
@@ -761,6 +880,37 @@ export function createPipelineMachine(services: {
                 }),
               },
             ],
+          },
+        },
+      },
+
+      evaluating_next_pass: {
+        always: [
+          { guard: 'isPauseRequested', target: 'paused' },
+          { guard: 'afterPass1', target: 'pass_2_test_generation' },
+          { guard: 'afterPass2', target: 'pass_3_core_implementation' },
+          { guard: 'afterPass3', target: 'pass_4_refactor' },
+          { guard: 'afterPass4', target: 'pass_5_observability' },
+          { guard: 'afterPass5', target: 'pass_6_security' },
+          { guard: 'afterPass6', target: 'pass_7_documentation' },
+          { guard: 'afterPass7', target: 'pipeline_complete' },
+        ],
+      },
+
+      paused: {
+        entry: [
+          assign({
+            ctx: ({ context }: { context: PipelineMachineContext }) => ({
+              ...context.ctx,
+              pauseRequested: false,
+            }),
+          }),
+          'emitPipelinePaused',
+        ],
+        on: {
+          RESUME: {
+            target: 'evaluating_next_pass',
+            actions: 'emitPipelineResumed',
           },
         },
       },

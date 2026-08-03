@@ -168,6 +168,9 @@ export interface PipelineContext {
    * Opaque to the core layer — never imported from `xstate` here.
    */
   xstateSnapshot?: Record<string, unknown>;
+
+  /** Flag set by a root-level PAUSE event; honoured at the next inter-pass boundary. */
+  pauseRequested?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +195,8 @@ export interface ExecutionMetadata {
 export type AgenticEventKind =
   | 'PIPELINE_STARTED'
   | 'PIPELINE_COMPLETED'
+  | 'PIPELINE_PAUSED'
+  | 'PIPELINE_RESUMED'
   | 'PASS_STARTED'
   | 'PASS_COMPLETED'
   | 'TEST_RUN_STARTED'
@@ -242,7 +247,11 @@ export type PipelineMachineEvent =
   | { type: 'HITL_REJECT'; pass: PipelinePass }
   | { type: 'HITL_REWIND'; pass: PipelinePass }
   | { type: 'COMMIT_SUCCESS'; pass: PipelinePass; commitHash: string }
-  | { type: 'COMMIT_FAILED'; pass: PipelinePass; error: string };
+  | { type: 'COMMIT_FAILED'; pass: PipelinePass; error: string }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME' };
+
+export type HitlAction = 'APPROVE' | 'REJECT' | 'REWIND';
 
 // ---------------------------------------------------------------------------
 // Result types for the DI services (so callers don't work with raw primitives)

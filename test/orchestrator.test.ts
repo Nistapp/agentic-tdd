@@ -166,7 +166,7 @@ function makeMocks(): Mocks {
     exists: vi.fn().mockResolvedValue(true),
   };
 
-  const hitl = vi.fn().mockResolvedValue(undefined);
+  const hitl = vi.fn().mockResolvedValue('APPROVE' as const);
 
   const logger = new StubLogger();
 
@@ -319,7 +319,7 @@ describe('PipelineOrchestrator', () => {
         orch.run(makeContext({ skipHitl: false })),
       ).rejects.toThrow('HITL rejected by user');
 
-      expect(findEvents(m.emittedEvents, 'ERROR').length).toBeGreaterThan(0);
+      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED').length).toBeGreaterThan(0);
 
       // git.commit must never be called — pipeline fails at first HITL gate
       expect(m.git.commit).not.toHaveBeenCalled();
@@ -510,6 +510,175 @@ describe('PipelineOrchestrator', () => {
       const saveCall = (m.stateStore.save as ReturnType<typeof vi.fn>).mock.calls.at(-1) as unknown[] | undefined;
       const savedCtx = saveCall?.[0] as PipelineContext | undefined;
       expect(savedCtx?.xstateSnapshot).toBeDefined();
+    });
+  });
+
+  describe('PAUSE / RESUME', () => {
+    it('pause() saves paused snapshot via stateStore', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
+      });
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      // Let the actor start — pass 0 will block on the deferred promise
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+
+      // Release pass 0 so the actor can proceed
+      resolveBlock?.();
+      resolveBlock = undefined;
+
+      await pausePromise;
+
+      // pause() should have called stateStore.save
+      expect(m.stateStore.save).toHaveBeenCalled();
+
+      const saveCall = (m.stateStore.save as ReturnType<typeof vi.fn>).mock.calls.at(-1) as unknown[] | undefined;
+      const savedCtx = saveCall?.[0] as PipelineContext | undefined;
+      expect(savedCtx?.xstateSnapshot).toBeDefined();
+      const snap = savedCtx?.xstateSnapshot as Record<string, unknown> | undefined;
+      expect(snap?.status).toBe('active');
+      expect(snap?.value).toBe('paused');
+    });
+
+    it('resumes from a paused snapshot without duplicating completed passes', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
+      });
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+      resolveBlock?.();
+      resolveBlock = undefined;
+      await pausePromise;
+
+      const pausedSnapshot = ctx.xstateSnapshot;
+
+      // Simulate --resume from the paused snapshot
+      const m2 = makeMocks();
+      const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.stateStore, m2.hitl);
+
+      const result = await orch2.run(ctx2);
+
+      expect(result).toBe(true);
+      // Should NOT re-run pass 0 or pass 1 — only remaining passes (2-7)
+      expect((m2.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(6);
+      expect((m2.cmd.runTests as ReturnType<typeof vi.fn>).mock.calls.length).toBe(5);
+    });
+
+    it('emits PIPELINE_PAUSED and PIPELINE_RESUMED events', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
+      });
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+      resolveBlock?.();
+      resolveBlock = undefined;
+      await pausePromise;
+
+      const pausedEvents = findEvents(m.emittedEvents, 'PIPELINE_PAUSED');
+      expect(pausedEvents).toHaveLength(1);
+
+      // Now resume from paused snapshot
+      const pausedSnapshot = ctx.xstateSnapshot;
+      const m2 = makeMocks();
+      const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.stateStore, m2.hitl);
+
+      await orch2.run(ctx2);
+
+      const resumedEvents = findEvents(m2.emittedEvents, 'PIPELINE_RESUMED');
+      expect(resumedEvents).toHaveLength(1);
+    });
+  });
+
+  describe('Corrupt snapshot handling', () => {
+    it('falls back to startPass path when xstateSnapshot is malformed object', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: { corrupt: true, status: 'active', value: 'paused' } });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      // Missing context/children — falls back to startPass
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+
+      // logger.warn should have been called about corrupt snapshot
+      const warnCalls = m.logger.calls.filter((c) => c.method === 'warn');
+      expect(warnCalls.some((c) => (c.args[0] as string).includes('Corrupt xstateSnapshot'))).toBe(true);
+    });
+
+    it('handles empty xstateSnapshot object gracefully', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: {} });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+    });
+
+    it('handles xstateSnapshot with unknown state value', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: { status: 'active', value: 'nonexistent_state' } });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      // Falls back to startPass path
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
     });
   });
 });
