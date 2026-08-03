@@ -73,17 +73,17 @@ Here is exactly what files are passed into the `contextFiles` array for each pas
 *   `implementation`: Files generated/touched in **Pass 3**
 > **Note**: Agent needs the tests to ensure refactoring doesn't break anything, and the core implementation files to actually refactor.
 
-### **Pass 5 (Security)**
+### **Pass 5 (Observability)**
 *   `contracts`: `[]`
 *   `tests`: Files generated/touched in **Pass 2**
-*   `implementation`: Files generated/touched in **Pass 3**
-> **Note**: Agent needs the tests and implementation to audit and apply security constraints.
+*   `implementation`: Files generated/touched in **Pass 3** and **Pass 4**
+> **Note**: Agent needs the tests and all implementation files (including refactored ones) to instrument logging and metrics.
 
-### **Pass 6 (Observability)**
+### **Pass 6 (Security)**
 *   `contracts`: `[]`
 *   `tests`: Files generated/touched in **Pass 2**
-*   `implementation`: Files generated/touched in **Pass 3**
-> **Note**: Agent needs the tests and implementation to instrument logging and metrics.
+*   `implementation`: Files generated/touched in **Pass 3** and **Pass 4**
+> **Note**: Agent needs the tests and all implementation files (including refactored ones) to audit and apply security constraints.
 
 ### **Pass 7 (Documentation)**
 *   `contracts`: `[]`

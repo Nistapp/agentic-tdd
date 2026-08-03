@@ -78,20 +78,22 @@ describe('buildContextFiles', () => {
     const ctx = makeContext({
       [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
       [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+      [PipelinePass.Refactor]: makePassHistory(['src/models/user.ts', 'src/utils/helper.ts']),
     });
     const result = buildContextFiles(ctx, PipelinePass.Observability);
     expect(result.tests).toEqual(['test/user.test.ts']);
-    expect(result.implementation).toEqual(['src/models/user.ts']);
+    expect(result.implementation).toEqual(['src/models/user.ts', 'src/utils/helper.ts']);
   });
 
   it('returns tests and implementation for Pass 6 (Security)', () => {
     const ctx = makeContext({
       [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
       [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+      [PipelinePass.Refactor]: makePassHistory(['src/utils/helper.ts']),
     });
     const result = buildContextFiles(ctx, PipelinePass.Security);
     expect(result.tests).toEqual(['test/user.test.ts']);
-    expect(result.implementation).toEqual(['src/models/user.ts']);
+    expect(result.implementation).toEqual(['src/models/user.ts', 'src/utils/helper.ts']);
   });
 
   it('returns implementation files from passes 3-6 for Pass 7 (Documentation)', () => {

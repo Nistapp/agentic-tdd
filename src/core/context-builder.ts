@@ -7,8 +7,8 @@ const CONTEXT_RULES: Record<PipelinePass, { contracts: PipelinePass[]; tests: Pi
   [PipelinePass.TestGeneration]:     { contracts: [PipelinePass.Contracts], tests: [], implementation: [] },
   [PipelinePass.CoreImplementation]: { contracts: [PipelinePass.Contracts], tests: [PipelinePass.TestGeneration], implementation: [] },
   [PipelinePass.Refactor]:           { contracts: [], tests: [PipelinePass.TestGeneration], implementation: [PipelinePass.CoreImplementation] },
-  [PipelinePass.Security]:           { contracts: [], tests: [PipelinePass.TestGeneration], implementation: [PipelinePass.CoreImplementation] },
-  [PipelinePass.Observability]:      { contracts: [], tests: [PipelinePass.TestGeneration], implementation: [PipelinePass.CoreImplementation] },
+  [PipelinePass.Security]:           { contracts: [], tests: [PipelinePass.TestGeneration], implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor] },
+  [PipelinePass.Observability]:      { contracts: [], tests: [PipelinePass.TestGeneration], implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor] },
   [PipelinePass.Documentation]:      { contracts: [], tests: [], implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor, PipelinePass.Security, PipelinePass.Observability] },
 };
 
