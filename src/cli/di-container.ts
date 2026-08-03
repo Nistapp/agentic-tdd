@@ -2,13 +2,12 @@
  * Dependency Injection (DI) container for the agentic-tdd CLI.
  *
  * Responsible for wiring up all pipeline services: EventBus, CommandRunner,
- * HitlHandler, OpenCodeAgentRunner, SelfCorrectionRunner, and PipelineOrchestrator.
+ * HitlHandler, OpenCodeAgentRunner, and PipelineOrchestrator.
  */
 
 import { EventBus } from '../infrastructure/event-bus.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
 import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
-import { SelfCorrectionRunner } from '../core/runners/self-correction-runner.js';
 import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
@@ -52,12 +51,8 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
     fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner,
   );
 
-  const selfCorrectionRunner = new SelfCorrectionRunner(
-    agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
-  );
-
   const orchestrator = new PipelineOrchestrator(
-    git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events,
+    git, fs, cmdRunner, agentRunner, events,
     new PinoLoggerAdapter(loggers.core), pipelineConfig, stateStore, hitlHandler,
   );
 
