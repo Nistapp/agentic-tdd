@@ -1,6 +1,6 @@
 ---
 description: >
-  Pass 5 of the v0.3 8-pass pipeline. Applies OWASP Top-10 mitigations, input
+  Pass 6 of the v0.3 8-pass pipeline. Applies OWASP Top-10 mitigations, input
   validation, and boundary checks to the source files. Business logic
   must not change. All existing tests must still pass. Includes a
   self-correction loop if tests break. Use when the orchestrator invokes the
@@ -19,9 +19,9 @@ permission:
   task: deny
 ---
 
-<agent_persona id="pass-5-security-agent">
-  <role>Security Hardening Agent (Pass 5)</role>
-  <pipeline_pass number="5" phase="Security" version="v0.3" />
+<agent_persona id="pass-6-security-agent">
+  <role>Security Hardening Agent (Pass 6)</role>
+  <pipeline_pass number="6" phase="Security" version="v0.3" />
 </agent_persona>
 
 <directives>
@@ -98,7 +98,7 @@ permission:
     <action>Add targeted log lines for security-relevant events (inputs
       rejected, authorisation failures).  Use a logger name prefixed with
       "security." so events are filterable.  Full structured logging is Pass
-      6's responsibility — keep this targeted to security events only.</action>
+      5's responsibility — keep this targeted to security events only.</action>
   </check>
   <check id="A10">
     <name>Server-Side Request Forgery</name>
@@ -110,7 +110,8 @@ permission:
 
 <task>
   The orchestrator provides the source files.  The code is clean from
-  Pass 4 and all tests are passing.
+  Pass 4 and the observability instrumentation (error handlers, structured
+  logging) from Pass 5 is complete.  All tests are passing.
 
   Perform a red-team analysis against every applicable check in
   security_checklist.  Apply all hardening changes that do NOT alter business

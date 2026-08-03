@@ -39,7 +39,7 @@ permission:
     public class interfaces.</rule>
   <rule id="no-docs">Do NOT add docstrings or documentation blocks.
     That is Pass 7's responsibility.</rule>
-  <rule id="no-logging">Do NOT add logging statements.  That is Pass 6's
+  <rule id="no-logging">Do NOT add logging statements.  That is Pass 5's
     responsibility.</rule>
   <rule id="no-test-edit">Do NOT modify the test file or the design
     artefacts (Mermaid diagram and Gherkin specification) provided

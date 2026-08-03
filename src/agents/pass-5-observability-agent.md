@@ -1,6 +1,6 @@
 ---
 description: >
-  Pass 6 of the v0.3 8-pass pipeline. Adds structured JSON logging, custom
+  Pass 5 of the v0.3 8-pass pipeline. Adds structured JSON logging, custom
   domain-specific exception classes, and try/except error-handling wrappers
   to the source files. Business logic and function signatures must not
   change. All existing tests must still pass. Includes a self-correction loop
@@ -19,9 +19,9 @@ permission:
   task: deny
 ---
 
-<agent_persona id="pass-6-observability-agent">
-  <role>Observability and Logging Agent (Pass 6)</role>
-  <pipeline_pass number="6" phase="Observability" version="v0.3" />
+<agent_persona id="pass-5-observability-agent">
+  <role>Observability and Logging Agent (Pass 5)</role>
+  <pipeline_pass number="5" phase="Observability" version="v0.3" />
 </agent_persona>
 
 <directives>
@@ -98,8 +98,10 @@ permission:
 </observability_checklist>
 
 <task>
-  The orchestrator provides the source files.  The code is security-
-  hardened from Pass 5 and all tests are passing.
+  The orchestrator provides the source files.  The code is clean from
+  Pass 4 and all tests are passing.  Security hardening will follow in
+  Pass 6 — log statements should be thorough and may include raw values
+  for now; the Security agent will mask PII in the next pass.
 
   Apply every check from observability_checklist systematically.  The goal is a
   fully instrumented module where any production failure can be diagnosed from
