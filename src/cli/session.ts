@@ -4,9 +4,16 @@ import { cwd } from 'node:process';
 import { PipelinePass, DEFAULT_MAX_CORRECTION_RETRIES } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
 import type { IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
+import type { PipelineOrchestrator } from '../core/orchestrator.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
+
+let activeOrchestrator: PipelineOrchestrator | undefined;
+
+export function getActiveOrchestrator(): PipelineOrchestrator | undefined {
+  return activeOrchestrator;
+}
 
 export interface ArtefactPaths {
   artefactDir: string;
@@ -59,11 +66,40 @@ export async function resumeSession(
   const ctx = await stateStore.load();
   ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
 
-  await git.resetWorkingTree();
-  console.log('\n  Resume: working tree cleaned.\n');
+  const snap = ctx.xstateSnapshot as Record<string, unknown> | undefined;
+  const isPaused: boolean = snap?.status === 'active' && snap?.value === 'paused';
 
   let startPass: PipelinePass;
   let lastCompletedPass: number | null = null;
+
+  if (isPaused) {
+    await fs.mkdir(ctx.artefactDir);
+    renderer.banner(ctx);
+
+    const { orchestrator } = createPipelineServices({
+      ctx,
+      fs,
+      git,
+      renderer,
+      version,
+      stateStore,
+    });
+
+    activeOrchestrator = orchestrator;
+
+    try {
+      await orchestrator.run(ctx);
+      await stateStore.delete();
+      activeOrchestrator = undefined;
+      process.exit(0);
+    } catch (err) {
+      renderer.fatal(err instanceof Error ? err.message : String(err));
+    }
+    return;
+  }
+
+  await git.resetWorkingTree();
+  console.log('\n  Resume: working tree cleaned.\n');
 
   if (ctx.currentPass !== undefined && Object.keys(ctx.history).length > 0) {
     const entry = ctx.history[ctx.currentPass];
@@ -106,11 +142,15 @@ export async function resumeSession(
     stateStore,
   });
 
+  activeOrchestrator = orchestrator;
+
   try {
     await orchestrator.run(ctx, startPass);
     await stateStore.delete();
+    activeOrchestrator = undefined;
     process.exit(0);
   } catch (err) {
+    activeOrchestrator = undefined;
     renderer.fatal(err instanceof Error ? err.message : String(err));
   }
 }
@@ -165,11 +205,15 @@ export async function startNewSession(
     stateStore,
   });
 
+  activeOrchestrator = orchestrator;
+
   try {
     await orchestrator.run(ctx, PipelinePass.Design);
     await stateStore.delete();
+    activeOrchestrator = undefined;
     process.exit(0);
   } catch (err) {
+    activeOrchestrator = undefined;
     renderer.fatal(err instanceof Error ? err.message : String(err));
   }
 }

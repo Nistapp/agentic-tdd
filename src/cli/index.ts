@@ -13,6 +13,7 @@ import {
   abortSession,
   resumeSession,
   startNewSession,
+  getActiveOrchestrator,
 } from './session.js';
 
 process.on('uncaughtException', (err) => {
@@ -23,6 +24,38 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   loggers.cli.fatal({ reason }, 'Unhandled rejection');
   process.exit(1);
+});
+
+let sigintCount = 0;
+let sigintTimer: ReturnType<typeof setTimeout> | undefined;
+
+process.on('SIGINT', async () => {
+  sigintCount++;
+
+  if (sigintCount === 1) {
+    console.log(
+      '\n  Gracefully pausing after the current pass completes. Press Ctrl+C again to force exit.\n',
+    );
+
+    sigintTimer = setTimeout(() => {
+      sigintCount = 0;
+    }, 2000);
+
+    try {
+      const orchestrator = getActiveOrchestrator();
+      if (orchestrator) {
+        await orchestrator.pause();
+      }
+      process.exit(0);
+    } catch {
+      process.exit(130);
+    }
+  } else {
+    if (sigintTimer !== undefined) {
+      clearTimeout(sigintTimer);
+    }
+    process.exit(130);
+  }
 });
 
 // ---------------------------------------------------------------------------

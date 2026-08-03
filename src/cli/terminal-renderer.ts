@@ -147,6 +147,28 @@ export class TerminalRenderer {
     this.#w.error(`  [FATAL]  ${msg}`);
   }
 
+  pausedBanner(msg: string): void {
+    const body = ['\u23F8  PAUSE', '', msg].join('\n');
+    this.#w.log(
+      boxen(body, {
+        width:       this.#boxWidth,
+        borderStyle: 'single',
+        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+      }),
+    );
+  }
+
+  resumedBanner(msg: string): void {
+    const body = ['\u25B6  RESUME', '', msg].join('\n');
+    this.#w.log(
+      boxen(body, {
+        width:       this.#boxWidth,
+        borderStyle: 'single',
+        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+      }),
+    );
+  }
+
   logPipelineComplete(version: string): void {
     const body = [
       `v${version} Pipeline complete — all 8 passes ran successfully.`,

@@ -55,6 +55,14 @@ export function attachTerminalListener(
   events.on('WARNING', (evt: AgenticEvent) => renderer.logWarnMessage(evt.message));
   events.on('ERROR',   (evt: AgenticEvent) => renderer.logErrorMessage(evt.message));
 
+  events.on('PIPELINE_PAUSED', (evt: AgenticEvent) =>
+    renderer.pausedBanner(evt.message),
+  );
+
+  events.on('PIPELINE_RESUMED', (evt: AgenticEvent) =>
+    renderer.resumedBanner(evt.message),
+  );
+
   events.on('PIPELINE_COMPLETED', (_: AgenticEvent) =>
     renderer.logPipelineComplete(version),
   );

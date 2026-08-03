@@ -1,7 +1,7 @@
 import { createInterface } from 'node:readline';
 import type { Interface } from 'node:readline';
 
-import type { PipelineContext, FileChange } from '../core/types.js';
+import type { PipelineContext, FileChange, HitlAction } from '../core/types.js';
 import { PipelinePass } from '../core/types.js';
 import type { HitlHandler } from '../core/orchestrator.js';
 
@@ -17,13 +17,42 @@ export function createHitlHandler(
 ): HitlHandler {
   const W = 68;
 
-  return async (pass: PipelinePass = PipelinePass.Design, files: FileChange[] = []) => {
+  return async (pass: PipelinePass = PipelinePass.Design, files: FileChange[] = []): Promise<HitlAction> => {
     if (pass === PipelinePass.TestGeneration) {
-      await renderTestGenerationHitl(ctx, files, W, createRl, write);
-    } else {
-      await renderDesignHitl(ctx, W, createRl, write);
+      return renderTestGenerationHitl(ctx, files, W, createRl, write);
     }
+    return renderDesignHitl(ctx, W, createRl, write);
   };
+}
+
+async function promptHitl(
+  createRl: ReadlineFactory,
+  write: (msg: string) => void,
+): Promise<HitlAction> {
+  const rl = createRl({ input: process.stdin, output: process.stdout });
+  const result = await new Promise<HitlAction>((resolve) => {
+    function ask() {
+      rl.question(
+        '  Press Enter to approve, type \'r\' to rewind, or \'x\' to reject (abort)...  ',
+        (answer: string) => {
+          const trimmed = answer.trim().toLowerCase();
+          if (trimmed === '') {
+            resolve('APPROVE');
+          } else if (trimmed === 'r') {
+            resolve('REWIND');
+          } else if (trimmed === 'x') {
+            resolve('REJECT');
+          } else {
+            write('  Unrecognised input — please try again.');
+            ask();
+          }
+        },
+      );
+    }
+    ask();
+  });
+  rl.close();
+  return result;
 }
 
 async function renderDesignHitl(
@@ -31,7 +60,7 @@ async function renderDesignHitl(
   W: number,
   createRl: ReadlineFactory,
   write: (msg: string) => void,
-): Promise<void> {
+): Promise<HitlAction> {
   const mmd = ctx.designMmdPath;
   const gh = ctx.specGherkinPath;
   const max = W - 10;
@@ -51,15 +80,17 @@ async function renderDesignHitl(
   write('\u2514' + '\u2500'.repeat(W) + '\u2518');
   write('');
 
-  const rl = createRl({ input: process.stdin, output: process.stdout });
-  await new Promise<void>((resolve) => {
-    rl.question('  Press Enter to approve and advance to Pass 1 (Contracts)...  ', () => {
-      rl.close();
-      resolve();
-    });
-  });
-  rl.close();
-  write('\n  Design approved.  Continuing to Pass 1 (Contracts & Types)...\n');
+  const action = await promptHitl(createRl, write);
+
+  if (action === 'APPROVE') {
+    write('\n  Design approved.  Continuing to Pass 1 (Contracts & Types)...\n');
+  } else if (action === 'REWIND') {
+    write('\n  Design rejected.  Rewinding to re-run Pass 0 (Design)...\n');
+  } else {
+    write('\n  Design rejected by user.  Aborting pipeline.\n');
+  }
+
+  return action;
 }
 
 async function renderTestGenerationHitl(
@@ -68,7 +99,7 @@ async function renderTestGenerationHitl(
   W: number,
   createRl: ReadlineFactory,
   write: (msg: string) => void,
-): Promise<void> {
+): Promise<HitlAction> {
   write('');
   write('\u250C' + '\u2500'.repeat(W) + '\u2510');
   write('\u2502  HUMAN-IN-THE-LOOP GATE (After Pass 2: Test Generation)        \u2502');
@@ -92,13 +123,15 @@ async function renderTestGenerationHitl(
   write('\u2514' + '\u2500'.repeat(W) + '\u2518');
   write('');
 
-  const rl = createRl({ input: process.stdin, output: process.stdout });
-  await new Promise<void>((resolve) => {
-    rl.question('  Press Enter to approve and advance to Pass 3 (Core Implementation)...  ', () => {
-      rl.close();
-      resolve();
-    });
-  });
-  rl.close();
-  write('\n  Test suite approved.  Continuing to Pass 3 (Core Implementation)...\n');
+  const action = await promptHitl(createRl, write);
+
+  if (action === 'APPROVE') {
+    write('\n  Test suite approved.  Continuing to Pass 3 (Core Implementation)...\n');
+  } else if (action === 'REWIND') {
+    write('\n  Test suite rejected.  Rewinding to re-run Pass 2 (Test Generation)...\n');
+  } else {
+    write('\n  Test suite rejected by user.  Aborting pipeline.\n');
+  }
+
+  return action;
 }
