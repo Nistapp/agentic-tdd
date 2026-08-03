@@ -34,8 +34,8 @@ Each of the 8 passes triggers an AI subagent. These use a dynamic namespace patt
 - `orchestrator:agent:pass-2-test-generation-agent`
 - `orchestrator:agent:pass-3-core-implementation-agent`
 - `orchestrator:agent:pass-4-refactor-agent`
-- `orchestrator:agent:pass-5-security-agent`
-- `orchestrator:agent:pass-6-observability-agent`
+- `orchestrator:agent:pass-5-observability-agent`
+- `orchestrator:agent:pass-6-security-agent`
 - `orchestrator:agent:pass-7-documentation-agent`
 
 ## Examples

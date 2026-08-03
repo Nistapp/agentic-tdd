@@ -81,7 +81,7 @@ The `ContextBuilder` must analyze `ctx.history` to determine which source files 
 
 *   **Pass 2 (Test Generation):** Needs the `filesTouched` from Pass 1 (Contracts).
 *   **Pass 3 (Core Implementation):** Needs `filesTouched` from Pass 1 (Contracts) and Pass 2 (Tests).
-*   **Pass 4 (Refactor), Pass 5 (Security), Pass 6 (Observability):** Needs `filesTouched` from Pass 3 (Implementation) and Pass 2 (Tests).
+*   **Pass 4 (Refactor), Pass 5 (Observability), Pass 6 (Security):** Needs `filesTouched` from Pass 3 (Implementation) and Pass 2 (Tests).
 *   **Pass 7 (Documentation):** Needs `filesTouched` from Pass 3-6 (Implementation files).
 
 **Agent Payload Updates:**

@@ -23,7 +23,7 @@ To give each agent exactly what it needs, we must track files by their semantic 
 - **Context:** `design.mmd`, `spec.gherkin` + **Pass 1 Contract Files** + **Pass 2 Test Files**
 - **Reason:** The agent needs to fill in the contract stubs to make the tests pass. The error log is also attached if tests fail on self-correction.
 
-### Pass 4 (Refactor), Pass 5 (Security), Pass 6 (Observability)
+### Pass 4 (Refactor), Pass 5 (Observability), Pass 6 (Security)
 - **Context:** **Implementation Files** + **Pass 2 Test Files**
 - **Reason:** These passes structurally modify the implementation. Passing the tests helps the agent understand behavioral constraints and edge cases to ensure logic remains intact.
 
