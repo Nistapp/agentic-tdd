@@ -256,6 +256,51 @@ export function createPipelineMachine(services: {
           }
         },
       ),
+
+      selfCorrectionPass3: createSelfCorrectionMachine({
+        agentRunner,
+        cmd,
+        fs,
+        git,
+        events,
+        logger: logger.child({ passId: 3 }),
+      }),
+
+      selfCorrectionPass4: createSelfCorrectionMachine({
+        agentRunner,
+        cmd,
+        fs,
+        git,
+        events,
+        logger: logger.child({ passId: 4 }),
+      }),
+
+      selfCorrectionPass5: createSelfCorrectionMachine({
+        agentRunner,
+        cmd,
+        fs,
+        git,
+        events,
+        logger: logger.child({ passId: 5 }),
+      }),
+
+      selfCorrectionPass6: createSelfCorrectionMachine({
+        agentRunner,
+        cmd,
+        fs,
+        git,
+        events,
+        logger: logger.child({ passId: 6 }),
+      }),
+
+      selfCorrectionPass7: createSelfCorrectionMachine({
+        agentRunner,
+        cmd,
+        fs,
+        git,
+        events,
+        logger: logger.child({ passId: 7 }),
+      }),
     },
 
     actions: {
@@ -654,14 +699,7 @@ export function createPipelineMachine(services: {
           }),
         }),
         invoke: {
-          src: createSelfCorrectionMachine({
-            agentRunner,
-            cmd,
-            fs,
-            git,
-            events,
-            logger: logger.child({ passId: 3 }),
-          }),
+          src: 'selfCorrectionPass3',
           input: ({
             context,
           }: {
@@ -697,14 +735,7 @@ export function createPipelineMachine(services: {
           }),
         }),
         invoke: {
-          src: createSelfCorrectionMachine({
-            agentRunner,
-            cmd,
-            fs,
-            git,
-            events,
-            logger: logger.child({ passId: 4 }),
-          }),
+          src: 'selfCorrectionPass4',
           input: ({
             context,
           }: {
@@ -740,14 +771,7 @@ export function createPipelineMachine(services: {
           }),
         }),
         invoke: {
-          src: createSelfCorrectionMachine({
-            agentRunner,
-            cmd,
-            fs,
-            git,
-            events,
-            logger: logger.child({ passId: 5 }),
-          }),
+          src: 'selfCorrectionPass5',
           input: ({
             context,
           }: {
@@ -783,14 +807,7 @@ export function createPipelineMachine(services: {
           }),
         }),
         invoke: {
-          src: createSelfCorrectionMachine({
-            agentRunner,
-            cmd,
-            fs,
-            git,
-            events,
-            logger: logger.child({ passId: 6 }),
-          }),
+          src: 'selfCorrectionPass6',
           input: ({
             context,
           }: {
@@ -826,14 +843,7 @@ export function createPipelineMachine(services: {
           }),
         }),
         invoke: {
-          src: createSelfCorrectionMachine({
-            agentRunner,
-            cmd,
-            fs,
-            git,
-            events,
-            logger: logger.child({ passId: 7 }),
-          }),
+          src: 'selfCorrectionPass7',
           input: ({
             context,
           }: {
