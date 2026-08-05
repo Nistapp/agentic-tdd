@@ -1,6 +1,6 @@
 import { createActor, waitFor } from 'xstate';
 
-import { createPipelineMachine, getInitialStateForPass } from '../../src/core/machines/pipeline.machine.js';
+import { pipelineMachineConfig, createPipelineMachine, getInitialStateForPass } from '../../src/core/machines/pipeline.machine.js';
 import { PipelinePass } from '../../src/core/types.js';
 import type {
   PipelineContext,
@@ -719,6 +719,32 @@ describe('Pipeline Machine', () => {
       await waitFor(actor, (snapshot) => snapshot.matches('pass_2_test_generation'));
 
       expect(findEvents(m.emittedEvents, 'PIPELINE_RESUMED')).toHaveLength(1);
+    });
+  });
+
+  describe('visualisation regression guard', () => {
+    it('pipelineMachineConfig uses only string refs in invoke.src', () => {
+      type InvokeDef = { src: unknown };
+
+      function collectInvokeSources(node: {
+        invoke?: InvokeDef[];
+        states?: Record<string, unknown>;
+      }): unknown[] {
+        const sources: unknown[] = (node.invoke ?? []).map((i) => i.src);
+        for (const child of Object.values(node.states ?? {})) {
+          sources.push(...collectInvokeSources(child as { invoke?: InvokeDef[]; states?: Record<string, unknown> }));
+        }
+        return sources;
+      }
+
+      const root = (pipelineMachineConfig as { root: { states?: Record<string, unknown> } }).root;
+      const allSrcs = collectInvokeSources(root);
+
+      expect(allSrcs.length).toBeGreaterThan(0);
+
+      for (const src of allSrcs) {
+        expect(typeof src).toBe('string');
+      }
     });
   });
 });

@@ -1,6 +1,6 @@
 import { createActor, waitFor } from 'xstate';
 
-import { createSelfCorrectionMachine } from '../../src/core/machines/self-correction.machine.js';
+import { selfCorrectionMachineConfig, createSelfCorrectionMachine } from '../../src/core/machines/self-correction.machine.js';
 import { PipelinePass, PASS_LABELS } from '../../src/core/types.js';
 import type {
   PipelineContext,
@@ -577,6 +577,32 @@ describe('SelfCorrection Machine', () => {
       const parsed = JSON.parse(json) as Record<string, unknown>;
       expect(typeof parsed).toBe('object');
       expect(parsed.status).toBe('done');
+    });
+  });
+
+  describe('visualisation regression guard', () => {
+    it('selfCorrectionMachineConfig uses only string refs in invoke.src', () => {
+      type InvokeDef = { src: unknown };
+
+      function collectInvokeSources(node: {
+        invoke?: InvokeDef[];
+        states?: Record<string, unknown>;
+      }): unknown[] {
+        const sources: unknown[] = (node.invoke ?? []).map((i) => i.src);
+        for (const child of Object.values(node.states ?? {})) {
+          sources.push(...collectInvokeSources(child as { invoke?: InvokeDef[]; states?: Record<string, unknown> }));
+        }
+        return sources;
+      }
+
+      const root = (selfCorrectionMachineConfig as { root: { states?: Record<string, unknown> } }).root;
+      const allSrcs = collectInvokeSources(root);
+
+      expect(allSrcs.length).toBeGreaterThan(0);
+
+      for (const src of allSrcs) {
+        expect(typeof src).toBe('string');
+      }
     });
   });
 });
