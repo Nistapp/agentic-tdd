@@ -41,12 +41,7 @@ export class OpenCodeAgentRunner implements IAgentRunner {
 
   async #buildArgs(request: AgentRunRequest, logger: ILogger): Promise<string[]> {
     const agentName = AGENT_NAMES[request.pass];
-    // --pure is a deliberate architectural decision: pipeline agents have narrow,
-    // file-scoped tasks and tightly declared permissions. External opencode plugins
-    // add unnecessary startup time, token budget overhead, and non-determinism.
-    // It also prevents opencode from auto-installing plugin deps into
-    // $OPENCODE_CONFIG_DIR, keeping our dist/ output free of node_modules pollution.
-    const args = ['run', '--pure', '--agent', agentName];
+    const args = ['run', '--agent', agentName];
 
     const { designMmd, specGherkin, specFile, errorLog } = request.artefacts;
 
