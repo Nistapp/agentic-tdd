@@ -287,6 +287,25 @@ export interface PassCompletedPayload {
 // ContextFiles — categorised source files for agent context injection
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Range — 1-based line range used by git diff and AST symbol resolution
+// ---------------------------------------------------------------------------
+
+export interface Range {
+  /** 1-based start line (inclusive). */
+  start: number;
+  /** 1-based end line (inclusive). */
+  end: number;
+}
+
+/** Parsed result of `git diff --unified=0` — per-file changed line ranges. */
+export interface DiffLineChange {
+  /** File path as reported by git diff (e.g. `src/foo.ts`). */
+  file: string;
+  /** Changed line ranges in the *new* file (1-based, inclusive). */
+  ranges: Range[];
+}
+
 export interface ContextFiles {
   contracts: string[];
   tests: string[];

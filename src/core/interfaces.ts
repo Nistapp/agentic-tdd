@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, AgentRunRequest, AgentRunResult } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -53,6 +53,15 @@ export interface IGitService {
 
   /** Execute `git reset --hard <sha>` and `git clean -fd` to rewind to a specific commit. */
   abortToSha(sha: string): Promise<void>;
+
+  /**
+   * Compute changed line ranges between two refs via `git diff --unified=0`.
+   *
+   * Returns per-file changed line ranges in the **new** file (1-based, inclusive).
+   * Implementations should cache the result for the same (fromRef, toRef) pair
+   * since multiple passes may request the same diff.
+   */
+  getDiffLineRanges(fromRef: string, toRef: string): Promise<DiffLineChange[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,5 +190,26 @@ export interface ILogger {
 export interface PipelineConfig {
   readonly opencodeLogPath: string;
   readonly apiKeySet: 'present' | 'missing';
+}
+
+// ---------------------------------------------------------------------------
+// ISymbolResolver — maps git-diff line ranges to enclosing function/method names
+// ---------------------------------------------------------------------------
+
+export interface ISymbolResolver {
+  /**
+   * For each {@link Range} in *ranges*, find the enclosing function, method,
+   * or class in *source* and return the qualified name (e.g. `Foo.methodA`).
+   *
+   * Parsing is done entirely in-memory — the implementation MUST NOT read the
+   * filesystem. *filePath* is provided for language detection and for error
+   * messages; it is not opened by the resolver.
+   *
+   * Ranges without an enclosing symbol are silently dropped.
+   * Malformed source returns an empty array (never throws).
+   *
+   * @returns Deduplicated, sorted array of qualified names.
+   */
+  mapRangesToSymbols(filePath: string, source: string, ranges: Range[]): string[];
 }
 
