@@ -240,6 +240,141 @@ describe('GitService', () => {
     expect(execaMock).toHaveBeenCalledWith('git', ['reset', '--hard', 'abc123']);
     expect(execaMock).toHaveBeenCalledWith('git', ['clean', '-fd']);
   });
+
+  // -----------------------------------------------------------------------
+  // getDiffLineRanges
+  // -----------------------------------------------------------------------
+
+  it('getDiffLineRanges parses a single-file diff into ranges', async () => {
+    execaMock.mockResolvedValue({
+      stdout:
+        'diff --git a/src/foo.ts b/src/foo.ts\n' +
+        'index abc123..def456 100644\n' +
+        '--- a/src/foo.ts\n' +
+        '+++ b/src/foo.ts\n' +
+        '@@ -10,0 +11,3 @@\n' +
+        '+new line 1\n' +
+        '+new line 2\n' +
+        '+new line 3\n',
+    });
+    const git = new GitService();
+    const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(result).toEqual([
+      { file: 'src/foo.ts', ranges: [{ start: 11, end: 13 }] },
+    ]);
+  });
+
+  it('getDiffLineRanges parses a diff with multiple hunks per file', async () => {
+    execaMock.mockResolvedValue({
+      stdout:
+        'diff --git a/src/foo.ts b/src/foo.ts\n' +
+        '--- a/src/foo.ts\n' +
+        '+++ b/src/foo.ts\n' +
+        '@@ -5,2 +5,3 @@\n' +
+        ' context\n' +
+        '-removed\n' +
+        '+added\n' +
+        ' context\n' +
+        '@@ -20,0 +22,4 @@\n' +
+        '+new block\n' +
+        '+line 2\n' +
+        '+line 3\n' +
+        '+line 4\n',
+    });
+    const git = new GitService();
+    const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(result).toEqual([
+      {
+        file: 'src/foo.ts',
+        ranges: [
+          { start: 5, end: 7 },
+          { start: 22, end: 25 },
+        ],
+      },
+    ]);
+  });
+
+  it('getDiffLineRanges parses a diff with multiple files', async () => {
+    execaMock.mockResolvedValue({
+      stdout:
+        'diff --git a/src/a.ts b/src/a.ts\n' +
+        '@@ -1,0 +2,1 @@\n' +
+        '+added a\n' +
+        'diff --git a/src/b.ts b/src/b.ts\n' +
+        '@@ -10,3 +10,4 @@\n' +
+        ' unchanged\n' +
+        '-removed b\n' +
+        '+added b1\n' +
+        '+added b2\n',
+    });
+    const git = new GitService();
+    const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(result).toEqual([
+      { file: 'src/a.ts', ranges: [{ start: 2, end: 2 }] },
+      { file: 'src/b.ts', ranges: [{ start: 10, end: 13 }] },
+    ]);
+  });
+
+  it('getDiffLineRanges handles hunk header without count (defaults to 1)', async () => {
+    execaMock.mockResolvedValue({
+      stdout:
+        'diff --git a/src/x.ts b/src/x.ts\n' +
+        '@@ -3 +3 @@\n' +
+        '-old\n' +
+        '+new\n',
+    });
+    const git = new GitService();
+    const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(result).toEqual([
+      { file: 'src/x.ts', ranges: [{ start: 3, end: 3 }] },
+    ]);
+  });
+
+  it('getDiffLineRanges returns empty array when there is no diff', async () => {
+    execaMock.mockResolvedValue({ stdout: '' });
+    const git = new GitService();
+    const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(result).toEqual([]);
+  });
+
+  it('getDiffLineRanges caches results for the same ref pair', async () => {
+    execaMock.mockResolvedValue({
+      stdout:
+        'diff --git a/src/foo.ts b/src/foo.ts\n' +
+        '@@ -1 +2 @@\n' +
+        '+changed\n',
+    });
+    const git = new GitService();
+
+    await git.getDiffLineRanges('from', 'to');
+    expect(execaMock).toHaveBeenCalledTimes(1);
+
+    await git.getDiffLineRanges('from', 'to');
+    // execa should still have been called only once (cache hit)
+    expect(execaMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('getDiffLineRanges does not cache across different ref pairs', async () => {
+    execaMock.mockResolvedValue({ stdout: '' });
+    const git = new GitService();
+
+    await git.getDiffLineRanges('HEAD~2', 'HEAD~1');
+    await git.getDiffLineRanges('HEAD~1', 'HEAD');
+    expect(execaMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('getDiffLineRanges uses correct git command line', async () => {
+    execaMock.mockResolvedValue({ stdout: '' });
+    const git = new GitService();
+    await git.getDiffLineRanges('abc123', 'def456');
+    expect(execaMock).toHaveBeenCalledWith('git', [
+      'diff',
+      '--unified=0',
+      'abc123',
+      'def456',
+      '--',
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------

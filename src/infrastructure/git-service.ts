@@ -1,8 +1,68 @@
 import { execa } from 'execa';
 import type { IGitService } from '../core/interfaces.js';
-import type { GitCommitResult, FileChange } from '../core/types.js';
+import type { GitCommitResult, FileChange, DiffLineChange, Range } from '../core/types.js';
+
+/**
+ * Regex to parse a `diff --git a/<old> b/<new>` file header.
+ * Captures the new file path (group 1).
+ */
+const DIFF_FILE_HEADER = /^diff --git a\/(.*) b\/(.*)$/;
+
+/**
+ * Regex to parse a unified-diff hunk header `@@ -oldStart,oldCount +newStart,newCount @@`.
+ * Groups: 1=oldStart, 2=oldCount (optional), 3=newStart, 4=newCount (optional).
+ */
+const DIFF_HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+function parseDiffUnified0(stdout: string): DiffLineChange[] {
+  const lines = stdout.split('\n');
+  const result: DiffLineChange[] = [];
+  let current: DiffLineChange | null = null;
+
+  for (const line of lines) {
+    const fileMatch = DIFF_FILE_HEADER.exec(line);
+    if (fileMatch) {
+      if (current) result.push(current);
+      current = { file: fileMatch[2]!, ranges: [] };
+      continue;
+    }
+
+    const hunkMatch = DIFF_HUNK_HEADER.exec(line);
+    if (hunkMatch && current) {
+      const newStart = parseInt(hunkMatch[3]!, 10);
+      const newCount = hunkMatch[4] !== undefined ? parseInt(hunkMatch[4], 10) : 1;
+      const range: Range = {
+        start: newStart,
+        end: newStart + newCount - 1,
+      };
+      current.ranges.push(range);
+    }
+  }
+
+  if (current) result.push(current);
+  return result;
+}
 
 export class GitService implements IGitService {
+  #diffCache = new Map<string, DiffLineChange[]>();
+
+  async getDiffLineRanges(fromRef: string, toRef: string): Promise<DiffLineChange[]> {
+    const key = `${fromRef}..${toRef}`;
+    const cached = this.#diffCache.get(key);
+    if (cached) return cached;
+
+    const { stdout } = await execa('git', [
+      'diff',
+      '--unified=0',
+      fromRef,
+      toRef,
+      '--',
+    ]);
+
+    const result = parseDiffUnified0(stdout);
+    this.#diffCache.set(key, result);
+    return result;
+  }
   async getCurrentBranch(): Promise<string> {
     const result = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
     return result.stdout.trim();
