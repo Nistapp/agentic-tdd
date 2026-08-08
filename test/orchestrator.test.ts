@@ -198,7 +198,7 @@ describe('PipelineOrchestrator', () => {
   describe('Happy Path — all 8 passes succeed', () => {
     it('calls agentRunner.execute for all 8 passes and cmd.runTests for self-correction passes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx);
@@ -213,7 +213,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits PIPELINE_STARTED and PIPELINE_COMPLETED', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -224,7 +224,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits PASS_STARTED and PASS_COMPLETED for all 8 passes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -234,7 +234,7 @@ describe('PipelineOrchestrator', () => {
 
     it('calls git.commit for passes 0–7 (8 commits)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -244,7 +244,7 @@ describe('PipelineOrchestrator', () => {
 
     it('does NOT emit HITL_REQUIRED when skipHitl is true', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -253,7 +253,7 @@ describe('PipelineOrchestrator', () => {
 
     it('emits HITL_REQUIRED and calls hitl handler when skipHitl is false', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -268,7 +268,7 @@ describe('PipelineOrchestrator', () => {
         { status: 'A', file: 'test/bar.test.ts' },
       ];
       (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -278,7 +278,7 @@ describe('PipelineOrchestrator', () => {
 
     it('characterization: event kind sequence for full 8-pass happy path', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -322,7 +322,7 @@ describe('PipelineOrchestrator', () => {
       const m = makeMocks();
       m.hitl = vi.fn().mockRejectedValue(new Error('HITL rejected by user'));
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await expect(
         orch.run(makeContext({ skipHitl: false })),
@@ -340,7 +340,7 @@ describe('PipelineOrchestrator', () => {
         { status: 'A', file: 'src/foo.ts' },
       ];
       (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -359,7 +359,7 @@ describe('PipelineOrchestrator', () => {
 
     it('invokes the HITL handler exactly twice (Pass 0 and Pass 2) and never for other passes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
@@ -372,7 +372,7 @@ describe('PipelineOrchestrator', () => {
   describe('Pass 0 — design phase', () => {
     it('runs Pass 0 and handles design artefacts', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -396,7 +396,7 @@ describe('PipelineOrchestrator', () => {
         return { output: '' };
       });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await expect(
         orch.run(makeContext({ skipHitl: true })),
@@ -409,7 +409,7 @@ describe('PipelineOrchestrator', () => {
   describe('Event payload accuracy', () => {
     it('passes currentPass and passLabel on every pass-level event', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -424,7 +424,7 @@ describe('PipelineOrchestrator', () => {
   describe('Pass 2 commits all changes', () => {
     it('commits all changes after Pass 2 completes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -439,7 +439,7 @@ describe('PipelineOrchestrator', () => {
   describe('Rebase Pattern — resume with startPass', () => {
     it('runs only passes from startPass onwards (Pass 3 resume)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.CoreImplementation);
@@ -454,7 +454,7 @@ describe('PipelineOrchestrator', () => {
 
     it('runs only Pass 7 when starting at Documentation', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.Documentation);
@@ -469,7 +469,7 @@ describe('PipelineOrchestrator', () => {
   describe('Snapshot serialization', () => {
     it('populates ctx.xstateSnapshot after completion', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -484,7 +484,7 @@ describe('PipelineOrchestrator', () => {
 
     it('resumes from final snapshot without re-running agents', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -496,7 +496,7 @@ describe('PipelineOrchestrator', () => {
       // Run again with the snapshot — should resolve immediately without re-invoking agents
       const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: ctx.xstateSnapshot });
       const m2 = makeMocks();
-      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, m2.stateStore, m2.hitl);
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
 
       const result = await orch2.run(ctx2);
 
@@ -508,7 +508,7 @@ describe('PipelineOrchestrator', () => {
 
     it('saves final snapshot via stateStore on completion', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -537,7 +537,7 @@ describe('PipelineOrchestrator', () => {
         return { output: '' };
       });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -579,7 +579,7 @@ describe('PipelineOrchestrator', () => {
         return { output: '' };
       });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -597,7 +597,7 @@ describe('PipelineOrchestrator', () => {
       // Simulate --resume from the paused snapshot
       const m2 = makeMocks();
       const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
-      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, m2.stateStore, m2.hitl);
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
 
       const result = await orch2.run(ctx2);
 
@@ -622,7 +622,7 @@ describe('PipelineOrchestrator', () => {
         return { output: '' };
       });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -642,7 +642,7 @@ describe('PipelineOrchestrator', () => {
       const pausedSnapshot = ctx.xstateSnapshot;
       const m2 = makeMocks();
       const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
-      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, m2.stateStore, m2.hitl);
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
 
       await orch2.run(ctx2);
 
@@ -654,7 +654,7 @@ describe('PipelineOrchestrator', () => {
   describe('Corrupt snapshot handling', () => {
     it('falls back to startPass path when xstateSnapshot is malformed object', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true, xstateSnapshot: { corrupt: true, status: 'active', value: 'paused' } });
 
       const result = await orch.run(ctx);
@@ -670,7 +670,7 @@ describe('PipelineOrchestrator', () => {
 
     it('handles empty xstateSnapshot object gracefully', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true, xstateSnapshot: {} });
 
       const result = await orch.run(ctx);
@@ -681,7 +681,7 @@ describe('PipelineOrchestrator', () => {
 
     it('handles xstateSnapshot with unknown state value', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, m.stateStore, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true, xstateSnapshot: { status: 'active', value: 'nonexistent_state' } });
 
       const result = await orch.run(ctx);

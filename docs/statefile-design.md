@@ -1,11 +1,12 @@
-# StateFile: Session Persistence (DEFERRED)
+# StateFile: Session Persistence (SUPERSEDED)
 
-> **⛔ SUPERSEDED (07 Aug 2026).** This design (and the plans under
+> **⛔ SUPERSEDED (08 Aug 2026).** This design (and the plans under
 > `docs/State-file-design/`) are superseded by
-> [`artefacts/Context-Enrichment-Architecture-07Aug26.md`](../artefacts/Context-Enrichment-Architecture-07Aug26.md)
+> [`artefacts/Context-Enrichment-Architecture-v2-08Aug26.md`](../artefacts/Context-Enrichment-Architecture-v2-08Aug26.md)
 > — which makes the state file (`.opencode/state-<feature>.json`, **not**
-> `active-run.json`) the single source of truth for per-pass context, and closes
-> the "no per-pass writes" gap. See the architecture doc §9 for the full mapping.
+> `active-run.json`) the single source of truth for per-pass context, with
+> deterministic resume and deterministic `targetSymbols`. See the architecture
+> doc §11 for the full legacy mapping.
 > Keep this file for historical context only.
 
 This document captures the intended design for full state-file

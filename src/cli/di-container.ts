@@ -10,6 +10,7 @@ import { CommandRunner } from '../infrastructure/command-runner.js';
 import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
 import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { StateContextProvider } from '../core/context-provider.js';
+import { AstGrepSymbolResolver } from '../infrastructure/ast-grep-symbol-resolver.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
 import { loggers } from '../utils/logger.js';
@@ -28,6 +29,7 @@ export interface ContainerOptions {
   renderer: TerminalRenderer;
   version: string;
   stateStore?: IStateStore;
+  noContextEnrich?: boolean;
 }
 
 export interface PipelineServices {
@@ -35,7 +37,7 @@ export interface PipelineServices {
 }
 
 export function createPipelineServices(opts: ContainerOptions): PipelineServices {
-  const { ctx, fs, git, renderer, version, stateStore } = opts;
+  const { ctx, fs, git, renderer, version, stateStore, noContextEnrich } = opts;
 
   const events = new EventBus();
   attachTerminalListener(events, renderer, version);
@@ -53,10 +55,11 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
   );
 
   const contextProvider = new StateContextProvider();
+  const symbolResolver = noContextEnrich ? undefined : new AstGrepSymbolResolver();
 
   const orchestrator = new PipelineOrchestrator(
     git, fs, cmdRunner, agentRunner, events,
-    new PinoLoggerAdapter(loggers.core), pipelineConfig, contextProvider, stateStore, hitlHandler,
+    new PinoLoggerAdapter(loggers.core), pipelineConfig, contextProvider, symbolResolver, stateStore, hitlHandler,
   );
 
   return { orchestrator };

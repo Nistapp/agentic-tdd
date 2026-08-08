@@ -73,6 +73,7 @@ program
   .option('--log-level <level>', 'Log level (DEBUG, INFO, WARNING, ERROR)', 'INFO')
   .option('--resume', 'Resume an active Agentic TDD session')
   .option('--abort', 'Abort the active session and rewind Git history')
+  .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -92,6 +93,7 @@ program
     const git = new GitService();
     const opts = await validateAndResolveOptions(options, renderer);
     const stateStore = new JsonStateStore(fs, opts.featureName);
+    const noContextEnrich = Boolean(options.noContextEnrich);
 
     if (resume || abort) {
       const stateExists = await stateStore.exists();
@@ -103,7 +105,7 @@ program
         await abortSession(stateStore, git);
       }
 
-      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION);
+      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
       return;
     }
 
@@ -112,7 +114,7 @@ program
       renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
     }
 
-    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION);
+    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
   });
 
 program.parse(process.argv);

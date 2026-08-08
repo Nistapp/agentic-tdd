@@ -62,6 +62,7 @@ export async function resumeSession(
   git: IGitService,
   renderer: TerminalRenderer,
   version: string,
+  noContextEnrich?: boolean,
 ): Promise<void> {
   const ctx = await stateStore.load();
   ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
@@ -76,30 +77,31 @@ export async function resumeSession(
     await fs.mkdir(ctx.artefactDir);
     renderer.banner(ctx);
 
-    const { orchestrator } = createPipelineServices({
-      ctx,
-      fs,
-      git,
-      renderer,
-      version,
-      stateStore,
-    });
+      const { orchestrator } = createPipelineServices({
+        ctx,
+        fs,
+        git,
+        renderer,
+        version,
+        stateStore,
+        noContextEnrich,
+      });
 
-    activeOrchestrator = orchestrator;
+      activeOrchestrator = orchestrator;
 
-    try {
-      await orchestrator.run(ctx);
-      await stateStore.delete();
-      activeOrchestrator = undefined;
-      process.exit(0);
-    } catch (err) {
-      renderer.fatal(err instanceof Error ? err.message : String(err));
+      try {
+        await orchestrator.run(ctx);
+        await stateStore.delete();
+        activeOrchestrator = undefined;
+        process.exit(0);
+      } catch (err) {
+        renderer.fatal(err instanceof Error ? err.message : String(err));
+      }
+      return;
     }
-    return;
-  }
 
-  await git.resetWorkingTree();
-  console.log('\n  Resume: working tree cleaned.\n');
+    await git.resetWorkingTree();
+    console.log('\n  Resume: working tree cleaned.\n');
 
   if (ctx.currentPass !== undefined && Object.keys(ctx.history).length > 0) {
     const entry = ctx.history[ctx.currentPass];
@@ -112,11 +114,8 @@ export async function resumeSession(
       startPass = ctx.currentPass;
     }
   } else {
-    lastCompletedPass = await git.getLastCompletedPass();
-    startPass =
-      lastCompletedPass !== null
-        ? ((lastCompletedPass + 1) as PipelinePass)
-        : PipelinePass.Design;
+    lastCompletedPass = null;
+    startPass = PipelinePass.Design;
   }
 
   if (startPass > PipelinePass.Documentation) {
@@ -140,6 +139,7 @@ export async function resumeSession(
     renderer,
     version,
     stateStore,
+    noContextEnrich,
   });
 
   activeOrchestrator = orchestrator;
@@ -162,6 +162,7 @@ export async function startNewSession(
   git: IGitService,
   renderer: TerminalRenderer,
   version: string,
+  noContextEnrich?: boolean,
 ): Promise<void> {
   const paths = computeArtefactPaths(options.featureName);
   const originalBaseSha = await git.getCurrentCommitSha();
@@ -203,6 +204,7 @@ export async function startNewSession(
     renderer,
     version,
     stateStore,
+    noContextEnrich,
   });
 
   activeOrchestrator = orchestrator;

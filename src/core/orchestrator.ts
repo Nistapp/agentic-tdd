@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createActor, waitFor, type Snapshot } from 'xstate';
 
-import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, IEventBus, ILogger, IStateStore, PipelineConfig, IContextProvider } from './interfaces.js';
+import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, IEventBus, ILogger, IStateStore, PipelineConfig, IContextProvider, ISymbolResolver } from './interfaces.js';
 import type { PipelineContext, FileChange, HitlAction } from './types.js';
 import { PipelinePass } from './types.js';
 
@@ -29,6 +29,7 @@ export class PipelineOrchestrator {
   readonly #config: PipelineConfig;
   readonly #stateStore: IStateStore | undefined;
   readonly #contextProvider: IContextProvider;
+  readonly #symbolResolver: ISymbolResolver | undefined;
   readonly #onHitl: HitlHandler;
   #actor: ReturnType<typeof createActor> | undefined;
   #currentCtx: PipelineContext | undefined;
@@ -42,6 +43,7 @@ export class PipelineOrchestrator {
     logger: ILogger,
     config: PipelineConfig,
     contextProvider: IContextProvider,
+    symbolResolver?: ISymbolResolver,
     stateStore?: IStateStore,
     onHitl: HitlHandler = () => Promise.resolve('APPROVE'),
   ) {
@@ -54,6 +56,7 @@ export class PipelineOrchestrator {
     this.#config = config;
     this.#stateStore = stateStore;
     this.#contextProvider = contextProvider;
+    this.#symbolResolver = symbolResolver;
     this.#onHitl = onHitl;
   }
 
@@ -92,6 +95,7 @@ export class PipelineOrchestrator {
       events: this.#events,
       logger: this.#logger,
       stateStore: this.#stateStore,
+      symbolResolver: this.#symbolResolver,
       contextProvider: this.#contextProvider,
     });
 
