@@ -36,6 +36,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ast-grep/napi": "^0.45.1",
     "@opencode-ai/plugin": "1.17.7",
     "boxen": "^8.0.1",
     "commander": "^13.1.0",

@@ -498,6 +498,14 @@ Even with the best models, we cannot trust AI-generated code blindly, especially
 >
 > **The Rationale:** If the DeepSeek Core Logic agent (Pass 3) writes a working feature, but includes a hardcoded secret or a SQL injection vulnerability, Semgrep intercepts the code during the verification gate. Instead of passing the vulnerable code to the human, the pipeline automatically feeds the Semgrep error trace back to the agent for self-correction. The human never sees the code until it passes all deterministic static analysis checks.
 
+### 4.4 Approved Runtime Dependencies
+
+Per AGENTS.md §10, any new runtime dependency must be reviewed against the guardrails framework and signed off here before being introduced.
+
+| Dependency | Version | Purpose | Sign-Off Date | Rationale |
+|---|---|---|---|---|
+| `@ast-grep/napi` | ^0.45.1 | Language-agnostic AST parsing for method-level symbol resolution (WRITER side of context enrichment) | 08 Aug 2026 | Embedded, in-process, zero-config. No subprocess latency. Used to map git-diff line ranges to enclosing methods/classes for deterministic per-pass `targetSymbols`. See `artefacts/Context-Enrichment-Architecture-v2-08Aug26.md` AD-7. |
+
 ---
 
 ## Next Steps and The Path Forward
