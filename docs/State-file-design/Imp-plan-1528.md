@@ -1,5 +1,11 @@
 # Context Passing and StateFile Implementation Plan
 
+> **⛔ SUPERSEDED (07 Aug 2026).** Superseded by
+> [`artefacts/Context-Enrichment-Architecture-07Aug26.md`](../../artefacts/Context-Enrichment-Architecture-07Aug26.md)
+> and the phased
+> [`artefacts/Context-Enrichment-Imp-Plan-07Aug26.md`](../../artefacts/Context-Enrichment-Imp-Plan-07Aug26.md).
+> Keep for historical context.
+
 ## Goal Description
 Currently, the orchestrator does not track which source files are created or modified across passes. Because an atomic `git commit` is made after each pass, the working directory is clean when the next pass starts. This leaves subsequent agents blind to previous work, forcing them to guess or inefficiently search the codebase.
 

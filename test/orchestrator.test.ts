@@ -223,14 +223,14 @@ describe('PipelineOrchestrator', () => {
       expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(8);
     });
 
-    it('calls git.commit for passes 1–7 (7 commits)', async () => {
+    it('calls git.commit for passes 0–7 (8 commits)', async () => {
       const m = makeMocks();
       const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // 7 commits: Passes 1-7
-      expect(m.git.commit).toHaveBeenCalledTimes(7);
+      // 8 commits: Passes 0-7 (AD-11)
+      expect(m.git.commit).toHaveBeenCalledTimes(8);
     });
 
     it('does NOT emit HITL_REQUIRED when skipHitl is true', async () => {
@@ -593,8 +593,9 @@ describe('PipelineOrchestrator', () => {
       const result = await orch2.run(ctx2);
 
       expect(result).toBe(true);
-      // Should NOT re-run pass 0 or pass 1 — only remaining passes (2-7)
-      expect((m2.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(6);
+      // AD-11: Pass 0 commits, so pause happens after pass 0 commit.
+      // Remaining passes: 1-7 (7 agent calls)
+      expect((m2.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(7);
       expect((m2.cmd.runTests as ReturnType<typeof vi.fn>).mock.calls.length).toBe(5);
     });
 

@@ -207,7 +207,7 @@ describe('Pipeline Machine', () => {
       expect(findEvents(m.emittedEvents, 'PASS_COMPLETED').length).toBe(8);
     });
 
-    it('calls git.commit for committed passes (1-7)', async () => {
+    it('calls git.commit for all committed passes (0-7)', async () => {
       const m = makeMocks();
       const machine = createPipelineMachine({
         agentRunner: m.agentRunner,
@@ -224,7 +224,7 @@ describe('Pipeline Machine', () => {
 
       await waitForDone(actor);
 
-      expect(m.git.commit).toHaveBeenCalledTimes(7);
+      expect(m.git.commit).toHaveBeenCalledTimes(8);
     });
   });
 
@@ -288,7 +288,7 @@ describe('Pipeline Machine', () => {
   });
 
   describe('Committing lifecycle (1557 spec)', () => {
-    it('does not call stateStore.save from the machine (orchestrator owns persistence)', async () => {
+    it('calls stateStore.save after each commit (WRITER persistence)', async () => {
       const m = makeMocks();
       const machine = createPipelineMachine({
         agentRunner: m.agentRunner,
@@ -305,8 +305,8 @@ describe('Pipeline Machine', () => {
 
       await waitForDone(actor);
 
-      // Machine no longer owns persistence — orchestrator handles it
-      expect(m.stateStore.save).not.toHaveBeenCalled();
+      // WRITER persists after every committed pass
+      expect(m.stateStore.save).toHaveBeenCalledTimes(8);
     });
 
     it('updates ctx.history[pass].commitHash post-commit', async () => {
@@ -327,7 +327,7 @@ describe('Pipeline Machine', () => {
       await waitForDone(actor);
 
       // Every committed pass should have its commitHash set
-      for (let p = 1; p <= 7; p++) {
+      for (let p = 0; p <= 7; p++) {
         expect(ctx.history[p as PipelinePass]?.commitHash).toBe('abc123def456');
       }
     });
@@ -354,7 +354,7 @@ describe('Pipeline Machine', () => {
       expect(findEvents(m.emittedEvents, 'PIPELINE_COMPLETED')).toHaveLength(1);
     });
 
-    it('pass 0 does not produce a git commit', async () => {
+    it('pass 0 produces a git commit (AD-11)', async () => {
       const m = makeMocks();
       const machine = createPipelineMachine({
         agentRunner: m.agentRunner,
@@ -371,8 +371,11 @@ describe('Pipeline Machine', () => {
 
       await waitForDone(actor);
 
-      // 7 committed passes (1-7), not pass 0
-      expect(m.git.commit).toHaveBeenCalledTimes(7);
+      // All 8 passes (0-7) are now in GIT_COMMIT_PASSES
+      expect(m.git.commit).toHaveBeenCalledTimes(8);
+
+      // Pass 0 should have a commitHash set
+      expect(ctx.history[0]?.commitHash).toBe('abc123def456');
     });
   });
 
@@ -435,8 +438,8 @@ describe('Pipeline Machine', () => {
       // Wait for pass 2 HITL
       await waitFor(actor, (snapshot) => snapshot.matches('awaiting_hitl_pass_2'));
 
-      // Verify one commit happened (pass 1)
-      expect(m.git.commit).toHaveBeenCalledTimes(1);
+      // Verify two commits happened (pass 0 + pass 1)
+      expect(m.git.commit).toHaveBeenCalledTimes(2);
 
       // Reject at pass 2
       actor.send({ type: 'HITL_REJECT', pass: 2 });
@@ -444,8 +447,8 @@ describe('Pipeline Machine', () => {
       await waitForDone(actor);
 
       expect(actor.getSnapshot().matches('pipeline_failed')).toBe(true);
-      // No additional commits
-      expect(m.git.commit).toHaveBeenCalledTimes(1);
+      // No additional commits after rejection
+      expect(m.git.commit).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -685,11 +688,16 @@ describe('Pipeline Machine', () => {
 
     it('PAUSE sent during committing reaches paused after commit completes', async () => {
       const m = makeMocks();
+      let commitCall = 0;
       let resolveCommit: (() => void) | undefined;
       (m.git.commit as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        return new Promise<{ kind: 'committed'; message: string }>((resolve) => {
-          resolveCommit = () => resolve({ kind: 'committed' as const, message: 'ok' });
-        });
+        commitCall++;
+        if (commitCall === 1) {
+          return new Promise<{ kind: 'committed'; message: string }>((resolve) => {
+            resolveCommit = () => resolve({ kind: 'committed' as const, message: 'ok' });
+          });
+        }
+        return Promise.resolve({ kind: 'committed' as const, message: 'ok' });
       });
 
       const machine = createPipelineMachine({

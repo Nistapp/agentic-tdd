@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { NodeFileSystem } from '../../src/infrastructure/file-system.js';
 import { JsonStateStore } from '../../src/infrastructure/state-store.js';
-import type { PipelineContext } from '../../src/core/types.js';
+import type { PipelineContext, StateFileEnvelope } from '../../src/core/types.js';
 
 function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext {
   return {
@@ -174,7 +174,7 @@ describe('JsonStateStore', () => {
     await expect(store.delete()).resolves.toBeUndefined();
   });
 
-  it('atomic write uses temp file and rename', async () => {
+  it('atomic write wraps state in schema envelope', async () => {
     const fs = new NodeFileSystem();
     const store = new JsonStateStore(fs, 'atomic', workDir);
     const ctx = makeContext();
@@ -186,8 +186,9 @@ describe('JsonStateStore', () => {
     expect(await fs.exists(store.path)).toBe(true);
 
     const raw = await readFile(store.path, 'utf-8');
-    const parsed = JSON.parse(raw) as PipelineContext;
-    expect(parsed.featureName).toBe('my-feature');
+    const envelope = JSON.parse(raw) as StateFileEnvelope;
+    expect(envelope.schemaVersion).toBe('0.1.0');
+    expect(envelope.context.featureName).toBe('my-feature');
   });
 
   it('save overwrites existing state', async () => {
@@ -204,6 +205,53 @@ describe('JsonStateStore', () => {
     expect(loaded.featureName).toBe('second');
     expect(loaded.history[1]?.filesTouched).toEqual(['b.txt']);
     expect(loaded.history[0]).toBeUndefined();
+  });
+
+  it('load rejects corrupt JSON with meaningful error', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'corrupt', workDir);
+
+    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.writeFile(store.path, 'not valid json {{{');
+
+    await expect(store.load()).rejects.toThrow('Corrupt state file');
+  });
+
+  it('load rejects unsupported schema version', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'future', workDir);
+
+    const envelope: StateFileEnvelope = {
+      schemaVersion: '99.0.0',
+      context: makeContext({ featureName: 'future-feature' }),
+    };
+    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.writeFile(store.path, JSON.stringify(envelope, null, 2));
+
+    await expect(store.load()).rejects.toThrow('Unsupported schema version');
+  });
+
+  it('load accepts raw context without envelope (forward-compat fallback)', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'legacy', workDir);
+
+    const ctx = makeContext({
+      featureName: 'legacy-feature',
+      history: {
+        1: {
+          status: 'completed',
+          filesTouched: ['src/foo.ts'],
+          attempts: 1,
+          commitHash: 'def456',
+        },
+      },
+    });
+    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.writeFile(store.path, JSON.stringify(ctx, null, 2));
+
+    const loaded = await store.load();
+    expect(loaded.featureName).toBe('legacy-feature');
+    expect(loaded.history[1]?.commitHash).toBe('def456');
   });
 
   it('independent stores do not collide', async () => {

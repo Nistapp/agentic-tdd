@@ -60,6 +60,7 @@ export const SELF_CORRECTION_PASSES = new Set<PipelinePass>([
 
 /** Passes where a git commit is made after the agent completes. */
 export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
+  PipelinePass.Design,
   PipelinePass.Contracts,
   PipelinePass.TestGeneration,
   PipelinePass.CoreImplementation,
@@ -88,6 +89,13 @@ export type SourceType = 'file' | 'string' | 'github';
 // PassHistory — append-only record of per-pass progress, files, and errors
 // ---------------------------------------------------------------------------
 
+/**
+ * Method-level target symbols keyed by file path.
+ * Persisted by the WRITER after each committed pass so the READER
+ * can assemble per-pass context without re-running git diff or AST.
+ */
+export type TargetSymbols = Record<string, string[]>;
+
 export interface PassHistory {
   status: 'completed' | 'failed' | 'aborted';
   filesTouched: string[];
@@ -99,6 +107,12 @@ export interface PassHistory {
    * as part of the next pass's atomic commit.
    */
   commitHash?: string;
+  /** Persisted by WRITER for completed passes — filePath → qualified method names. */
+  targetSymbols?: TargetSymbols;
+  /** ISO 8601 timestamp when the pass was started. */
+  startedAt?: string;
+  /** ISO 8601 timestamp when the pass completed. */
+  completedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,6 +324,18 @@ export interface ContextFiles {
   contracts: string[];
   tests: string[];
   implementation: string[];
+}
+
+/** The assembled context for a single pass — READER output. */
+export interface BuiltContext {
+  files: ContextFiles;
+  targetSymbols: TargetSymbols;
+}
+
+/** Envelope wrapping the persisted state file. Provides forward-compat schema versioning. */
+export interface StateFileEnvelope {
+  schemaVersion: string;
+  context: PipelineContext;
 }
 
 // ---------------------------------------------------------------------------

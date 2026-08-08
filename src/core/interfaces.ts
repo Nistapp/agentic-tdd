@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -211,5 +211,23 @@ export interface ISymbolResolver {
    * @returns Deduplicated, sorted array of qualified names.
    */
   mapRangesToSymbols(filePath: string, source: string, ranges: Range[]): string[];
+}
+
+// ---------------------------------------------------------------------------
+// IContextProvider — pure synchronous assembler over ctx.history (READER)
+// ---------------------------------------------------------------------------
+
+export interface IContextProvider {
+  /**
+   * Assemble per-pass context from the persisted {@link PipelineContext}.
+   *
+   * This method is **pure and synchronous** — it performs no git, no AST,
+   * and no async calls.  It reads ``ctx.history`` (hydrated from the state
+   * file on resume), merges the ``targetSymbols`` from upstream passes
+   * according to {@link CONTEXT_RULES}, and returns a {@link BuiltContext}.
+   *
+   * Missing history entries are silently treated as empty — no exceptions.
+   */
+  build(ctx: PipelineContext, pass: PipelinePass): BuiltContext;
 }
 

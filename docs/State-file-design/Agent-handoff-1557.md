@@ -1,5 +1,10 @@
 # Agent Handoff Spec: State-Driven Context Management
 
+> **⛔ SUPERSEDED (07 Aug 2026).** Superseded by
+> [`artefacts/Context-Enrichment-Architecture-07Aug26.md`](../../artefacts/Context-Enrichment-Architecture-07Aug26.md).
+> The `state-driven context management` model is retained; the `annotations` field
+> is deliberately **not** implemented (see AD-10 there). Keep for historical context.
+
 ## 1. Context and Rationale
 The `agentic-tdd` repository orchestrates an 8-pass AI software development pipeline. Currently, the orchestrator issues an atomic `git commit` after every pass. Consequently, the working directory is clean when the next pass begins. This leaves subsequent agents "blind" to the files created or modified by prior passes, forcing them to guess or inefficiently search the codebase. 
 

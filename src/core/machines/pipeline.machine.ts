@@ -3,16 +3,18 @@ import type { ActorLogic } from 'xstate';
 
 import type {
   PipelineContext,
-  PipelinePass,
+  PassHistory,
   AgenticEvent,
   AgentRunRequest,
   FileChange,
   HitlPayload,
   PassCompletedPayload,
+  TargetSymbols,
 } from '../types.js';
 import {
   PASS_LABELS,
   GIT_COMMIT_PASSES,
+  PipelinePass,
 } from '../types.js';
 import type {
   IAgentRunner,
@@ -22,6 +24,7 @@ import type {
   IEventBus,
   ILogger,
   IStateStore,
+  ISymbolResolver,
 } from '../interfaces.js';
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
@@ -141,6 +144,7 @@ export const pipelineMachineConfig: any = setup({
     atPass7: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 7,
     skipHitl: ({ context }: { context: PipelineMachineContext }) => context.ctx.skipHitl,
     isPauseRequested: ({ context }: { context: PipelineMachineContext }) => context.ctx.pauseRequested === true,
+    afterPass0: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 0,
     afterPass1: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 1,
     afterPass2: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 2,
     afterPass3: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 3,
@@ -199,7 +203,7 @@ export const pipelineMachineConfig: any = setup({
           ctx: context.ctx,
         }),
         onDone: [
-          { guard: 'skipHitl', target: 'pass_1_contracts' },
+          { guard: 'skipHitl', target: 'committing' },
           { target: 'preparing_hitl_pass_0' },
         ],
         onError: {
@@ -254,7 +258,7 @@ export const pipelineMachineConfig: any = setup({
 
     awaiting_hitl_pass_0: {
       on: {
-        HITL_APPROVE: 'pass_1_contracts',
+        HITL_APPROVE: 'committing',
         HITL_REWIND: 'rewinding_pass_0',
         HITL_REJECT: 'pipeline_failed',
       },
@@ -623,6 +627,7 @@ export const pipelineMachineConfig: any = setup({
     evaluating_next_pass: {
       always: [
         { guard: 'isPauseRequested', target: 'paused' },
+        { guard: 'afterPass0', target: 'pass_1_contracts' },
         { guard: 'afterPass1', target: 'pass_2_test_generation' },
         { guard: 'afterPass2', target: 'pass_3_core_implementation' },
         { guard: 'afterPass3', target: 'pass_4_refactor' },
@@ -674,6 +679,7 @@ export function createPipelineMachine(services: {
   events: IEventBus;
   logger: ILogger;
   stateStore?: IStateStore;
+  symbolResolver?: ISymbolResolver;
 }) {
   const {
     agentRunner,
@@ -683,8 +689,41 @@ export function createPipelineMachine(services: {
     events,
     logger,
     stateStore,
+    symbolResolver,
   } = services;
   const emit = makeEmit(events);
+
+  function resolveFromRef(ctx: PipelineContext, pass: PipelinePass): string {
+    if (pass === PipelinePass.Design) {
+      return ctx.originalBaseSha ?? 'HEAD~1';
+    }
+    const prevPass = (pass - 1) as PipelinePass;
+    return ctx.history[prevPass]?.commitHash ?? ctx.originalBaseSha ?? 'HEAD~1';
+  }
+
+  function recordPassOutcome(
+    ctx: PipelineContext,
+    pass: PipelinePass,
+    status: PassHistory['status'],
+    opts?: {
+      filesTouched?: string[];
+      targetSymbols?: TargetSymbols;
+      lastError?: string;
+    },
+  ): void {
+    const now = new Date().toISOString();
+    const existing = ctx.history[pass];
+    ctx.history[pass] = {
+      status,
+      filesTouched: opts?.filesTouched ?? existing?.filesTouched ?? [],
+      attempts: ctx.currentAttempt ?? 1,
+      lastError: opts?.lastError,
+      commitHash: existing?.commitHash,
+      targetSymbols: opts?.targetSymbols ?? existing?.targetSymbols,
+      startedAt: existing?.startedAt ?? now,
+      completedAt: status !== 'completed' ? undefined : now,
+    };
+  }
 
   return setup({
     types: {
@@ -800,16 +839,11 @@ export function createPipelineMachine(services: {
           const pass = ctx.currentPass!;
           if (!GIT_COMMIT_PASSES.has(pass)) return;
 
+          const fromRef = resolveFromRef(ctx, pass);
           const files = await git.getPendingChanges();
           const filesTouched = files.map((c) => c.file);
 
-          const existing = ctx.history[pass];
-          ctx.history[pass] = {
-            status: 'completed',
-            filesTouched,
-            attempts: ctx.currentAttempt ?? 1,
-            commitHash: existing?.commitHash,
-          };
+          recordPassOutcome(ctx, pass, 'completed', { filesTouched });
 
           const stagePaths: string[] = ['.'];
           if (stateStore) {
@@ -821,12 +855,48 @@ export function createPipelineMachine(services: {
             `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]}`,
           );
 
-          if (stateStore) {
-            const headHash = await git.getCurrentCommitSha();
-            const entry = ctx.history[pass];
-            if (entry) {
-              entry.commitHash = headHash;
+          const headHash = await git.getCurrentCommitSha();
+          const entry = ctx.history[pass];
+          if (entry) {
+            entry.commitHash = headHash;
+          }
+
+          if (symbolResolver) {
+            try {
+              const toRef = headHash;
+              const diffChanges = await git.getDiffLineRanges(fromRef, toRef);
+              const targetSymbols: TargetSymbols = {};
+
+              for (const change of diffChanges) {
+                if (change.ranges.length === 0) continue;
+                try {
+                  const source = await fs.readFile(change.file);
+                  const symbols = symbolResolver.mapRangesToSymbols(
+                    change.file,
+                    source,
+                    change.ranges,
+                  );
+                  if (symbols.length > 0) {
+                    targetSymbols[change.file] = symbols;
+                  }
+                } catch {
+                  // File read failed — non-fatal degradation
+                }
+              }
+
+              if (Object.keys(targetSymbols).length > 0) {
+                const historyEntry = ctx.history[pass];
+                if (historyEntry) {
+                  historyEntry.targetSymbols = targetSymbols;
+                }
+              }
+            } catch {
+              // Symbol resolution failed — non-fatal degradation (AD-9)
             }
+          }
+
+          if (stateStore) {
+            await stateStore.save(ctx);
           }
         },
       ),
@@ -977,6 +1047,9 @@ export function createPipelineMachine(services: {
       isPauseRequested: ({ context }: { context: PipelineMachineContext }) =>
         context.ctx.pauseRequested === true,
 
+      afterPass0: ({ context }: { context: PipelineMachineContext }) =>
+        context.ctx.currentPass === 0,
+
       afterPass1: ({ context }: { context: PipelineMachineContext }) =>
         context.ctx.currentPass === 1,
 
@@ -1047,7 +1120,7 @@ export function createPipelineMachine(services: {
             ctx: context.ctx,
           }),
           onDone: [
-            { guard: 'skipHitl', target: 'pass_1_contracts' },
+            { guard: 'skipHitl', target: 'committing' },
             { target: 'preparing_hitl_pass_0' },
           ],
           onError: {
@@ -1102,7 +1175,7 @@ export function createPipelineMachine(services: {
 
       awaiting_hitl_pass_0: {
         on: {
-          HITL_APPROVE: 'pass_1_contracts',
+          HITL_APPROVE: 'committing',
           HITL_REWIND: 'rewinding_pass_0',
           HITL_REJECT: 'pipeline_failed',
         },
@@ -1471,6 +1544,7 @@ export function createPipelineMachine(services: {
       evaluating_next_pass: {
         always: [
           { guard: 'isPauseRequested', target: 'paused' },
+          { guard: 'afterPass0', target: 'pass_1_contracts' },
           { guard: 'afterPass1', target: 'pass_2_test_generation' },
           { guard: 'afterPass2', target: 'pass_3_core_implementation' },
           { guard: 'afterPass3', target: 'pass_4_refactor' },
@@ -1506,6 +1580,15 @@ export function createPipelineMachine(services: {
 
       pipeline_failed: {
         type: 'final',
+        entry: ({ context }: { context: PipelineMachineContext }) => {
+          const pass = context.ctx.currentPass;
+          if (pass !== undefined) {
+            recordPassOutcome(context.ctx, pass, 'failed');
+            if (stateStore) {
+              stateStore.save(context.ctx).catch(() => {});
+            }
+          }
+        },
       },
     },
   });

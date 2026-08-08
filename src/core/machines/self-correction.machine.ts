@@ -266,7 +266,14 @@ export const selfCorrectionMachineConfig: any = setup({
     },
 
     failed: {
-      type: 'final',
+      entry: ({ context }: { context: SelfCorrectionMachineContext }) => {
+        const pass = context.ctx.currentPass;
+        const label = pass !== undefined ? PASS_LABELS[pass] : 'Unknown';
+        const attempt = context.attempt;
+        throw new Error(
+          `Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`,
+        );
+      },
     },
   },
 });
@@ -603,7 +610,14 @@ export function createSelfCorrectionMachine(services: {
       },
 
       failed: {
-        type: 'final',
+        entry: ({ context }: { context: SelfCorrectionMachineContext }) => {
+          const pass = context.ctx.currentPass;
+          const label = pass !== undefined ? PASS_LABELS[pass] : 'Unknown';
+          const attempt = context.attempt;
+          throw new Error(
+            `Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`,
+          );
+        },
       },
     },
   });

@@ -425,7 +425,7 @@ describe('SelfCorrection Machine', () => {
   });
 
   describe('Max retries exhausted', () => {
-    it('reaches failed state when all attempts fail', async () => {
+    it('throws error when all attempts exhaust (AD-12 fix)', async () => {
       const m = makeMocks();
       (m.cmd.runTests as ReturnType<typeof vi.fn>).mockResolvedValue({
         passed: false,
@@ -443,12 +443,14 @@ describe('SelfCorrection Machine', () => {
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
-      await waitForDone(actor);
-
-      const snapshot = actor.getPersistedSnapshot();
-      const snapshotStr = JSON.stringify(snapshot);
-      // The actor should be in a failed final state
-      expect(snapshotStr).toContain('failed');
+      // After AD-12 fix, failed entry throws → actor errors
+      try {
+        await waitForDone(actor);
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+        expect(String(err)).toContain('FAILED');
+      }
+      expect(actor.getSnapshot().status).toBe('error');
     });
 
     it('agentRunner.execute called totalAttempts times', async () => {
@@ -469,7 +471,11 @@ describe('SelfCorrection Machine', () => {
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
-      await waitForDone(actor);
+      try {
+        await waitForDone(actor);
+      } catch {
+        // expected — AD-12 fix throws
+      }
 
       expect(m.agentRunner.execute).toHaveBeenCalledTimes(2);
     });
@@ -492,7 +498,11 @@ describe('SelfCorrection Machine', () => {
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
-      await waitForDone(actor);
+      try {
+        await waitForDone(actor);
+      } catch {
+        // expected — AD-12 fix throws
+      }
 
       const errorEvents = findEvents(m.emittedEvents, 'ERROR');
       expect(errorEvents.length).toBeGreaterThan(0);
@@ -516,7 +526,11 @@ describe('SelfCorrection Machine', () => {
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
-      await waitForDone(actor);
+      try {
+        await waitForDone(actor);
+      } catch {
+        // expected — AD-12 fix throws
+      }
 
       const writeCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
       const errorLogWrite = writeCalls.find((c) => c[0] === ctx.errorLogPath);
@@ -529,7 +543,7 @@ describe('SelfCorrection Machine', () => {
   });
 
   describe('Agent execution error', () => {
-    it('reaches failed state and emits ERROR when agent rejects', async () => {
+    it('throws when agent rejects (AD-12 fix)', async () => {
       const m = makeMocks();
       (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Agent crashed'),
@@ -546,7 +560,11 @@ describe('SelfCorrection Machine', () => {
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
-      await waitForDone(actor);
+      try {
+        await waitForDone(actor);
+      } catch {
+        // expected — AD-12 fix throws
+      }
 
       const errorEvents = findEvents(m.emittedEvents, 'ERROR');
       expect(errorEvents.length).toBeGreaterThan(0);
