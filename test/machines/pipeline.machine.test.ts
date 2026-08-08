@@ -15,6 +15,7 @@ import type {
   IEventBus,
   ILogger,
   IStateStore,
+  IContextProvider,
 } from '../../src/core/interfaces.js';
 import { vi, describe, it, expect } from 'vitest';
 
@@ -129,6 +130,13 @@ function makeMocks() {
 
   const logger = new StubLogger();
 
+  const contextProvider: IContextProvider = {
+    build: vi.fn().mockReturnValue({
+      files: { contracts: [], tests: [], implementation: [] },
+      targetSymbols: {},
+    }),
+  };
+
   return {
     agentRunner,
     cmd,
@@ -137,6 +145,7 @@ function makeMocks() {
     events,
     logger,
     stateStore,
+    contextProvider,
     emittedEvents,
   };
 }
@@ -169,6 +178,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -196,6 +206,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -217,6 +228,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -239,6 +251,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: false });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -276,6 +289,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -298,6 +312,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -319,6 +334,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -341,6 +357,7 @@ describe('Pipeline Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
         // No stateStore
       });
       const ctx = makeContext({ skipHitl: true });
@@ -364,6 +381,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -398,6 +416,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -422,6 +441,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: false });
       // Pre-populate history so pass 0 has a commit hash
@@ -476,6 +496,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Refactor } });
@@ -504,6 +525,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -531,6 +553,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: false });
       ctx.originalBaseSha = undefined;
@@ -560,6 +583,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: false });
       ctx.history = {};
@@ -590,6 +614,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -621,6 +646,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -647,6 +673,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
@@ -668,6 +695,7 @@ describe('Pipeline Machine', () => {
         events: m2.events,
         logger: m2.logger,
         stateStore: m2.stateStore,
+        contextProvider: m2.contextProvider,
       });
       const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
       const actor2 = createActor(machine2, {
@@ -708,6 +736,7 @@ describe('Pipeline Machine', () => {
         events: m.events,
         logger: m.logger,
         stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ skipHitl: true });
       const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });

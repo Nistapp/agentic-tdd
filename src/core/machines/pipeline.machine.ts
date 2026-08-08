@@ -25,6 +25,7 @@ import type {
   ILogger,
   IStateStore,
   ISymbolResolver,
+  IContextProvider,
 } from '../interfaces.js';
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
@@ -680,6 +681,7 @@ export function createPipelineMachine(services: {
   logger: ILogger;
   stateStore?: IStateStore;
   symbolResolver?: ISymbolResolver;
+  contextProvider: IContextProvider;
 }) {
   const {
     agentRunner,
@@ -690,6 +692,7 @@ export function createPipelineMachine(services: {
     logger,
     stateStore,
     symbolResolver,
+    contextProvider,
   } = services;
   const emit = makeEmit(events);
 
@@ -744,13 +747,14 @@ export function createPipelineMachine(services: {
           emit('PASS_STARTED', 'Starting Pass 0', ctx);
 
           logger.info('Entering Pass 0 [Attempt 1]');
-          const prompt = getAgentContextPayload(ctx);
+          const built = contextProvider.build(ctx, ctx.currentPass);
+          const prompt = getAgentContextPayload(ctx, built);
           logger.info(
             { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
             'Dispatching prompt to Opencode',
           );
 
-          const artefacts = await buildArtefacts(ctx, fs, undefined, logger);
+          const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
           const request: AgentRunRequest = {
             pass: 0,
             prompt,
@@ -784,13 +788,14 @@ export function createPipelineMachine(services: {
           emit('PASS_STARTED', `Starting Pass ${pass}`, ctx);
 
           logger.info(`Entering Pass ${pass} [Attempt 1]`);
-          const prompt = getAgentContextPayload(ctx);
+          const built = contextProvider.build(ctx, pass);
+          const prompt = getAgentContextPayload(ctx, built);
           logger.info(
             { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
             'Dispatching prompt to Opencode',
           );
 
-          const artefacts = await buildArtefacts(ctx, fs, undefined, logger);
+          const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
           const request: AgentRunRequest = {
             pass,
             prompt,
@@ -908,6 +913,7 @@ export function createPipelineMachine(services: {
         git,
         events,
         logger: logger.child({ passId: 3 }),
+        contextProvider,
       }),
 
       selfCorrectionPass4: createSelfCorrectionMachine({
@@ -917,6 +923,7 @@ export function createPipelineMachine(services: {
         git,
         events,
         logger: logger.child({ passId: 4 }),
+        contextProvider,
       }),
 
       selfCorrectionPass5: createSelfCorrectionMachine({
@@ -926,6 +933,7 @@ export function createPipelineMachine(services: {
         git,
         events,
         logger: logger.child({ passId: 5 }),
+        contextProvider,
       }),
 
       selfCorrectionPass6: createSelfCorrectionMachine({
@@ -935,6 +943,7 @@ export function createPipelineMachine(services: {
         git,
         events,
         logger: logger.child({ passId: 6 }),
+        contextProvider,
       }),
 
       selfCorrectionPass7: createSelfCorrectionMachine({
@@ -944,6 +953,7 @@ export function createPipelineMachine(services: {
         git,
         events,
         logger: logger.child({ passId: 7 }),
+        contextProvider,
       }),
     },
 

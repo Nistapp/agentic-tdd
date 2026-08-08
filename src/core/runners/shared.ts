@@ -1,10 +1,15 @@
-import type { PipelineContext, AgentArtefacts } from '../types.js';
+import type { PipelineContext, AgentArtefacts, BuiltContext } from '../types.js';
 import type { IFileSystem, ILogger } from '../interfaces.js';
 import { buildContextFiles } from '../context-builder.js';
 
-export function getAgentContextPayload(ctx: PipelineContext, meta: Record<string, unknown> = {}): string {
+export function getAgentContextPayload(
+  ctx: PipelineContext,
+  built?: BuiltContext,
+  meta: Record<string, unknown> = {},
+): string {
   const currentPass = ctx.currentPass;
-  const contextFiles = currentPass !== undefined ? buildContextFiles(ctx, currentPass) : { contracts: [], tests: [], implementation: [] };
+  const contextFiles = built?.files
+    ?? (currentPass !== undefined ? buildContextFiles(ctx, currentPass) : { contracts: [], tests: [], implementation: [] });
 
   const payload = {
     featureName: ctx.featureName,
@@ -16,6 +21,7 @@ export function getAgentContextPayload(ctx: PipelineContext, meta: Record<string
       errorLog: ctx.errorLogPath,
     },
     contextFiles,
+    targetSymbols: built?.targetSymbols ?? {},
     meta,
   };
   return JSON.stringify(payload, null, 2);
@@ -24,6 +30,7 @@ export function getAgentContextPayload(ctx: PipelineContext, meta: Record<string
 export async function buildArtefacts(
   ctx: PipelineContext,
   fs: IFileSystem,
+  built?: BuiltContext,
   errorLog?: string,
   logger?: ILogger,
 ): Promise<AgentArtefacts> {
@@ -50,7 +57,9 @@ export async function buildArtefacts(
     artefacts.errorLog = errorLog;
   }
 
-  if (ctx.currentPass !== undefined) {
+  if (built) {
+    artefacts.contextFiles = built.files;
+  } else if (ctx.currentPass !== undefined) {
     artefacts.contextFiles = buildContextFiles(ctx, ctx.currentPass);
   }
 

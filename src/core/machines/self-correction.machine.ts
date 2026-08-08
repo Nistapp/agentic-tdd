@@ -19,6 +19,7 @@ import type {
   IGitService,
   IEventBus,
   ILogger,
+  IContextProvider,
 } from '../interfaces.js';
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
@@ -289,8 +290,9 @@ export function createSelfCorrectionMachine(services: {
   git: IGitService;
   events: IEventBus;
   logger: ILogger;
+  contextProvider: IContextProvider;
 }) {
-  const { agentRunner, cmd, fs, git, events, logger } = services;
+  const { agentRunner, cmd, fs, git, events, logger, contextProvider } = services;
   const emit = makeEmit(events);
 
   return setup({
@@ -318,13 +320,15 @@ export function createSelfCorrectionMachine(services: {
             );
           }
 
+          const built = contextProvider.build(ctx, pass);
+
           const prompt = isFirstAttempt
-            ? getAgentContextPayload(ctx)
-            : getAgentContextPayload(ctx, { attemptNumber: attempt });
+            ? getAgentContextPayload(ctx, built)
+            : getAgentContextPayload(ctx, built, { attemptNumber: attempt });
 
           const artefacts = isFirstAttempt
-            ? await buildArtefacts(ctx, fs)
-            : await buildArtefacts(ctx, fs, ctx.errorLogPath);
+            ? await buildArtefacts(ctx, fs, built)
+            : await buildArtefacts(ctx, fs, built, ctx.errorLogPath);
 
           logger.info(`Entering Pass ${pass} [Attempt ${attempt}]`);
           logger.info(

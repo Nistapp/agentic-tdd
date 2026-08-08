@@ -9,6 +9,7 @@ import { EventBus } from '../infrastructure/event-bus.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
 import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
 import { PipelineOrchestrator } from '../core/orchestrator.js';
+import { StateContextProvider } from '../core/context-provider.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
 import { loggers } from '../utils/logger.js';
@@ -51,9 +52,11 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
     fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner,
   );
 
+  const contextProvider = new StateContextProvider();
+
   const orchestrator = new PipelineOrchestrator(
     git, fs, cmdRunner, agentRunner, events,
-    new PinoLoggerAdapter(loggers.core), pipelineConfig, stateStore, hitlHandler,
+    new PinoLoggerAdapter(loggers.core), pipelineConfig, contextProvider, stateStore, hitlHandler,
   );
 
   return { orchestrator };

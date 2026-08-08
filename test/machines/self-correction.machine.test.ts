@@ -14,6 +14,7 @@ import type {
   IAgentRunner,
   IEventBus,
   ILogger,
+  IContextProvider,
 } from '../../src/core/interfaces.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
@@ -122,7 +123,14 @@ function makeMocks() {
 
   const logger = new StubLogger();
 
-  return { agentRunner, cmd, git, fs, events, logger, emittedEvents };
+  const contextProvider: IContextProvider = {
+    build: vi.fn().mockReturnValue({
+      files: { contracts: [], tests: [], implementation: [] },
+      targetSymbols: {},
+    }),
+  };
+
+  return { agentRunner, cmd, git, fs, events, logger, contextProvider, emittedEvents };
 }
 
 // ---------------------------------------------------------------------------
@@ -152,6 +160,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -175,6 +184,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -195,6 +205,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -217,6 +228,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -237,6 +249,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -268,6 +281,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -296,6 +310,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -322,6 +337,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -352,6 +368,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -382,6 +399,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -412,6 +430,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -438,6 +457,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -466,6 +486,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -493,6 +514,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -521,6 +543,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext({ maxCorrectionRetries: 1 });
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -555,6 +578,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
@@ -582,6 +606,7 @@ describe('SelfCorrection Machine', () => {
         git: m.git,
         events: m.events,
         logger: m.logger,
+        contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
