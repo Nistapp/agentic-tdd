@@ -33,6 +33,7 @@ const mockFs: IFileSystem = {
   mkdir:      vi.fn<() => Promise<void>>(() => Promise.resolve()),
   deleteFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   renameFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  readdir:    vi.fn<() => Promise<string[]>>(() => Promise.resolve([])),
 };
 
 const mockGit: IGitService = {

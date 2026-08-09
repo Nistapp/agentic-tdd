@@ -10,13 +10,19 @@ export function sanitizeFilename(raw: string): string {
     .replace(/-+$/, '');
 }
 
+const STATE_DIR = '.agentic-tdd';
+
+export function getStateDir(workDir?: string): string {
+  return join(workDir ?? cwd(), STATE_DIR);
+}
+
 export function getStateFilePath(featureName: string, workDir?: string): string {
   const safe = sanitizeFilename(featureName);
-  return join(workDir ?? cwd(), '.opencode', `state-${safe}.json`);
+  return join(getStateDir(workDir), `state-${safe}.json`);
 }
 
 export function getLogDir(workDir?: string): string {
-  return join(workDir ?? cwd(), '.opencode', 'log');
+  return join(workDir ?? cwd(), STATE_DIR, 'log');
 }
 
 export { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';

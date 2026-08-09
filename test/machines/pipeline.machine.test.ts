@@ -111,6 +111,7 @@ function makeMocks() {
     mkdir: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
     renameFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
   };
 
   const events: IEventBus = {

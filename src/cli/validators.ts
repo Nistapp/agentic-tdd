@@ -46,9 +46,7 @@ export async function validateAndResolveOptions(
   }
 
   if (!options.testCmd) {
-    console.log(
-      '  Note: --test-cmd not provided. It will be loaded from the state file on resume.',
-    );
+    renderer.fatal('--test-cmd is required for a new session. Example: --test-cmd "npm test"');
   }
 
   const specFileAbsPath = resolve(cwd(), String(options.featureDescFile));

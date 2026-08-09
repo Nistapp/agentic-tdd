@@ -39,7 +39,7 @@ describe('JsonStateStore', () => {
   it('constructs a feature-scoped path', () => {
     const fs = new NodeFileSystem();
     const store = new JsonStateStore(fs, 'payment-retry', workDir);
-    expect(store.path).toContain('.opencode');
+    expect(store.path).toContain('.agentic-tdd');
     expect(store.path).toContain('state-payment-retry.json');
     expect(store.path).toContain(workDir);
   });
@@ -268,5 +268,51 @@ describe('JsonStateStore', () => {
     expect(loadedA.featureName).toBe('feature-a');
     expect(loadedB.featureName).toBe('feature-b');
     expect(storeA.path).not.toBe(storeB.path);
+  });
+
+  describe('findActive', () => {
+    it('returns undefined when .agentic-tdd/ does not exist', async () => {
+      const fs = new NodeFileSystem();
+      const found = await JsonStateStore.findActive(fs, workDir);
+      expect(found).toBeUndefined();
+    });
+
+    it('returns undefined when .agentic-tdd/ has no state files', async () => {
+      const fs = new NodeFileSystem();
+      await fs.mkdir(join(workDir, '.agentic-tdd'));
+      const found = await JsonStateStore.findActive(fs, workDir);
+      expect(found).toBeUndefined();
+    });
+
+    it('returns the single active store when one state file exists', async () => {
+      const fs = new NodeFileSystem();
+      const store = new JsonStateStore(fs, 'lone-session', workDir);
+      await store.save(makeContext({ featureName: 'lone-session' }));
+
+      const found = await JsonStateStore.findActive(fs, workDir);
+      expect(found).toBeDefined();
+      expect(found!.path).toBe(store.path);
+    });
+
+    it('rejects when multiple state files exist', async () => {
+      const fs = new NodeFileSystem();
+      const storeA = new JsonStateStore(fs, 'session-a', workDir);
+      const storeB = new JsonStateStore(fs, 'session-b', workDir);
+      await storeA.save(makeContext({ featureName: 'session-a' }));
+      await storeB.save(makeContext({ featureName: 'session-b' }));
+
+      await expect(JsonStateStore.findActive(fs, workDir)).rejects.toThrow('Multiple active sessions');
+    });
+
+    it('ignores non-state-*.json files in the directory', async () => {
+      const fs = new NodeFileSystem();
+      await fs.writeFile(join(workDir, '.agentic-tdd', 'other-file.txt'), 'hello');
+      const store = new JsonStateStore(fs, 'my-session', workDir);
+      await store.save(makeContext({ featureName: 'my-session' }));
+
+      const found = await JsonStateStore.findActive(fs, workDir);
+      expect(found).toBeDefined();
+      expect(found!.path).toBe(store.path);
+    });
   });
 });

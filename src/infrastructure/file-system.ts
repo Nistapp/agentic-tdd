@@ -1,5 +1,5 @@
 import type { IFileSystem } from '../core/interfaces.js';
-import { stat, readFile, writeFile as write, unlink, mkdir } from 'node:fs/promises';
+import { stat, readFile, writeFile as write, unlink, mkdir, readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { reqLogger } from '../utils/logger.js';
 
@@ -40,5 +40,9 @@ export class NodeFileSystem implements IFileSystem {
   async renameFile(oldPath: string, newPath: string): Promise<void> {
     const { rename } = await import('node:fs/promises');
     await rename(oldPath, newPath);
+  }
+
+  async readdir(path: string): Promise<string[]> {
+    return readdir(path);
   }
 }

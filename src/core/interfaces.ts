@@ -86,6 +86,9 @@ export interface IFileSystem {
 
   /** Rename *oldPath* to *newPath*. */
   renameFile(oldPath: string, newPath: string): Promise<void>;
+
+  /** List entries in a directory (non-recursive). Throws if dir is missing. */
+  readdir(path: string): Promise<string[]>;
 }
 
 // ---------------------------------------------------------------------------

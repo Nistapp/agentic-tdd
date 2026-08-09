@@ -3,9 +3,11 @@ import { cwd } from 'node:process';
 
 import type { IStateStore, IFileSystem } from '../core/interfaces.js';
 import type { PipelineContext, StateFileEnvelope } from '../core/types.js';
-import { getStateFilePath } from '../utils/paths.js';
+import { getStateDir, getStateFilePath } from '../utils/paths.js';
 
 const CURRENT_SCHEMA_VERSION = '0.1.0';
+
+const STATE_FILE_RE = /^state-.+\.json$/;
 
 export class JsonStateStore implements IStateStore {
   readonly #fs: IFileSystem;
@@ -16,6 +18,38 @@ export class JsonStateStore implements IStateStore {
     this.#fs = fs;
     this.#workDir = workDir ?? cwd();
     this.path = getStateFilePath(featureName, this.#workDir);
+  }
+
+  static async findActive(
+    fs: IFileSystem,
+    workDir?: string,
+  ): Promise<JsonStateStore | undefined> {
+    const dir = getStateDir(workDir);
+
+    const dirExists = await fs.exists(dir);
+    if (!dirExists) return undefined;
+
+    let entries: string[];
+    try {
+      entries = await fs.readdir(dir);
+    } catch {
+      return undefined;
+    }
+
+    const stateFiles = entries.filter((e) => STATE_FILE_RE.test(e));
+    if (stateFiles.length === 0) return undefined;
+
+    if (stateFiles.length > 1) {
+      const list = stateFiles.map((f) => `  - ${dir}/${f}`).join('\n');
+      throw new Error(
+        `Multiple active sessions found in ${dir}:\n${list}\n\n` +
+          'Use --feature-desc-file to specify which session to resume or abort.',
+      );
+    }
+
+    const filename = stateFiles[0]!;
+    const featureName = filename.replace(/^state-/, '').replace(/\.json$/, '');
+    return new JsonStateStore(fs, featureName, workDir);
   }
 
   async save(ctx: PipelineContext): Promise<void> {

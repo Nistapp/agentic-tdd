@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
+import { basename, extname } from 'node:path';
 import { cwd } from 'node:process';
 import { config as loadDotEnv } from 'dotenv';
 import { NodeFileSystem } from '../infrastructure/file-system.js';
@@ -91,11 +92,18 @@ program
 
     const fs = new NodeFileSystem();
     const git = new GitService();
-    const opts = await validateAndResolveOptions(options, renderer);
-    const stateStore = new JsonStateStore(fs, opts.featureName);
     const noContextEnrich = Boolean(options.noContextEnrich);
 
     if (resume || abort) {
+      let stateStore: JsonStateStore;
+      if (typeof options.featureDescFile === 'string') {
+        const featureName = basename(String(options.featureDescFile), extname(String(options.featureDescFile)));
+        stateStore = new JsonStateStore(fs, featureName);
+      } else {
+        stateStore = await JsonStateStore.findActive(fs) ??
+          renderer.fatal('No active TDD session found. Nothing to resume or abort.');
+      }
+
       const stateExists = await stateStore.exists();
       if (!stateExists) {
         renderer.fatal('No active TDD session found. Nothing to resume or abort.');
@@ -108,6 +116,9 @@ program
       await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
       return;
     }
+
+    const opts = await validateAndResolveOptions(options, renderer);
+    const stateStore = new JsonStateStore(fs, opts.featureName);
 
     const stateExists = await stateStore.exists();
     if (stateExists) {
