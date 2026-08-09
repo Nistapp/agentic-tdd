@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { getStateDir, getStateFilePath, getLogDir, sanitizeFilename } from '../../src/utils/paths.js';
+import { getStateDir, getStateFilePath, getErrorLogPath, getLogDir, sanitizeFilename } from '../../src/utils/paths.js';
 
 describe('getStateDir', () => {
   it('returns .agentic-tdd under the given workDir', () => {
@@ -37,6 +37,24 @@ describe('getLogDir', () => {
   it('returns .agentic-tdd/log under the workDir', () => {
     const dir = getLogDir('/tmp/proj');
     expect(dir).toBe(join('/tmp/proj', '.agentic-tdd', 'log'));
+  });
+});
+
+describe('getErrorLogPath', () => {
+  it('returns a feature-scoped error log path under .agentic-tdd/', () => {
+    const path = getErrorLogPath('my-feature', '/tmp/proj');
+    expect(path).toBe(join('/tmp/proj', '.agentic-tdd', 'error-my-feature.log'));
+  });
+
+  it('sanitises feature names in the filename', () => {
+    const path = getErrorLogPath('Payment Retry!!', '/tmp/proj');
+    expect(path).toContain('error-payment-retry.log');
+    expect(path).not.toContain('!!');
+  });
+
+  it('defaults workDir to cwd()', () => {
+    const path = getErrorLogPath('hello');
+    expect(path).toContain('.agentic-tdd/error-hello.log');
   });
 });
 

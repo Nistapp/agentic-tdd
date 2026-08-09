@@ -10,7 +10,8 @@ package-lock.json
 dist/
 
 # Pipeline artifacts (transient — deleted by Context Compaction on success)
-.opencode_error.log
+# State files, logs, and error logs live in .agentic-tdd/ (run-time only)
+.agentic-tdd/
 session-*
 
 # opencode internals

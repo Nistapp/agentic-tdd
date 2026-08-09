@@ -8,6 +8,7 @@ import type { PipelineOrchestrator } from '../core/orchestrator.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
+import { getErrorLogPath } from '../utils/paths.js';
 
 let activeOrchestrator: PipelineOrchestrator | undefined;
 
@@ -31,7 +32,7 @@ export function computeArtefactPaths(featureName: string): ArtefactPaths {
     designMmdPath: join(specsDir, `${featureName}-${tmpTs}.mmd`),
     specGherkinPath: join(specsDir, `${featureName}-${tmpTs}.gherkin`),
     testFilePath: join(cwd(), 'test', `${featureName}.test.ts`),
-    errorLogPath: join(specsDir, '.opencode_error.log'),
+    errorLogPath: getErrorLogPath(featureName),
   };
 }
 

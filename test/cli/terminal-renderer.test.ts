@@ -41,7 +41,7 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     artefactDir:          '/workspace/specs',
     designMmdPath:        '/workspace/specs/auth.mmd',
     specGherkinPath:      '/workspace/specs/auth.gherkin',
-    errorLogPath:         '/workspace/specs/.opencode_error.log',
+    errorLogPath:         '/workspace/.agentic-tdd/error-auth.log',
     ...overrides,
   } as PipelineContext;
 }

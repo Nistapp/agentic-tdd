@@ -21,7 +21,7 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     artefactDir: '/tmp/specs',
     designMmdPath: '/tmp/specs/test-feature.mmd',
     specGherkinPath: '/tmp/specs/test-feature.gherkin',
-    errorLogPath: '/tmp/specs/.opencode_error.log',
+    errorLogPath: '/tmp/.agentic-tdd/error-test-feature.log',
     ...overrides,
   } as PipelineContext;
 }

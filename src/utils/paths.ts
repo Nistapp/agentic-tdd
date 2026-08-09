@@ -25,6 +25,11 @@ export function getLogDir(workDir?: string): string {
   return join(workDir ?? cwd(), STATE_DIR, 'log');
 }
 
+export function getErrorLogPath(featureName: string, workDir?: string): string {
+  const safe = sanitizeFilename(featureName);
+  return join(getStateDir(workDir), `error-${safe}.log`);
+}
+
 export { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
 export function getOpencodeLogPath(): string {

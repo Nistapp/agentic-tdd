@@ -40,7 +40,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     artefactDir: specsDir,
     designMmdPath: `${specsDir}/my_module.mmd`,
     specGherkinPath: `${specsDir}/my_module.gherkin`,
-    errorLogPath: `${srcDir}/.opencode_error.log`,
+    errorLogPath: `${srcDir}/.agentic-tdd/error-my-feature.log`,
     history: {},
     ...overrides,
   };
