@@ -1,5 +1,6 @@
 import { resolve, join } from 'node:path';
 import { cwd } from 'node:process';
+import { createInterface } from 'node:readline';
 
 import { PipelinePass, DEFAULT_MAX_CORRECTION_RETRIES } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
@@ -166,6 +167,33 @@ export async function startNewSession(
   noContextEnrich?: boolean,
 ): Promise<void> {
   const paths = computeArtefactPaths(options.featureName);
+
+  const promptUser = async (question: string): Promise<boolean> => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise<boolean>((resolve) => {
+      rl.question(question + ' ', (answer) => {
+        rl.close();
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+      });
+    });
+  };
+
+  const branchOutcome = await git.createFeatureBranch(
+    options.featureName,
+    options.baseBranch ?? null,
+    options.skipHitl,
+    promptUser,
+  );
+
+  if (
+    branchOutcome.kind === 'abort_dirty' ||
+    branchOutcome.kind === 'abort_main' ||
+    branchOutcome.kind === 'abort_user_declined'
+  ) {
+    renderer.fatal(branchOutcome.message);
+  }
+  renderer.gitInfo(`Switched to branch ${branchOutcome.branch} [${branchOutcome.kind}]`);
+
   const originalBaseSha = await git.getCurrentCommitSha();
 
   await fs.mkdir(paths.artefactDir);

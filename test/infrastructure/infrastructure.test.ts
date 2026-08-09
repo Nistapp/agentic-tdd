@@ -432,6 +432,132 @@ describe('GitService', () => {
       '--',
     ]);
   });
+
+  // -----------------------------------------------------------------------
+  // createFeatureBranch
+  // -----------------------------------------------------------------------
+
+  it('createFeatureBranch returns abort_dirty when working tree is dirty', async () => {
+    execaMock.mockResolvedValueOnce({ stdout: ' M src/file.ts\n' }); // isDirty
+
+    const git = new GitService();
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('abort_dirty');
+    if (result.kind === 'abort_dirty') {
+      expect(result.message).toContain('uncommitted changes');
+    }
+  });
+
+  it('createFeatureBranch returns abort_main when HEAD is main and no override', async () => {
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'main\n' }); // getCurrentBranch
+
+    const git = new GitService();
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('abort_main');
+    if (result.kind === 'abort_main') {
+      expect(result.message).toContain('Refusing to branch from main');
+    }
+  });
+
+  it('createFeatureBranch returns abort_main when HEAD is master and no override', async () => {
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'master\n' }); // getCurrentBranch
+
+    const git = new GitService();
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('abort_main');
+  });
+
+  it('createFeatureBranch bypasses abort_main when baseBranchOverride is provided', async () => {
+    const git = new GitService();
+    // isDirty clean, then branchExistsLocal → false, then checkout -b, then ensureBranchIsSynced
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
+      .mockRejectedValueOnce(new Error('not found'))    // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' })            // checkout -b
+      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+
+    const result = await git.createFeatureBranch('PAY-404', 'develop', true);
+    expect(result.kind).toBe('created');
+    if (result.kind === 'created') {
+      expect(result.branch).toBe('feat/pay-404');
+    }
+    expect(execaMock).toHaveBeenCalledWith('git', ['checkout', '-b', 'feat/pay-404', 'develop'], expect.anything());
+  });
+
+  it('createFeatureBranch returns created when a new branch is made', async () => {
+    const git = new GitService();
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
+      .mockRejectedValueOnce(new Error('not found'))    // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' })            // checkout -b
+      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('created');
+    expect(execaMock).toHaveBeenCalledWith('git', ['checkout', '-b', 'feat/pay-404', 'develop'], expect.anything());
+  });
+
+  it('createFeatureBranch returns checked_out when branch exists and skipHitl is true', async () => {
+    const git = new GitService();
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
+      .mockResolvedValueOnce({ stdout: '' })            // branchExistsLocal → true
+      .mockResolvedValueOnce({ stdout: '' })            // checkout
+      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('checked_out');
+    expect(execaMock).toHaveBeenCalledWith('git', ['checkout', 'feat/pay-404'], expect.anything());
+  });
+
+  it('createFeatureBranch returns checked_out when branch exists, skipHitl false, user approves', async () => {
+    const promptUser = vi.fn<[string], Promise<boolean>>().mockResolvedValue(true);
+    const git = new GitService();
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
+      .mockResolvedValueOnce({ stdout: '' })            // branchExistsLocal → true
+      .mockResolvedValueOnce({ stdout: '' })            // checkout
+      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+
+    const result = await git.createFeatureBranch('PAY-404', null, false, promptUser);
+    expect(result.kind).toBe('checked_out');
+    expect(promptUser).toHaveBeenCalledWith(expect.stringContaining('feat/pay-404'));
+  });
+
+  it('createFeatureBranch returns abort_user_declined when branch exists, skipHitl false, user declines', async () => {
+    const promptUser = vi.fn<[string], Promise<boolean>>().mockResolvedValue(false);
+    const git = new GitService();
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' });  // getCurrentBranch
+      // branchExistsLocal → true
+    execaMock.mockResolvedValueOnce({ stdout: '' });
+
+    const result = await git.createFeatureBranch('PAY-404', null, false, promptUser);
+    expect(result.kind).toBe('abort_user_declined');
+    expect(promptUser).toHaveBeenCalled();
+  });
+
+  it('createFeatureBranch uses current branch when baseBranchOverride is null', async () => {
+    const git = new GitService();
+    execaMock
+      .mockResolvedValueOnce({ stdout: '' })              // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'feature/xyz\n' }) // getCurrentBranch
+      .mockRejectedValueOnce(new Error('not found'))      // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' })              // checkout -b
+      .mockRejectedValueOnce(new Error('no remote'));      // ensureBranchIsSynced → silent
+
+    const result = await git.createFeatureBranch('PAY-404', null, true);
+    expect(result.kind).toBe('created');
+    expect(execaMock).toHaveBeenCalledWith('git', ['checkout', '-b', 'feat/pay-404', 'feature/xyz'], expect.anything());
+  });
 });
 
 // ---------------------------------------------------------------------------

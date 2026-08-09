@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass, CreateFeatureBranchOutcome } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -54,6 +54,22 @@ export interface IGitService {
 
   /** Execute `git reset --hard <sha>` and `git clean -fd` to rewind to a specific commit. */
   abortToSha(sha: string): Promise<void>;
+
+  /**
+   * Create (or check out) a feature branch for the given issue reference.
+   *
+   * @param issueRef - Free-form issue reference (e.g. "PAY-404", "Add OAuth").
+   * @param baseBranchOverride - Explicit base branch, or `null` to use the current branch.
+   * @param skipHitl - If `true`, skip user prompt when the target branch already exists.
+   * @param promptUser - Optional async callback for HITL prompts (defaults to rejecting).
+   * @returns An {@link CreateFeatureBranchOutcome} describing what happened.
+   */
+  createFeatureBranch(
+    issueRef: string,
+    baseBranchOverride: string | null,
+    skipHitl: boolean,
+    promptUser?: (question: string) => Promise<boolean>,
+  ): Promise<CreateFeatureBranchOutcome>;
 
   /** Create a lightweight git tag pointing at the current HEAD commit. */
   tag(name: string): Promise<void>;

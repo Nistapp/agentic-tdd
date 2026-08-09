@@ -7,7 +7,10 @@ import type {
   DiffHunk,
   Range,
   ChangeKind,
+  CreateFeatureBranchOutcome,
 } from '../core/types.js';
+import type { IssueRef } from '../utils/git-sanitize.js';
+import { sanitizeToGitBranch } from '../utils/git-sanitize.js';
 
 /**
  * Regex to parse a `diff --git a/<old> b/<new>` file header.
@@ -212,5 +215,70 @@ export class GitService implements IGitService {
 
   async tag(name: string): Promise<void> {
     await execa('git', ['tag', name, 'HEAD']);
+  }
+
+  async createFeatureBranch(
+    issueRef: string,
+    baseBranchOverride: string | null,
+    skipHitl: boolean,
+    promptUser: (question: string) => Promise<boolean> = async () => false,
+  ): Promise<CreateFeatureBranchOutcome> {
+    const dirty = await this.isDirty();
+    if (dirty) {
+      return { kind: 'abort_dirty', message: 'Working directory has uncommitted changes. Aborting.' };
+    }
+
+    const resolvedBase = baseBranchOverride !== null
+      ? baseBranchOverride
+      : await this.getCurrentBranch();
+
+    if (baseBranchOverride === null) {
+      if (resolvedBase === 'main' || resolvedBase === 'master') {
+        return {
+          kind: 'abort_main',
+          message: 'Refusing to branch from main. Provide an explicit baseBranch override.',
+        };
+      }
+    }
+
+    const sanitized = sanitizeToGitBranch(issueRef as IssueRef);
+
+    const exists = await this.#branchExistsLocal(sanitized);
+
+    if (exists) {
+      if (!skipHitl) {
+        const approved = await promptUser(`Branch "${sanitized}" already exists. Check it out? (y/n)`);
+        if (!approved) {
+          return {
+            kind: 'abort_user_declined',
+            message: `User declined to check out existing branch "${sanitized}".`,
+          };
+        }
+      }
+
+      await execa('git', ['checkout', sanitized], { stdio: 'pipe', reject: true });
+    } else {
+      await execa('git', ['checkout', '-b', sanitized, resolvedBase], { stdio: 'pipe', reject: true });
+    }
+
+    await this.#ensureBranchIsSynced(sanitized);
+
+    return exists
+      ? { kind: 'checked_out', branch: sanitized }
+      : { kind: 'created', branch: sanitized };
+  }
+
+  #branchExistsLocal(branchName: string): Promise<boolean> {
+    return execa('git', ['rev-parse', '--verify', '--quiet', `refs/heads/${branchName}`], { stdio: 'pipe' })
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  async #ensureBranchIsSynced(branchName: string): Promise<void> {
+    try {
+      await execa('git', ['fetch', 'origin', `${branchName}:${branchName}`], { stdio: 'pipe' });
+    } catch {
+      // Silently ignore errors (e.g. no remote, branch not on remote, etc.)
+    }
   }
 }

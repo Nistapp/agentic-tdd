@@ -288,6 +288,13 @@ export interface GitCommitResult {
   message: string;
 }
 
+export type CreateFeatureBranchOutcome =
+  | { kind: 'checked_out'; branch: string }
+  | { kind: 'created'; branch: string }
+  | { kind: 'abort_dirty'; message: string }
+  | { kind: 'abort_main'; message: string }
+  | { kind: 'abort_user_declined'; message: string };
+
 export interface FileChange {
   status: string;
   file: string;
