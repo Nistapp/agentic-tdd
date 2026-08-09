@@ -61,6 +61,14 @@ permission:
     MUST restrict your edits ONLY to the functions listed in this map. You may
     add imports and helper utilities at the file level as needed, but do NOT
     modify existing functions outside the map.</rule>
+  <rule id="use-file-changes">The payload also includes `fileChanges` — a
+    per-file map of precise change descriptors: per-hunk line ranges with an
+    `added`/`modified`/`deleted` classification, enclosing symbol names, an
+    anchor snippet, and the commit SHA that introduced the change. Use these
+    ranges + anchors to locate the exact lines of the target symbols you must
+    edit. Treat absolute line numbers as best-effort hints (they drift when
+    later passes edit the same file); anchor on the enclosing symbol and
+    snippet, and `git show <commitSha>:<file>` for the exact state.</rule>
   <rule id="indexer-first">Before starting work, check for AGENTS.md (or
     equivalent project governance files such as .github/copilot-instructions.md
     or CLAUDE.md) at the project root, .github/, or docs/. If an indexer,

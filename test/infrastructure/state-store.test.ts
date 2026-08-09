@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { NodeFileSystem } from '../../src/infrastructure/file-system.js';
 import { JsonStateStore } from '../../src/infrastructure/state-store.js';
-import type { PipelineContext, StateFileEnvelope } from '../../src/core/types.js';
+import type { PipelineContext, StateFileEnvelope, FileChanges } from '../../src/core/types.js';
 
 function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext {
   return {
@@ -187,7 +187,7 @@ describe('JsonStateStore', () => {
 
     const raw = await readFile(store.path, 'utf-8');
     const envelope = JSON.parse(raw) as StateFileEnvelope;
-    expect(envelope.schemaVersion).toBe('0.1.0');
+    expect(envelope.schemaVersion).toBe('0.2.0');
     expect(envelope.context.featureName).toBe('my-feature');
   });
 
@@ -252,6 +252,64 @@ describe('JsonStateStore', () => {
     const loaded = await store.load();
     expect(loaded.featureName).toBe('legacy-feature');
     expect(loaded.history[1]?.commitHash).toBe('def456');
+  });
+
+  it('load accepts a legacy 0.1.0 envelope (optional-field forward-compat)', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'v010', workDir);
+
+    const envelope: StateFileEnvelope = {
+      schemaVersion: '0.1.0',
+      context: makeContext({ featureName: 'v010-feature' }),
+    };
+    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.writeFile(store.path, JSON.stringify(envelope, null, 2));
+
+    const loaded = await store.load();
+    expect(loaded.featureName).toBe('v010-feature');
+  });
+
+  it('round-trips targetSymbols and fileChanges through save/load', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'changes', workDir);
+
+    const fileChanges: FileChanges = {
+      'test/foo.test.ts': {
+        commitHash: 'def456',
+        kind: 'edited-file',
+        hunks: [
+          {
+            range: { start: 10, end: 20 },
+            kind: 'added',
+            addedLines: 11,
+            removedLines: 0,
+            symbols: ["describe('Foo') › it('edge case')"],
+            anchor: "it('edge case', () => {",
+          },
+        ],
+      },
+    };
+    const ctx = makeContext({
+      history: {
+        2: {
+          status: 'completed',
+          filesTouched: ['test/foo.test.ts'],
+          attempts: 1,
+          targetSymbols: {
+            'test/foo.test.ts': ["describe('Foo') › it('edge case')"],
+          },
+          fileChanges,
+        },
+      },
+    });
+
+    await store.save(ctx);
+    const loaded = await store.load();
+
+    expect(loaded.history[2]?.targetSymbols).toEqual({
+      'test/foo.test.ts': ["describe('Foo') › it('edge case')"],
+    });
+    expect(loaded.history[2]?.fileChanges).toEqual(fileChanges);
   });
 
   it('independent stores do not collide', async () => {

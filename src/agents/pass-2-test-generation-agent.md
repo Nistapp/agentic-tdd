@@ -37,6 +37,11 @@ permission:
     JavaScript / TypeScript.</rule>
   <rule id="independent">Each test must be independent, deterministic, and
     idempotent.  No shared mutable state between test cases.</rule>
+  <rule id="append-not-overwrite">If a test file already exists for the module
+    you are covering, APPEND the new test cases to it.  Never overwrite or
+    rewrite an existing test file wholesale.  Keep your addition as a clean,
+    additive block so the orchestrator can capture its exact line range and
+    hand precise change metadata to the next pass.</rule>
   <rule id="document-flaws">If a logic flaw is discovered in the source files
     during analysis, encode the expected correct behaviour as a failing test.
     Do NOT edit the source files to fix it.</rule>

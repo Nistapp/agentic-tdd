@@ -109,6 +109,12 @@ export interface PassHistory {
   commitHash?: string;
   /** Persisted by WRITER for completed passes — filePath → qualified method names. */
   targetSymbols?: TargetSymbols;
+  /**
+   * Persisted by WRITER for completed passes — filePath → precise change
+   * descriptor (line ranges, change kind, enclosing symbols, anchor snippet).
+   * Complements {@link targetSymbols} for edits to EXISTING files/symbols.
+   */
+  fileChanges?: FileChanges;
   /** ISO 8601 timestamp when the pass was started. */
   startedAt?: string;
   /** ISO 8601 timestamp when the pass completed. */
@@ -213,6 +219,7 @@ export type AgenticEventKind =
   | 'PIPELINE_RESUMED'
   | 'PASS_STARTED'
   | 'PASS_COMPLETED'
+  | 'COMMIT_CAPTURED'
   | 'TEST_RUN_STARTED'
   | 'TEST_RUN_COMPLETED'
   | 'TEST_RUN_FAILED'
@@ -294,6 +301,10 @@ export interface HitlPayload {
 export interface PassCompletedPayload {
   files?: FileChange[];
   attempts?: number;
+  /** Enclosing symbol names per file — captured by the WRITER post-commit. */
+  targetSymbols?: TargetSymbols;
+  /** Precise change descriptors (ranges/kind/symbols/anchors) per file. */
+  fileChanges?: FileChanges;
   [k: string]: unknown;
 }
 
@@ -312,13 +323,55 @@ export interface Range {
   end: number;
 }
 
-/** Parsed result of `git diff --unified=0` — per-file changed line ranges. */
+/** Classification of a single contiguous changed region in the NEW file. */
+export type ChangeKind = 'added' | 'modified' | 'deleted';
+
+/** A single contiguous changed region, as parsed from a unified-0 diff. */
+export interface DiffHunk {
+  /** 1-based line range in the new file (inclusive). */
+  range: Range;
+  /** Pure-add, mixed-edit, or pure-delete. */
+  kind: ChangeKind;
+  /** Number of added (+) lines in the hunk. */
+  addedLines: number;
+  /** Number of removed (-) lines in the hunk. */
+  removedLines: number;
+}
+
+/** Parsed result of `git diff --unified=0` — per-file changed hunks. */
 export interface DiffLineChange {
   /** File path as reported by git diff (e.g. `src/foo.ts`). */
   file: string;
-  /** Changed line ranges in the *new* file (1-based, inclusive). */
-  ranges: Range[];
+  /** Changed hunks in the *new* file (1-based, inclusive ranges). */
+  hunks: DiffHunk[];
 }
+
+/** Enriched change descriptor for a single hunk, persisted to the statefile. */
+export interface ChangeHunk extends DiffHunk {
+  /**
+   * Enclosing symbol names for the changed lines (e.g. `Foo.method`,
+   * `describe('Foo') › it('edge case')`). Includes test-style symbols.
+   */
+  symbols: string[];
+  /** First few added/changed lines from the new file — a drift-resistant locator. */
+  anchor?: string;
+}
+
+/** Per-file change descriptor written to the statefile by the WRITER. */
+export interface FileChangeRecord {
+  /** SHA of the commit that introduced this change. */
+  commitHash: string;
+  /** Whether the file was created by this pass or edited in place. */
+  kind: 'new-file' | 'edited-file';
+  hunks: ChangeHunk[];
+}
+
+/**
+ * `history[pass].fileChanges` — filePath → precise change descriptor.
+ * Tells the READER (and downstream agents) exactly which lines of which
+ * existing file/symbol changed, with anchors and symbol names.
+ */
+export type FileChanges = Record<string, FileChangeRecord>;
 
 export interface ContextFiles {
   contracts: string[];
@@ -330,6 +383,8 @@ export interface ContextFiles {
 export interface BuiltContext {
   files: ContextFiles;
   targetSymbols: TargetSymbols;
+  /** Precise change descriptors for edits to existing files/symbols. */
+  fileChanges: FileChanges;
 }
 
 /** Envelope wrapping the persisted state file. Provides forward-compat schema versioning. */

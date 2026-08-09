@@ -21,11 +21,66 @@ const ENCLOSING_KINDS = new Set([
   'function_expression',
 ]);
 
+/**
+ * Base names of test-style call expressions treated as enclosing symbols so
+ * that edits inside existing test files resolve to meaningful names such as
+ * `describe('Foo') › it('edge case')` instead of being dropped.
+ */
+const TEST_CALL_NAMES = new Set(['describe', 'it', 'test', 'context']);
+
 function detectLang(filePath: string): Lang | null {
   for (const [ext, lang] of Object.entries(EXTENSION_LANG)) {
     if (filePath.endsWith(ext)) return lang;
   }
   return null;
+}
+
+/** True when *node* is a test-style call like `describe(...)`, `it(...)`, `test(...)`. */
+function isTestCall(node: SgNode): boolean {
+  if (String(node.kind()) !== 'call_expression') return false;
+  const fn = node.field('function');
+  if (!fn) return false;
+  const base = fn.text().split('.')[0] ?? '';
+  return TEST_CALL_NAMES.has(base);
+}
+
+/**
+ * Build a short label for a test call, e.g. `describe('Foo')` or `it('edge')`.
+ * Falls back to `name(...)` when the first argument is not a string literal.
+ */
+function testCallLabel(node: SgNode): string | null {
+  const fn = node.field('function');
+  if (!fn) return null;
+  const base = fn.text().split('.')[0] ?? 'test';
+
+  const args = node.field('arguments');
+  if (args) {
+    const first = args.children().find(
+      (a) => String(a.kind()) === 'string' || String(a.kind()) === 'template_string',
+    );
+    if (first) {
+      const inner = first.text().replace(/^['"`]|['"`]$/g, '');
+      return `${base}('${inner}')`;
+    }
+  }
+  return `${base}(...)`;
+}
+
+/**
+ * Build a qualified name for a test-style call node by walking up to collect
+ * enclosing test calls, e.g. `describe('Foo') › it('handles null')`.
+ */
+function buildTestCallPath(node: SgNode): string {
+  const parts: string[] = [];
+  let current: SgNode | null = node;
+  while (current) {
+    if (String(current.kind()) === 'call_expression' && isTestCall(current)) {
+      const label = testCallLabel(current);
+      if (label) parts.unshift(label);
+    }
+    current = current.parent();
+  }
+  return parts.length > 0 ? parts.join(' \u203A ') : 'anonymous';
 }
 
 /**
@@ -35,9 +90,26 @@ function detectLang(filePath: string): Lang | null {
  * (variable_declarator or public_field_definition).  For function_declaration
  * and method_definition the name comes from the node's own identifier.
  * Class ancestors are prepended to produce e.g. `ClassName.methodName`.
+ * Test callbacks (arrow/function expressions inside describe/it/test) are
+ * resolved to their test-suite path instead.
  */
 function buildQualifiedName(node: SgNode): string {
   const kind = String(node.kind());
+
+  if (kind === 'call_expression' && isTestCall(node)) {
+    return buildTestCallPath(node);
+  }
+
+  // Callbacks passed to describe/it/test — resolve via the nearest test call.
+  if (kind === 'arrow_function' || kind === 'function_expression') {
+    let current: SgNode | null = node.parent();
+    while (current) {
+      if (String(current.kind()) === 'call_expression' && isTestCall(current)) {
+        return buildTestCallPath(current);
+      }
+      current = current.parent();
+    }
+  }
 
   // Resolve the symbol's own name (may involve the parent for arrows)
   const ownName = resolveOwnName(node);
@@ -136,7 +208,10 @@ function findEnclosingSymbol(root: SgNode, line0: number): SgNode | null {
   function walk(node: SgNode): void {
     const r = node.range();
     if (r.start.line <= line0 && r.end.line >= line0) {
-      if (ENCLOSING_KINDS.has(String(node.kind()))) {
+      if (
+        ENCLOSING_KINDS.has(String(node.kind())) ||
+        isTestCall(node)
+      ) {
         deepest = node;
       }
       for (const child of node.children()) {

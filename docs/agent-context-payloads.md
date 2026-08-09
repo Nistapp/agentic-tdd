@@ -22,6 +22,8 @@ Regardless of the pass, every agent receives the following JSON payload, constru
     "tests": [],
     "implementation": []
   },
+  "targetSymbols": {},
+  "fileChanges": {},
   "meta": {}
 }
 ```
@@ -34,6 +36,16 @@ Regardless of the pass, every agent receives the following JSON payload, constru
     *   `designMmd`: Path for the design Mermaid diagram.
     *   `specGherkin`: Path for the Gherkin specifications.
     *   `errorLog`: Path to the error log (read by agents during self-correction).
+*   **`targetSymbols`**: A map of `filePath → [qualified method/symbol names]` changed by upstream passes. Tells the agent *which* symbols were touched.
+*   **`fileChanges`**: A per-file map of precise change descriptors for edits to **existing** files/symbols. Each entry records:
+    *   `commitHash` — the SHA of the pass commit that introduced the change (use `git show <sha>:<file>` for the exact state).
+    *   `kind` — `new-file` or `edited-file`.
+    *   `hunks` — one entry per changed region with:
+        *   `range` — 1-based line range in the new file.
+        *   `kind` — `added` / `modified` / `deleted`.
+        *   `addedLines` / `removedLines` — line counts.
+        *   `symbols` — enclosing symbol names (incl. test-style names like `describe('Foo') › it('edge case')`).
+        *   `anchor` — a short snippet of the added lines, drift-resistant for locating the edit after later passes shift line numbers.
 *   **`meta`**: Empty by default, but if the pass fails and falls back to the self-correction state machine, this will contain `{ "attemptNumber": <number> }` so the agent knows it is retrying a failed task.
 
 ---

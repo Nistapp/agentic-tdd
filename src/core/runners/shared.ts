@@ -22,6 +22,7 @@ export function getAgentContextPayload(
     },
     contextFiles,
     targetSymbols: built?.targetSymbols ?? {},
+    fileChanges: built?.fileChanges ?? {},
     meta,
   };
   return JSON.stringify(payload, null, 2);

@@ -10,6 +10,9 @@ import type {
   HitlPayload,
   PassCompletedPayload,
   TargetSymbols,
+  FileChanges,
+  FileChangeRecord,
+  Range,
 } from '../types.js';
 import {
   PASS_LABELS,
@@ -704,6 +707,20 @@ export function createPipelineMachine(services: {
     return ctx.history[prevPass]?.commitHash ?? ctx.originalBaseSha ?? 'HEAD~1';
   }
 
+  /**
+   * Extract a short, non-empty snippet from *source* starting at *range.start*
+   * (1-based). Used as a drift-resistant anchor for locating an edit in later
+   * passes, since absolute line numbers shift when files are edited again.
+   */
+  function extractAnchor(source: string, range: Range): string | undefined {
+    const start = Math.max(range.start - 1, 0);
+    const slice = source.split('\n').slice(start, start + 5);
+    const trimmed = slice
+      .map((l) => l.replace(/\s+$/g, ''))
+      .filter((l) => l.length > 0);
+    return trimmed.length > 0 ? trimmed.join('\n') : undefined;
+  }
+
   function recordPassOutcome(
     ctx: PipelineContext,
     pass: PipelinePass,
@@ -866,39 +883,77 @@ export function createPipelineMachine(services: {
             entry.commitHash = headHash;
           }
 
+          // Always persist defined (possibly empty) descriptors so the state
+          // file distinguishes "WRITER ran, nothing targeted" from "not run".
+          let targetSymbols: TargetSymbols = {};
+          let fileChanges: FileChanges = {};
+
           if (symbolResolver) {
             try {
               const toRef = headHash;
               const diffChanges = await git.getDiffLineRanges(fromRef, toRef);
-              const targetSymbols: TargetSymbols = {};
+              const pendingByFile = new Map(
+                files.map((c) => [c.file, c.status] as const),
+              );
 
               for (const change of diffChanges) {
-                if (change.ranges.length === 0) continue;
-                try {
-                  const source = await fs.readFile(change.file);
-                  const symbols = symbolResolver.mapRangesToSymbols(
-                    change.file,
-                    source,
-                    change.ranges,
-                  );
-                  if (symbols.length > 0) {
-                    targetSymbols[change.file] = symbols;
-                  }
-                } catch {
-                  // File read failed — non-fatal degradation
-                }
-              }
+                const fileKind: FileChangeRecord['kind'] =
+                  pendingByFile.get(change.file) === 'A'
+                    ? 'new-file'
+                    : 'edited-file';
+                const record: FileChangeRecord = {
+                  commitHash: headHash,
+                  kind: fileKind,
+                  hunks: [],
+                };
 
-              if (Object.keys(targetSymbols).length > 0) {
-                const historyEntry = ctx.history[pass];
-                if (historyEntry) {
-                  historyEntry.targetSymbols = targetSymbols;
+                if (change.hunks.length > 0) {
+                  try {
+                    const source = await fs.readFile(change.file);
+                    for (const hunk of change.hunks) {
+                      const symbols = symbolResolver.mapRangesToSymbols(
+                        change.file,
+                        source,
+                        [hunk.range],
+                      );
+                      record.hunks.push({
+                        ...hunk,
+                        symbols,
+                        anchor: extractAnchor(source, hunk.range),
+                      });
+                      if (symbols.length > 0) {
+                        const existing = targetSymbols[change.file] ?? [];
+                        targetSymbols[change.file] = [
+                          ...new Set([...existing, ...symbols]),
+                        ].sort();
+                      }
+                    }
+                  } catch {
+                    // File read failed — non-fatal degradation
+                  }
+                }
+
+                if (record.hunks.length > 0) {
+                  fileChanges[change.file] = record;
                 }
               }
             } catch {
               // Symbol resolution failed — non-fatal degradation (AD-9)
             }
           }
+
+          const historyEntry = ctx.history[pass];
+          if (historyEntry) {
+            historyEntry.targetSymbols = targetSymbols;
+            historyEntry.fileChanges = fileChanges;
+          }
+
+          emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass}`, ctx, {
+            files,
+            targetSymbols,
+            fileChanges,
+            attempts: ctx.currentAttempt,
+          } satisfies PassCompletedPayload);
 
           if (stateStore) {
             await stateStore.save(ctx);

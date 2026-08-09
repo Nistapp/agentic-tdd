@@ -261,6 +261,77 @@ class MathUtil {
   });
 
   // -----------------------------------------------------------------------
+  // Test-style symbols (describe/it/test) — the "add tests to an existing
+  // file" case must yield meaningful target names instead of empty results.
+  // -----------------------------------------------------------------------
+
+  describe('test-style symbols', () => {
+    const TEST_SOURCE = `import { describe, it, expect } from 'vitest';
+
+describe('Foo', () => {
+  it('handles null', () => {
+    const result = validate(null);
+    expect(result).toBeNull();
+  });
+
+  it('handles empty', () => {
+    const result = validate('');
+    expect(result).toEqual([]);
+  });
+});
+
+test('top level test', () => {
+  expect(1 + 1).toBe(2);
+});
+`;
+
+    it('maps a range inside an it body to describe › it', () => {
+      const symbols = resolver.mapRangesToSymbols(
+        'foo.test.ts',
+        TEST_SOURCE,
+        [{ start: 6, end: 6 }],
+      );
+      expect(symbols).toEqual(["describe('Foo') › it('handles null')"]);
+    });
+
+    it('maps the it declaration line to describe › it', () => {
+      const symbols = resolver.mapRangesToSymbols(
+        'foo.test.ts',
+        TEST_SOURCE,
+        [{ start: 4, end: 4 }],
+      );
+      expect(symbols).toEqual(["describe('Foo') › it('handles null')"]);
+    });
+
+    it('maps a range in the describe callback to the describe name', () => {
+      const symbols = resolver.mapRangesToSymbols(
+        'foo.test.ts',
+        TEST_SOURCE,
+        [{ start: 3, end: 3 }],
+      );
+      expect(symbols).toEqual(["describe('Foo')"]);
+    });
+
+    it('maps a range inside the second it block to its own path', () => {
+      const symbols = resolver.mapRangesToSymbols(
+        'foo.test.ts',
+        TEST_SOURCE,
+        [{ start: 11, end: 11 }],
+      );
+      expect(symbols).toEqual(["describe('Foo') › it('handles empty')"]);
+    });
+
+    it('maps a range inside a top-level test() to the test name', () => {
+      const symbols = resolver.mapRangesToSymbols(
+        'foo.test.ts',
+        TEST_SOURCE,
+        [{ start: 17, end: 17 }],
+      );
+      expect(symbols).toEqual(["test('top level test')"]);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // .tsx extension
   // -----------------------------------------------------------------------
 

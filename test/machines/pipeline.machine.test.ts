@@ -6,6 +6,8 @@ import type {
   PipelineContext,
   AgenticEvent,
   FileChange,
+  DiffLineChange,
+  PassCompletedPayload,
 } from '../../src/core/types.js';
 import type {
   IGitService,
@@ -16,6 +18,7 @@ import type {
   ILogger,
   IStateStore,
   IContextProvider,
+  ISymbolResolver,
 } from '../../src/core/interfaces.js';
 import { vi, describe, it, expect } from 'vitest';
 
@@ -102,6 +105,7 @@ function makeMocks() {
     getLastCompletedPass: vi.fn().mockResolvedValue(null),
     resetWorkingTree: vi.fn().mockResolvedValue(undefined),
     abortToSha: vi.fn().mockResolvedValue(undefined),
+    getDiffLineRanges: vi.fn().mockResolvedValue([] as DiffLineChange[]),
   };
 
   const fs: IFileSystem = {
@@ -370,6 +374,114 @@ describe('Pipeline Machine', () => {
       expect(actor.getSnapshot().status).toBe('done');
       // stateStore.save not called because there is none
       expect(findEvents(m.emittedEvents, 'PIPELINE_COMPLETED')).toHaveLength(1);
+    });
+
+    it('emits COMMIT_CAPTURED once per pass with defined change metadata', async () => {
+      const m = makeMocks();
+      const machine = createPipelineMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext({ skipHitl: true });
+      const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
+      actor.start();
+
+      await waitForDone(actor);
+
+      const captured = findEvents(m.emittedEvents, 'COMMIT_CAPTURED');
+      expect(captured).toHaveLength(8);
+      for (const evt of captured) {
+        const payload = evt.payload as PassCompletedPayload;
+        expect(payload).toBeDefined();
+        expect(payload.targetSymbols).toEqual({});
+        expect(payload.fileChanges).toEqual({});
+      }
+    });
+
+    it('persists defined (empty) targetSymbols and fileChanges per pass without a resolver', async () => {
+      const m = makeMocks();
+      const machine = createPipelineMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext({ skipHitl: true });
+      const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
+      actor.start();
+
+      await waitForDone(actor);
+
+      for (let p = 0; p <= 7; p++) {
+        expect(ctx.history[p as PipelinePass]?.targetSymbols).toEqual({});
+        expect(ctx.history[p as PipelinePass]?.fileChanges).toEqual({});
+      }
+    });
+
+    it('WRITER persists fileChanges with resolved symbols and anchors', async () => {
+      const m = makeMocks();
+      (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'M', file: 'src/foo.ts' },
+      ] as FileChange[]);
+      (m.git.getDiffLineRanges as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          file: 'src/foo.ts',
+          hunks: [
+            {
+              range: { start: 2, end: 2 },
+              kind: 'modified',
+              addedLines: 1,
+              removedLines: 1,
+            },
+          ],
+        },
+      ] as DiffLineChange[]);
+      (m.fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(
+        async (path: string) => {
+          if (path === 'src/foo.ts') {
+            return 'export function foo() {\n  const x = 1;\n  return x;\n}';
+          }
+          return '%% Module: my_module\n%% This is a long enough module design mock string \n';
+        },
+      );
+      const symbolResolver: ISymbolResolver = {
+        mapRangesToSymbols: () => ['foo'],
+      };
+      const machine = createPipelineMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        stateStore: m.stateStore,
+        symbolResolver,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext({ skipHitl: true });
+      const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
+      actor.start();
+
+      await waitForDone(actor);
+
+      const entry = ctx.history[PipelinePass.CoreImplementation]!;
+      expect(entry.fileChanges?.['src/foo.ts']).toMatchObject({
+        commitHash: 'abc123def456',
+        kind: 'edited-file',
+      });
+      expect(entry.fileChanges?.['src/foo.ts']?.hunks[0]?.symbols).toEqual(['foo']);
+      expect(entry.fileChanges?.['src/foo.ts']?.hunks[0]?.anchor).toContain('const x = 1');
+      expect(entry.targetSymbols?.['src/foo.ts']).toEqual(['foo']);
     });
 
     it('pass 0 produces a git commit (AD-11)', async () => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { StateContextProvider } from '../../src/core/context-provider.js';
 import { PipelinePass } from '../../src/core/types.js';
-import type { PipelineContext, PassHistory } from '../../src/core/types.js';
+import type { PipelineContext, PassHistory, FileChanges } from '../../src/core/types.js';
 
 function makeContext(
   history: Partial<Record<PipelinePass, PassHistory>>,
@@ -26,12 +26,14 @@ function makeContext(
 function makePassHistory(
   files: string[],
   targetSymbols?: Record<string, string[]>,
+  fileChanges?: FileChanges,
 ): PassHistory {
   return {
     status: 'completed' as const,
     filesTouched: files,
     attempts: 1,
     targetSymbols,
+    fileChanges,
   };
 }
 
@@ -201,5 +203,101 @@ describe('StateContextProvider', () => {
     expect(result.targetSymbols).toEqual({
       'src/models/user.ts': ['User.create', 'User.find'],
     });
+  });
+
+  // ---------------------------------------------------------------------
+  // fileChanges merging
+  // ---------------------------------------------------------------------
+
+  it('returns empty fileChanges when upstream passes have none', () => {
+    const ctx = makeContext({
+      [PipelinePass.Refactor]: makePassHistory(['src/bar.ts']),
+    });
+    const result = provider.build(ctx, PipelinePass.Observability);
+    expect(result.fileChanges).toEqual({});
+  });
+
+  it('merges fileChanges from the Refactor pass for Observability', () => {
+    const refactorFileChanges: FileChanges = {
+      'src/models/user.ts': {
+        commitHash: 'abc123',
+        kind: 'edited-file',
+        hunks: [
+          {
+            range: { start: 42, end: 58 },
+            kind: 'modified',
+            addedLines: 10,
+            removedLines: 6,
+            symbols: ['User.update'],
+            anchor: '  const result = validate(input);',
+          },
+        ],
+      },
+    };
+    const ctx = makeContext({
+      [PipelinePass.CoreImplementation]: makePassHistory(
+        ['src/models/user.ts'],
+        { 'src/models/user.ts': ['User', 'User.create'] },
+      ),
+      [PipelinePass.Refactor]: makePassHistory(
+        ['src/models/user.ts'],
+        { 'src/models/user.ts': ['User.update'] },
+        refactorFileChanges,
+      ),
+    });
+    const result = provider.build(ctx, PipelinePass.Observability);
+    expect(result.fileChanges).toEqual(refactorFileChanges);
+    expect(result.targetSymbols).toEqual({ 'src/models/user.ts': ['User.update'] });
+  });
+
+  it('latest upstream pass wins per file for fileChanges records', () => {
+    const ctx = makeContext({
+      [PipelinePass.CoreImplementation]: makePassHistory(
+        ['src/shared.ts'],
+        { 'src/shared.ts': ['init'] },
+        {
+          'src/shared.ts': {
+            commitHash: 'aaa',
+            kind: 'edited-file',
+            hunks: [
+              {
+                range: { start: 1, end: 5 },
+                kind: 'added',
+                addedLines: 5,
+                removedLines: 0,
+                symbols: ['init'],
+                anchor: 'export function init() {',
+              },
+            ],
+          },
+        },
+      ),
+      [PipelinePass.Refactor]: makePassHistory(
+        ['src/shared.ts'],
+        { 'src/shared.ts': ['teardown'] },
+        {
+          'src/shared.ts': {
+            commitHash: 'bbb',
+            kind: 'edited-file',
+            hunks: [
+              {
+                range: { start: 20, end: 30 },
+                kind: 'modified',
+                addedLines: 6,
+                removedLines: 4,
+                symbols: ['teardown'],
+                anchor: 'export function teardown() {',
+              },
+            ],
+          },
+        },
+      ),
+    });
+    const result = provider.build(ctx, PipelinePass.Security);
+    // Refactor (later in target order) wins for the fileChanges record
+    expect(result.fileChanges['src/shared.ts']?.commitHash).toBe('bbb');
+    expect(result.fileChanges['src/shared.ts']?.hunks[0]?.symbols).toEqual(['teardown']);
+    // targetSymbols still unions symbols across upstream passes
+    expect(result.targetSymbols).toEqual({ 'src/shared.ts': ['teardown'] });
   });
 });

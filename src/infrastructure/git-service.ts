@@ -1,6 +1,13 @@
 import { execa } from 'execa';
 import type { IGitService } from '../core/interfaces.js';
-import type { GitCommitResult, FileChange, DiffLineChange, Range } from '../core/types.js';
+import type {
+  GitCommitResult,
+  FileChange,
+  DiffLineChange,
+  DiffHunk,
+  Range,
+  ChangeKind,
+} from '../core/types.js';
 
 /**
  * Regex to parse a `diff --git a/<old> b/<new>` file header.
@@ -14,31 +21,71 @@ const DIFF_FILE_HEADER = /^diff --git a\/(.*) b\/(.*)$/;
  */
 const DIFF_HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
+/**
+ * Classify a hunk from its line counts.
+ * Pure-add → 'added'; pure-delete → 'deleted'; otherwise 'modified'.
+ */
+function classifyHunk(added: number, removed: number): ChangeKind {
+  if (added > 0 && removed === 0) return 'added';
+  if (removed > 0 && added === 0) return 'deleted';
+  return 'modified';
+}
+
 function parseDiffUnified0(stdout: string): DiffLineChange[] {
   const lines = stdout.split('\n');
   const result: DiffLineChange[] = [];
   let current: DiffLineChange | null = null;
+  let currentHunk: DiffHunk | null = null;
+
+  const flushHunk = (): void => {
+    if (currentHunk && current) {
+      const added = currentHunk.addedLines;
+      const removed = currentHunk.removedLines;
+      if (added > 0 || removed > 0) {
+        currentHunk.kind = classifyHunk(added, removed);
+        current.hunks.push(currentHunk);
+      }
+    }
+    currentHunk = null;
+  };
 
   for (const line of lines) {
     const fileMatch = DIFF_FILE_HEADER.exec(line);
     if (fileMatch) {
+      flushHunk();
       if (current) result.push(current);
-      current = { file: fileMatch[2]!, ranges: [] };
+      current = { file: fileMatch[2]!, hunks: [] };
       continue;
     }
 
     const hunkMatch = DIFF_HUNK_HEADER.exec(line);
     if (hunkMatch && current) {
+      flushHunk();
       const newStart = parseInt(hunkMatch[3]!, 10);
       const newCount = hunkMatch[4] !== undefined ? parseInt(hunkMatch[4], 10) : 1;
       const range: Range = {
         start: newStart,
-        end: newStart + newCount - 1,
+        end: newStart + Math.max(newCount, 1) - 1,
       };
-      current.ranges.push(range);
+      currentHunk = {
+        range,
+        kind: 'modified',
+        addedLines: 0,
+        removedLines: 0,
+      };
+      continue;
+    }
+
+    if (currentHunk && !fileMatch) {
+      if (line.startsWith('+')) {
+        currentHunk.addedLines += 1;
+      } else if (line.startsWith('-')) {
+        currentHunk.removedLines += 1;
+      }
     }
   }
 
+  flushHunk();
   if (current) result.push(current);
   return result;
 }

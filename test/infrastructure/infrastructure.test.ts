@@ -260,7 +260,17 @@ describe('GitService', () => {
     const git = new GitService();
     const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
     expect(result).toEqual([
-      { file: 'src/foo.ts', ranges: [{ start: 11, end: 13 }] },
+      {
+        file: 'src/foo.ts',
+        hunks: [
+          {
+            range: { start: 11, end: 13 },
+            kind: 'added',
+            addedLines: 3,
+            removedLines: 0,
+          },
+        ],
+      },
     ]);
   });
 
@@ -286,9 +296,19 @@ describe('GitService', () => {
     expect(result).toEqual([
       {
         file: 'src/foo.ts',
-        ranges: [
-          { start: 5, end: 7 },
-          { start: 22, end: 25 },
+        hunks: [
+          {
+            range: { start: 5, end: 7 },
+            kind: 'modified',
+            addedLines: 1,
+            removedLines: 1,
+          },
+          {
+            range: { start: 22, end: 25 },
+            kind: 'added',
+            addedLines: 4,
+            removedLines: 0,
+          },
         ],
       },
     ]);
@@ -310,8 +330,28 @@ describe('GitService', () => {
     const git = new GitService();
     const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
     expect(result).toEqual([
-      { file: 'src/a.ts', ranges: [{ start: 2, end: 2 }] },
-      { file: 'src/b.ts', ranges: [{ start: 10, end: 13 }] },
+      {
+        file: 'src/a.ts',
+        hunks: [
+          {
+            range: { start: 2, end: 2 },
+            kind: 'added',
+            addedLines: 1,
+            removedLines: 0,
+          },
+        ],
+      },
+      {
+        file: 'src/b.ts',
+        hunks: [
+          {
+            range: { start: 10, end: 13 },
+            kind: 'modified',
+            addedLines: 2,
+            removedLines: 1,
+          },
+        ],
+      },
     ]);
   });
 
@@ -326,7 +366,17 @@ describe('GitService', () => {
     const git = new GitService();
     const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
     expect(result).toEqual([
-      { file: 'src/x.ts', ranges: [{ start: 3, end: 3 }] },
+      {
+        file: 'src/x.ts',
+        hunks: [
+          {
+            range: { start: 3, end: 3 },
+            kind: 'modified',
+            addedLines: 1,
+            removedLines: 1,
+          },
+        ],
+      },
     ]);
   });
 

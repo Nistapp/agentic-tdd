@@ -84,4 +84,15 @@ permission:
   first run it will be empty `{}`. On self-correction cycles it may list
   functions from the previous attempt. Use the indexer (if available) to
   understand the project's architecture, dependencies, and conventions.
+
+  The payload also includes `fileChanges` — a per-file map of precise change
+  descriptors. Each entry records the commit that introduced the change, the
+  file kind (`new-file` or `edited-file`), and per-hunk line ranges with an
+  `added`/`modified`/`deleted` classification, the enclosing symbol names, and
+  a short anchor snippet. When a change edits an EXISTING file or symbol
+  (e.g. test cases appended to an existing test suite), use these ranges and
+  anchors to locate the exact region instead of rescanning the file. Treat
+  absolute line numbers as best-effort hints — they drift if later passes edit
+  the same file; anchor on the enclosing symbol name and the snippet, and use
+  the recorded commit SHA (`git show <sha>:<file>`) for the exact state.
 </task>

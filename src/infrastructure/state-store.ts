@@ -5,7 +5,10 @@ import type { IStateStore, IFileSystem } from '../core/interfaces.js';
 import type { PipelineContext, StateFileEnvelope } from '../core/types.js';
 import { getStateDir, getStateFilePath } from '../utils/paths.js';
 
-const CURRENT_SCHEMA_VERSION = '0.1.0';
+const CURRENT_SCHEMA_VERSION = '0.2.0';
+
+/** Older versions still readable (optional fields are forward-compatible). */
+const SUPPORTED_SCHEMA_VERSIONS = new Set<string>(['0.1.0', CURRENT_SCHEMA_VERSION]);
 
 const STATE_FILE_RE = /^state-.+\.json$/;
 
@@ -83,7 +86,7 @@ export class JsonStateStore implements IStateStore {
       'context' in parsed
     ) {
       const env = parsed as StateFileEnvelope;
-      if (env.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+      if (!SUPPORTED_SCHEMA_VERSIONS.has(env.schemaVersion)) {
         console.warn(
           `[agentic-tdd] Unsupported state file schema version "${env.schemaVersion}" ` +
           `at ${this.path}. Expected "${CURRENT_SCHEMA_VERSION}".`,
