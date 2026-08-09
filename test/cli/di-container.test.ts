@@ -45,6 +45,7 @@ const mockGit: IGitService = {
   getLastCompletedPass: vi.fn<() => Promise<number | null>>(() => Promise.resolve(null)),
   resetWorkingTree:    vi.fn<() => Promise<void>>(() => Promise.resolve()),
   abortToSha:          vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  tag:                 vi.fn<() => Promise<void>>(() => Promise.resolve()),
 };
 
 describe('createPipelineServices', () => {

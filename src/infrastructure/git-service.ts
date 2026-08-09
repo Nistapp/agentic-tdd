@@ -209,4 +209,8 @@ export class GitService implements IGitService {
     await execa('git', ['reset', '--hard', sha]);
     await execa('git', ['clean', '-fd']);
   }
+
+  async tag(name: string): Promise<void> {
+    await execa('git', ['tag', name, 'HEAD']);
+  }
 }

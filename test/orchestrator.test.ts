@@ -108,6 +108,7 @@ function makeMocks(): Mocks {
     getLastCompletedPass: vi.fn().mockResolvedValue(null),
     resetWorkingTree: vi.fn().mockResolvedValue(undefined),
     abortToSha: vi.fn().mockResolvedValue(undefined),
+    tag: vi.fn().mockResolvedValue(undefined),
   };
 
   const fs: IFileSystem = {

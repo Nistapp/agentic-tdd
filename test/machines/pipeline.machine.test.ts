@@ -105,6 +105,7 @@ function makeMocks() {
     getLastCompletedPass: vi.fn().mockResolvedValue(null),
     resetWorkingTree: vi.fn().mockResolvedValue(undefined),
     abortToSha: vi.fn().mockResolvedValue(undefined),
+    tag: vi.fn().mockResolvedValue(undefined),
     getDiffLineRanges: vi.fn().mockResolvedValue([] as DiffLineChange[]),
   };
 
@@ -242,6 +243,33 @@ describe('Pipeline Machine', () => {
       await waitForDone(actor);
 
       expect(m.git.commit).toHaveBeenCalledTimes(8);
+    });
+
+    it('includes the feature name in every commit message and tags HEAD after Pass 7', async () => {
+      const m = makeMocks();
+      const machine = createPipelineMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        stateStore: m.stateStore,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext({ skipHitl: true, featureName: 'my_module' });
+      const actor = createActor(machine, { input: { ctx, startPass: PipelinePass.Design } });
+      actor.start();
+
+      await waitForDone(actor);
+
+      const commitCalls = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls;
+      expect(commitCalls).toHaveLength(8);
+      for (const [files, message] of commitCalls) {
+        expect(message).toContain('- my_module');
+      }
+      expect(m.git.tag).toHaveBeenCalledTimes(1);
+      expect(m.git.tag).toHaveBeenCalledWith('Completed - my_module');
     });
   });
 

@@ -44,7 +44,8 @@ export interface IGitService {
    * Parse git log to find the highest completed Pass number.
    *
    * Looks for commit messages matching `chore(ai): completed Pass N -- ...`
-   * where N is a number 0-7. Returns the highest N found, or null if none.
+   * (optionally suffixed with `- <feature-name>`) where N is a number 0-7.
+   * Returns the highest N found, or null if none.
    */
   getLastCompletedPass(): Promise<number | null>;
 
@@ -53,6 +54,9 @@ export interface IGitService {
 
   /** Execute `git reset --hard <sha>` and `git clean -fd` to rewind to a specific commit. */
   abortToSha(sha: string): Promise<void>;
+
+  /** Create a lightweight git tag pointing at the current HEAD commit. */
+  tag(name: string): Promise<void>;
 
   /**
    * Compute changed line ranges between two refs via `git diff --unified=0`.

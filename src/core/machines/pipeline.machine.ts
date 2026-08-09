@@ -872,15 +872,22 @@ export function createPipelineMachine(services: {
             stagePaths.push(stateStore.path);
           }
 
-          await git.commit(
+          const commitResult = await git.commit(
             stagePaths,
-            `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]}`,
+            `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]} - ${ctx.featureName}`,
           );
 
           const headHash = await git.getCurrentCommitSha();
           const entry = ctx.history[pass];
           if (entry) {
             entry.commitHash = headHash;
+          }
+
+          if (
+            pass === PipelinePass.Documentation &&
+            (commitResult.kind === 'committed' || commitResult.kind === 'add_warning')
+          ) {
+            await git.tag(`Completed - ${ctx.featureName}`);
           }
 
           // Always persist defined (possibly empty) descriptors so the state
