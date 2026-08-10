@@ -364,7 +364,7 @@ export function createSelfCorrectionMachine(services: {
             : await buildArtefacts(ctx, fs, built, ctx.errorLogPath);
 
           logger.info(`Entering Pass ${pass} [Attempt ${attempt}]`);
-          logger.info(
+          logger.debug(
             { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
             'Dispatching prompt to agent',
           );

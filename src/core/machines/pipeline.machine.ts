@@ -767,7 +767,7 @@ export function createPipelineMachine(services: {
           logger.info('Entering Pass 0 [Attempt 1]');
           const built = contextProvider.build(ctx, ctx.currentPass);
           const prompt = getAgentContextPayload(ctx, built);
-          logger.info(
+          logger.debug(
             { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
             'Dispatching prompt to Opencode',
           );
@@ -808,7 +808,7 @@ export function createPipelineMachine(services: {
           logger.info(`Entering Pass ${pass} [Attempt 1]`);
           const built = contextProvider.build(ctx, pass);
           const prompt = getAgentContextPayload(ctx, built);
-          logger.info(
+          logger.debug(
             { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
             'Dispatching prompt to Opencode',
           );

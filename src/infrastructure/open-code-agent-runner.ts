@@ -84,7 +84,7 @@ export class OpenCodeAgentRunner implements IAgentRunner {
     }
 
     const apiKeySet = this.#config.apiKeySet;
-    logger.info(
+    logger.debug(
       { pass: request.pass, agent: agentName, model, apiKey: apiKeySet },
       'Pre-flight: invoking opencode agent',
     );

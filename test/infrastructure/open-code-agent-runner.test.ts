@@ -218,7 +218,7 @@ describe('OpenCodeAgentRunner', () => {
 
       await runner.execute(request);
 
-      const infoCalls = m.logger.calls.filter(c => c.method === 'info');
+      const infoCalls = m.logger.calls.filter(c => c.method === 'debug');
       const preFlightCall = infoCalls.find(c =>
         c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
       );
