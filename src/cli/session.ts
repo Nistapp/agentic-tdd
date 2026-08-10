@@ -1,13 +1,21 @@
 import { resolve, join } from 'node:path';
 import { cwd } from 'node:process';
+import { createInterface } from 'node:readline';
 
 import { PipelinePass, DEFAULT_MAX_CORRECTION_RETRIES } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
 import type { IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
-import { getStateFilePath } from '../utils/paths.js';
+import type { PipelineOrchestrator } from '../core/orchestrator.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
+import { getErrorLogPath } from '../utils/paths.js';
+
+let activeOrchestrator: PipelineOrchestrator | undefined;
+
+export function getActiveOrchestrator(): PipelineOrchestrator | undefined {
+  return activeOrchestrator;
+}
 
 export interface ArtefactPaths {
   artefactDir: string;
@@ -25,7 +33,7 @@ export function computeArtefactPaths(featureName: string): ArtefactPaths {
     designMmdPath: join(specsDir, `${featureName}-${tmpTs}.mmd`),
     specGherkinPath: join(specsDir, `${featureName}-${tmpTs}.gherkin`),
     testFilePath: join(cwd(), 'test', `${featureName}.test.ts`),
-    errorLogPath: join(specsDir, '.opencode_error.log'),
+    errorLogPath: getErrorLogPath(featureName),
   };
 }
 
@@ -56,18 +64,61 @@ export async function resumeSession(
   git: IGitService,
   renderer: TerminalRenderer,
   version: string,
+  noContextEnrich?: boolean,
 ): Promise<void> {
   const ctx = await stateStore.load();
   ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
 
-  await git.resetWorkingTree();
-  console.log('\n  Resume: working tree cleaned.\n');
+  const snap = ctx.xstateSnapshot as Record<string, unknown> | undefined;
+  const isPaused: boolean = snap?.status === 'active' && snap?.value === 'paused';
 
-  const lastCompletedPass = await git.getLastCompletedPass();
-  const startPass =
-    lastCompletedPass !== null
-      ? ((lastCompletedPass + 1) as PipelinePass)
-      : PipelinePass.Design;
+  let startPass: PipelinePass;
+  let lastCompletedPass: number | null = null;
+
+  if (isPaused) {
+    await fs.mkdir(ctx.artefactDir);
+    renderer.banner(ctx);
+
+      const { orchestrator } = createPipelineServices({
+        ctx,
+        fs,
+        git,
+        renderer,
+        version,
+        stateStore,
+        noContextEnrich,
+      });
+
+      activeOrchestrator = orchestrator;
+
+      try {
+        await orchestrator.run(ctx);
+        await stateStore.delete();
+        activeOrchestrator = undefined;
+        process.exit(0);
+      } catch (err) {
+        renderer.fatal(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+
+    await git.resetWorkingTree();
+    console.log('\n  Resume: working tree cleaned.\n');
+
+  if (ctx.currentPass !== undefined && Object.keys(ctx.history).length > 0) {
+    const entry = ctx.history[ctx.currentPass];
+    if (entry?.status === 'completed') {
+      lastCompletedPass = ctx.currentPass;
+      startPass = (ctx.currentPass + 1) as PipelinePass;
+    } else if (entry?.status === 'failed') {
+      startPass = ctx.currentPass;
+    } else {
+      startPass = ctx.currentPass;
+    }
+  } else {
+    lastCompletedPass = null;
+    startPass = PipelinePass.Design;
+  }
 
   if (startPass > PipelinePass.Documentation) {
     await stateStore.delete();
@@ -89,13 +140,19 @@ export async function resumeSession(
     git,
     renderer,
     version,
+    stateStore,
+    noContextEnrich,
   });
+
+  activeOrchestrator = orchestrator;
 
   try {
     await orchestrator.run(ctx, startPass);
     await stateStore.delete();
+    activeOrchestrator = undefined;
     process.exit(0);
   } catch (err) {
+    activeOrchestrator = undefined;
     renderer.fatal(err instanceof Error ? err.message : String(err));
   }
 }
@@ -107,8 +164,36 @@ export async function startNewSession(
   git: IGitService,
   renderer: TerminalRenderer,
   version: string,
+  noContextEnrich?: boolean,
 ): Promise<void> {
   const paths = computeArtefactPaths(options.featureName);
+
+  const promptUser = async (question: string): Promise<boolean> => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    return new Promise<boolean>((resolve) => {
+      rl.question(question + ' ', (answer) => {
+        rl.close();
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+      });
+    });
+  };
+
+  const branchOutcome = await git.createFeatureBranch(
+    options.featureName,
+    options.baseBranch ?? null,
+    options.skipHitl,
+    promptUser,
+  );
+
+  if (
+    branchOutcome.kind === 'abort_dirty' ||
+    branchOutcome.kind === 'abort_main' ||
+    branchOutcome.kind === 'abort_user_declined'
+  ) {
+    renderer.fatal(branchOutcome.message);
+  }
+  renderer.gitInfo(`Switched to branch ${branchOutcome.branch} [${branchOutcome.kind}]`);
+
   const originalBaseSha = await git.getCurrentCommitSha();
 
   await fs.mkdir(paths.artefactDir);
@@ -130,12 +215,13 @@ export async function startNewSession(
     featureDescription: options.featureDescription,
     baseBranch: options.baseBranch,
     originalBaseSha,
+    history: {},
     ...paths,
   };
 
   await stateStore.save(ctx);
   console.log(
-    `  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${getStateFilePath()}.\n`,
+    `  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${stateStore.path}.\n`,
   );
 
   renderer.banner(ctx);
@@ -146,13 +232,19 @@ export async function startNewSession(
     git,
     renderer,
     version,
+    stateStore,
+    noContextEnrich,
   });
+
+  activeOrchestrator = orchestrator;
 
   try {
     await orchestrator.run(ctx, PipelinePass.Design);
     await stateStore.delete();
+    activeOrchestrator = undefined;
     process.exit(0);
   } catch (err) {
+    activeOrchestrator = undefined;
     renderer.fatal(err instanceof Error ? err.message : String(err));
   }
 }

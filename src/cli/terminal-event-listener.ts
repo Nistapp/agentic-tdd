@@ -1,5 +1,5 @@
 import type { IEventBus } from '../core/interfaces.js';
-import type { AgenticEvent } from '../core/types.js';
+import type { AgenticEvent, FileChanges, TargetSymbols } from '../core/types.js';
 import { PipelinePass, PASS_LABELS, AGENT_NAMES } from '../core/types.js';
 
 import { TerminalRenderer } from './terminal-renderer.js';
@@ -44,6 +44,12 @@ export function attachTerminalListener(
     }
   });
 
+  events.on('COMMIT_CAPTURED', (evt: AgenticEvent) => {
+    const fileChanges = evt.payload?.fileChanges as FileChanges | undefined;
+    const targetSymbols = evt.payload?.targetSymbols as TargetSymbols | undefined;
+    renderer.logCapturedContext(fileChanges, targetSymbols);
+  });
+
   events.on('TEST_RUN_STARTED',   (evt: AgenticEvent) => renderer.logTestStatus(evt.message));
   events.on('TEST_RUN_COMPLETED', (evt: AgenticEvent) => renderer.logTestStatus(evt.message));
   events.on('TEST_RUN_FAILED',    (evt: AgenticEvent) => renderer.logTestStatus(evt.message));
@@ -54,6 +60,14 @@ export function attachTerminalListener(
 
   events.on('WARNING', (evt: AgenticEvent) => renderer.logWarnMessage(evt.message));
   events.on('ERROR',   (evt: AgenticEvent) => renderer.logErrorMessage(evt.message));
+
+  events.on('PIPELINE_PAUSED', (evt: AgenticEvent) =>
+    renderer.pausedBanner(evt.message),
+  );
+
+  events.on('PIPELINE_RESUMED', (evt: AgenticEvent) =>
+    renderer.resumedBanner(evt.message),
+  );
 
   events.on('PIPELINE_COMPLETED', (_: AgenticEvent) =>
     renderer.logPipelineComplete(version),

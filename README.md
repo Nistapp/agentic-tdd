@@ -29,8 +29,8 @@ Pass 1  Contracts & Types      →  type stubs in source files
 Pass 2  TDD Test Generation    →  test file                   [Red Phase]
 Pass 3  Core Implementation    →  logic                       [Green Phase + self-correction]
 Pass 4  Refactor & Optimise    →  complexity/DRY              [self-correction]
-Pass 5  Security Hardening     →  Secure Code + OWASP         [self-correction]
-Pass 6  Observability & Logs   →  logging + error classes     [self-correction]
+Pass 5  Observability & Logs   →  logging + error classes     [self-correction]
+Pass 6  Security Hardening     →  Secure Code + OWASP         [self-correction]
 Pass 7  Documentation          →  docstrings + @see links
 ```
 
@@ -87,24 +87,24 @@ stateDiagram-v2
     Gate_4 --> Pass_4 : Refactor Broke Logic (Revert & Fix)
     Gate_4 --> Pass_5 : Tests Passed
 
-    Pass_5 : Pass 5 - Security Hardening
+    Pass_5 : Pass 5 - Observability & Logs
     class Pass_5 agent
 
-    Gate_5 : Test Runner (Verify Security)
+    Gate_5 : Test Runner (Verify Observability)
     class Gate_5 testGate
 
     Pass_5 --> Gate_5
-    Gate_5 --> Pass_5 : Security Blocked Valid Logic (Fix)
+    Gate_5 --> Pass_5 : Logs Broke Scopes/Types (Fix)
     Gate_5 --> Pass_6 : Tests Passed
 
-    Pass_6 : Pass 6 - Observability & Logs
+    Pass_6 : Pass 6 - Security Hardening
     class Pass_6 agent
 
-    Gate_6 : Test Runner (Verify Observability)
+    Gate_6 : Test Runner (Verify Security)
     class Gate_6 testGate
 
     Pass_6 --> Gate_6
-    Gate_6 --> Pass_6 : Logs Broke Scopes/Types (Fix)
+    Gate_6 --> Pass_6 : Security Blocked Valid Logic (Fix)
     Gate_6 --> Pass_7 : Tests Passed
 
     Pass_7 : Pass 7 - Sync Docs & Spec Artifacts

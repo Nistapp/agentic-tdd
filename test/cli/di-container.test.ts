@@ -21,7 +21,7 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     artefactDir: '/tmp/specs',
     designMmdPath: '/tmp/specs/test-feature.mmd',
     specGherkinPath: '/tmp/specs/test-feature.gherkin',
-    errorLogPath: '/tmp/specs/.opencode_error.log',
+    errorLogPath: '/tmp/.agentic-tdd/error-test-feature.log',
     ...overrides,
   } as PipelineContext;
 }
@@ -33,6 +33,7 @@ const mockFs: IFileSystem = {
   mkdir:      vi.fn<() => Promise<void>>(() => Promise.resolve()),
   deleteFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   renameFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  readdir:    vi.fn<() => Promise<string[]>>(() => Promise.resolve([])),
 };
 
 const mockGit: IGitService = {
@@ -44,6 +45,7 @@ const mockGit: IGitService = {
   getLastCompletedPass: vi.fn<() => Promise<number | null>>(() => Promise.resolve(null)),
   resetWorkingTree:    vi.fn<() => Promise<void>>(() => Promise.resolve()),
   abortToSha:          vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  tag:                 vi.fn<() => Promise<void>>(() => Promise.resolve()),
 };
 
 describe('createPipelineServices', () => {

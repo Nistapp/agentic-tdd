@@ -56,7 +56,7 @@ export class CommandRunner implements ICommandRunner, IOpencodeSpawner {
   async spawn(args: string[]): Promise<string> {
     const child = execa('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, OPENCODE_CONFIG_DIR } });
 
-    loggers.core.info({ pid: child.pid, opencode_log: OPENCODE_LOG_PATH }, 'Opencode process spawned');
+    loggers.core.debug({ pid: child.pid, opencode_log: OPENCODE_LOG_PATH }, 'Opencode process spawned');
     reqLogger().debug({ pid: child.pid, command: ['opencode', ...args] }, 'Executing shell command');
 
     let lastActivity = Date.now();

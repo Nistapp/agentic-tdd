@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TerminalRenderer, consoleWriter, PIPELINE_VERSION } from '../../src/cli/terminal-renderer.js';
 import type { TerminalWriter } from '../../src/cli/terminal-renderer.js';
-import type { PipelineContext } from '../../src/core/types.js';
+import type { PipelineContext, FileChanges, TargetSymbols } from '../../src/core/types.js';
 
 // -- Stub writer that records all calls ------------------------------------- //
 
@@ -41,7 +41,7 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     artefactDir:          '/workspace/specs',
     designMmdPath:        '/workspace/specs/auth.mmd',
     specGherkinPath:      '/workspace/specs/auth.gherkin',
-    errorLogPath:         '/workspace/specs/.opencode_error.log',
+    errorLogPath:         '/workspace/.agentic-tdd/error-auth.log',
     ...overrides,
   } as PipelineContext;
 }
@@ -231,6 +231,70 @@ describe('TerminalRenderer', () => {
     it('logs nothing for empty files array', () => {
       const w = makeWriter();
       new TerminalRenderer(w).logChangedFiles([]);
+      expect(w.logs.length).toBe(0);
+    });
+  });
+
+  describe('logCapturedContext', () => {
+    it('renders file, symbol, line range, and change kind', () => {
+      const w = makeWriter();
+      const fileChanges: FileChanges = {
+        'src/foo.ts': {
+          commitHash: 'abc123',
+          kind: 'edited-file',
+          hunks: [
+            {
+              range: { start: 42, end: 58 },
+              kind: 'modified',
+              addedLines: 10,
+              removedLines: 6,
+              symbols: ['Foo.doWork'],
+              anchor: '  const result = validate(input);',
+            },
+          ],
+        },
+      };
+      new TerminalRenderer(w).logCapturedContext(fileChanges);
+      const out = w.logs.join('\n');
+      expect(out).toContain('src/foo.ts');
+      expect(out).toContain('Foo.doWork');
+      expect(out).toContain('L42-58');
+      expect(out).toContain('(modified)');
+    });
+
+    it('uses A status for new-file records', () => {
+      const w = makeWriter();
+      const fileChanges: FileChanges = {
+        'test/new.test.ts': {
+          commitHash: 'abc',
+          kind: 'new-file',
+          hunks: [
+            {
+              range: { start: 1, end: 3 },
+              kind: 'added',
+              addedLines: 3,
+              removedLines: 0,
+              symbols: [],
+            },
+          ],
+        },
+      };
+      new TerminalRenderer(w).logCapturedContext(fileChanges);
+      expect(w.logs.join('\n')).toContain('[A] test/new.test.ts');
+    });
+
+    it('renders symbol-only entries from targetSymbols when fileChanges absent', () => {
+      const w = makeWriter();
+      const targetSymbols: TargetSymbols = { 'src/bar.ts': ['Bar.baz'] };
+      new TerminalRenderer(w).logCapturedContext(undefined, targetSymbols);
+      const out = w.logs.join('\n');
+      expect(out).toContain('src/bar.ts');
+      expect(out).toContain('Bar.baz');
+    });
+
+    it('logs nothing when both inputs are empty', () => {
+      const w = makeWriter();
+      new TerminalRenderer(w).logCapturedContext({}, {});
       expect(w.logs.length).toBe(0);
     });
   });

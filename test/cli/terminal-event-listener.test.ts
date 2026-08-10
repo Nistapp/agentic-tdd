@@ -48,6 +48,7 @@ function makeRenderer() {
     logAttemptCount: vi.fn(),
     logChangedFiles: vi.fn(),
     logNoChanges: vi.fn(),
+    logCapturedContext: vi.fn(),
     logTestStatus: vi.fn(),
     logCompaction: vi.fn(),
     logWarnMessage: vi.fn(),
@@ -128,6 +129,39 @@ describe('attachTerminalListener', () => {
         payload: {},
       });
       expect((renderer as any).logNoChanges).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('COMMIT_CAPTURED', () => {
+    it('calls logCapturedContext with fileChanges and targetSymbols from payload', () => {
+      const fileChanges = {
+        'src/foo.ts': {
+          commitHash: 'abc123',
+          kind: 'edited-file' as const,
+          hunks: [
+            {
+              range: { start: 42, end: 58 },
+              kind: 'modified' as const,
+              addedLines: 10,
+              removedLines: 6,
+              symbols: ['Foo.doWork'],
+            },
+          ],
+        },
+      };
+      const targetSymbols = { 'src/foo.ts': ['Foo.doWork'] };
+      events.trigger('COMMIT_CAPTURED', {
+        payload: { fileChanges, targetSymbols },
+      });
+      expect((renderer as any).logCapturedContext).toHaveBeenCalledWith(
+        fileChanges,
+        targetSymbols,
+      );
+    });
+
+    it('does not throw when payload lacks fileChanges', () => {
+      expect(() => events.trigger('COMMIT_CAPTURED', { payload: {} })).not.toThrow();
+      expect((renderer as any).logCapturedContext).toHaveBeenCalledWith(undefined, undefined);
     });
   });
 

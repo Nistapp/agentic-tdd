@@ -75,7 +75,7 @@ To solve this, we evolved the approach to agent development to: **AI as an Assem
 
 Instead of a single zero-shot prompt, development is broken down into a strict, sequential pipeline. Each step (pass) is handled by a specialized sub-agent with a deeply constrained scope and strict guard-rails.
 
-> **The Decision:** We use a 8-pass pipeline (Design -> Contracts -> Tests -> Core Logic -> Refactor -> Security -> Observability -> Documentation).
+> **The Decision:** We use a 8-pass pipeline (Design -> Contracts -> Tests -> Core Logic -> Refactor -> Observability -> Security -> Documentation).
 >
 > **The Rationale:** By strictly scoping each pass, we eliminate attention degradation. A "Security Agent" tasked *only* with finding OWASP vulnerabilities in a pre-written file performs significantly better than a generalist agent trying to write logic and secure it at the same time. Furthermore, tight scoping allows us to route simpler tasks to cheaper models, drastically reducing API costs.
 
@@ -365,26 +365,26 @@ stateDiagram-v2
     Gate_4 --> Pass_4 : Refactor Broke Logic (Revert & Fix)
     Gate_4 --> Pass_5 : Tests Passed
     
-    %% --- PHASE 5: Security ---
-    Pass_5 : Pass 5 - Security Hardening
+    %% --- PHASE 5: Observability ---
+    Pass_5 : Pass 5 - Observability & Logs
     class Pass_5 agent
     
-    Gate_5 : Test Runner (Verify Security)
+    Gate_5 : Test Runner (Verify Observability)
     class Gate_5 testGate
     
     Pass_5 --> Gate_5
-    Gate_5 --> Pass_5 : Security Blocked Valid Logic (Fix)
+    Gate_5 --> Pass_5 : Logs Broke Scopes/Types (Fix)
     Gate_5 --> Pass_6 : Tests Passed
     
-    %% --- PHASE 6: Observability ---
-    Pass_6 : Pass 6 - Observability & Logs
+    %% --- PHASE 6: Security ---
+    Pass_6 : Pass 6 - Security Hardening
     class Pass_6 agent
     
-    Gate_6 : Test Runner (Verify Observability)
+    Gate_6 : Test Runner (Verify Security)
     class Gate_6 testGate
     
     Pass_6 --> Gate_6
-    Gate_6 --> Pass_6 : Logs Broke Scopes/Types (Fix)
+    Gate_6 --> Pass_6 : Security Blocked Valid Logic (Fix)
     Gate_6 --> Pass_7 : Tests Passed
     
     %% --- PHASE 7: Documentation & Spec Sync ---
@@ -416,11 +416,11 @@ The workflow requires the OpenCode orchestrator to sequentially trigger the foll
 5. **Pass 4: Refactor & Optimization** (The Optimizer)
    * *Goal:* Reduce cyclomatic complexity, enforce DRY principles, and optimize Big-O performance without changing behavior.
    * *Gate:* `npm test` must pass to ensure the refactor didn't break functionality.
-6. **Pass 5: Security Hardening** (The Red Team)
-   * *Goal:* Add input sanitization, OWASP mitigations, and boundary validation (e.g., Zod schemas). 
-   * *Gate:* `npm test` must pass.
-7. **Pass 6: Observability** (The SRE)
+6. **Pass 5: Observability** (The SRE)
    * *Goal:* Implement uniform try/catch blocks, structured JSON logging, and custom error classes.
+   * *Gate:* `npm test` must pass.
+7. **Pass 6: Security Hardening** (The Red Team)
+   * *Goal:* Add input sanitization, OWASP mitigations, and boundary validation (e.g., Zod schemas). Review and sanitize log statements from Pass 5 for PII leakage.
    * *Gate:* `npm test` must pass.
 8. **Pass 7: Documentation** (The Tech Writer)
    * *Goal:* Generate JSDoc/Docstrings, sync the Traceability Matrix, and ensure the README and inline comments reflect the final implementation.
@@ -431,13 +431,13 @@ Using a frontier model (like Claude 4.x Sonnet or GPT-4.5) for all eight passes 
 
 > **The Decision:** We route Architectural passes to **Claude**, Logic/Execution passes to **DeepSeek**, Security passes to **OpenAI**, and text generation to **Llama/Gemini**. 
 > 
->*(Given the bloop integration and resultant high-quality context, we think that 30B-300B param models too might do a great (or at least adequate) job for exeution passes 3-4 and 6,7. You should probably use a frontier model for the Security pass (pass 5) though.). Some more experiments with different models for different passes will be very helful.*
+>*(Given the bloop integration and resultant high-quality context, we think that 30B-300B param models too might do a great (or at least adequate) job for exeution passes 3-5 and 7. You should probably use a frontier model for the Security pass (pass 6) though.). Some more experiments with different models for different passes will be very helful.*
 >
 > **The Rationale:** 
 > *   **Claude 3.7 Sonnet or higher (Passes 0 & 1):** Claude is the industry leader in Constitutional Adherence and Systems Design. It excels at reading messy Jira tickets and translating them into flawless XML and Mermaid.js boundaries without hallucinating premature code.
 > *   **DeepSeek v4 (Passes 2, 3, & 4):** DeepSeek is an algorithmic powerhouse. For pure "make the tests pass" mathematical logic, it matches or beats proprietary frontier models at roughly 10% of the cost. It is our heavy-lifting engine.
-> *   **GPT-4.5 (Pass 5 - Security):** OpenAI models undergo massive corporate RLHF (Reinforcement Learning from Human Feedback) for defensive cybersecurity. We pay the premium token cost here to leverage its deep red-teaming mindset to spot injection flaws.
-> *   **Llama 3 70B / Gemini 2.5 Flash (Passes 6 & 7):** Adding logging and writing docstrings is highly repetitive, mundane prose. We route this to blazing-fast, nearly-free models to minimize overhead.
+> *   **GPT-4.5 (Pass 6 - Security):** OpenAI models undergo massive corporate RLHF (Reinforcement Learning from Human Feedback) for defensive cybersecurity. We pay the premium token cost here to leverage its deep red-teaming mindset to spot injection flaws.
+> *   **Llama 3 70B / Gemini 2.5 Flash (Passes 5 & 7):** Adding logging and writing docstrings is highly repetitive, mundane prose. We route this to blazing-fast, nearly-free models to minimize overhead.
 
 ### 3.3 Execution: Atomic Commits vs. Bulk Edits
 
@@ -484,7 +484,7 @@ Most agentic systems use Markdown (`# Instructions`, `## Context`) to prompt the
 
 ### 4.2 Agent Isolation and Scope Locking
 
-If the Observability Agent (Pass 6) decides that the core logic is "messy" and rewrites it while adding logs, the pipeline breaks. We must enforce the "Separation of Concerns" at the file and Abstract Syntax Tree (AST) level.
+If the Observability Agent (Pass 5) decides that the core logic is "messy" and rewrites it while adding logs, the pipeline breaks. We must enforce the "Separation of Concerns" at the file and Abstract Syntax Tree (AST) level.
 
 > **The Decision:** Agents are heavily restricted via "Scope Guardrails." If an agent believes an out-of-scope change is required (e.g., the Docs Agent realizes the Core Logic is flawed), it is forbidden from making the change. It must pause, delegate a request back to the Orchestrator, and wait for human intervention.
 >
@@ -497,6 +497,14 @@ Even with the best models, we cannot trust AI-generated code blindly, especially
 > **The Decision:** The pipeline incorporates static analysis tools like **Semgrep** as automated "Hard-Fail" gates between passes.
 >
 > **The Rationale:** If the DeepSeek Core Logic agent (Pass 3) writes a working feature, but includes a hardcoded secret or a SQL injection vulnerability, Semgrep intercepts the code during the verification gate. Instead of passing the vulnerable code to the human, the pipeline automatically feeds the Semgrep error trace back to the agent for self-correction. The human never sees the code until it passes all deterministic static analysis checks.
+
+### 4.4 Approved Runtime Dependencies
+
+Per AGENTS.md §10, any new runtime dependency must be reviewed against the guardrails framework and signed off here before being introduced.
+
+| Dependency | Version | Purpose | Sign-Off Date | Rationale |
+|---|---|---|---|---|
+| `@ast-grep/napi` | ^0.45.1 | Language-agnostic AST parsing for method-level symbol resolution (WRITER side of context enrichment) | 08 Aug 2026 | Embedded, in-process, zero-config. No subprocess latency. Used to map git-diff line ranges to enclosing methods/classes for deterministic per-pass `targetSymbols`. See `artefacts/Context-Enrichment-Architecture-v2-08Aug26.md` AD-7. |
 
 ---
 
@@ -685,8 +693,8 @@ sequenceDiagram
     rect rgb(204, 251, 241)
         Note right of Orch: Phase 2: Enterprise Hardening
         Orch->>Feature: Commit: [Pass 4] Refactor & Code Cleanup
-        Orch->>Feature: Commit: [Pass 5] Security Guardrails
-        Orch->>Feature: Commit: [Pass 6] Observability & Logging
+        Orch->>Feature: Commit: [Pass 5] Observability & Logging
+        Orch->>Feature: Commit: [Pass 6] Security Guardrails
         Orch->>Feature: Commit: [Pass 7] Traceability Links & Docs
     end
 
@@ -877,8 +885,8 @@ graph TD
     subgraph CI ["CI/CD Build Server (Asynchronous Agents)"]
         direction TB
         C_P4["Pass 4: Refactor <br> + Run Tests"]:::coreSystem
-        C_P5["Pass 5: Security <br> + Run Tests"]:::coreSystem
-        C_P6["Pass 6: Logging <br> + Run Tests"]:::coreSystem
+        C_P5["Pass 5: Logging <br> + Run Tests"]:::coreSystem
+        C_P6["Pass 6: Security <br> + Run Tests"]:::coreSystem
         C_P7["Pass 7: Docs & Spec Sync <br> + Run Tests"]:::coreSystem
         
         C_P4 -- "If Tests Pass" --> C_P5

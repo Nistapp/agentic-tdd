@@ -75,6 +75,7 @@ function makeMocks(): Mocks {
     mkdir: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
     renameFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
   };
 
   const config: PipelineConfig = {
@@ -91,14 +92,14 @@ function makeMocks(): Mocks {
 
 describe('OpenCodeAgentRunner', () => {
   describe('execute() — argv assembly', () => {
-    it('includes --pure to prevent external plugin loading', async () => {
+    it('does NOT include --pure so agents can access indexers and MCP tools', async () => {
       const m = makeMocks();
       const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest());
 
       const args = (m.spawner.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
-      expect(args).toContain('--pure');
+      expect(args).not.toContain('--pure');
     });
 
     it('calls spawner.spawn with --agent and --dangerously-skip-permissions', async () => {
@@ -217,7 +218,7 @@ describe('OpenCodeAgentRunner', () => {
 
       await runner.execute(request);
 
-      const infoCalls = m.logger.calls.filter(c => c.method === 'info');
+      const infoCalls = m.logger.calls.filter(c => c.method === 'debug');
       const preFlightCall = infoCalls.find(c =>
         c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
       );

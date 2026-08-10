@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { program } from 'commander';
+import { basename, extname } from 'node:path';
 import { cwd } from 'node:process';
 import { config as loadDotEnv } from 'dotenv';
 import { NodeFileSystem } from '../infrastructure/file-system.js';
@@ -13,6 +14,7 @@ import {
   abortSession,
   resumeSession,
   startNewSession,
+  getActiveOrchestrator,
 } from './session.js';
 
 process.on('uncaughtException', (err) => {
@@ -25,11 +27,41 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
+let sigintCount = 0;
+let sigintTimer: ReturnType<typeof setTimeout> | undefined;
+
+process.on('SIGINT', async () => {
+  sigintCount++;
+
+  if (sigintCount === 1) {
+    console.log(
+      '\n  Gracefully pausing after the current pass completes. Press Ctrl+C again to force exit.\n',
+    );
+
+    sigintTimer = setTimeout(() => {
+      sigintCount = 0;
+    }, 2000);
+
+    try {
+      const orchestrator = getActiveOrchestrator();
+      if (orchestrator) {
+        await orchestrator.pause();
+      }
+      process.exit(0);
+    } catch {
+      process.exit(130);
+    }
+  } else {
+    if (sigintTimer !== undefined) {
+      clearTimeout(sigintTimer);
+    }
+    process.exit(130);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Command-line setup
 // ---------------------------------------------------------------------------
-
-// DEFERRED: StateFile — see docs/statefile-design.md
 
 program
   .name('agentic-tdd')
@@ -42,6 +74,7 @@ program
   .option('--log-level <level>', 'Log level (DEBUG, INFO, WARNING, ERROR)', 'INFO')
   .option('--resume', 'Resume an active Agentic TDD session')
   .option('--abort', 'Abort the active session and rewind Git history')
+  .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -59,28 +92,40 @@ program
 
     const fs = new NodeFileSystem();
     const git = new GitService();
-    const stateStore = new JsonStateStore(fs);
-    const stateExists = await stateStore.exists();
+    const noContextEnrich = Boolean(options.noContextEnrich);
 
-    if (stateExists) {
-      if (!resume && !abort) {
-        renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
+    if (resume || abort) {
+      let stateStore: JsonStateStore;
+      if (typeof options.featureDescFile === 'string') {
+        const featureName = basename(String(options.featureDescFile), extname(String(options.featureDescFile)));
+        stateStore = new JsonStateStore(fs, featureName);
+      } else {
+        stateStore = await JsonStateStore.findActive(fs) ??
+          renderer.fatal('No active TDD session found. Nothing to resume or abort.');
+      }
+
+      const stateExists = await stateStore.exists();
+      if (!stateExists) {
+        renderer.fatal('No active TDD session found. Nothing to resume or abort.');
       }
 
       if (abort) {
         await abortSession(stateStore, git);
       }
 
-      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION);
+      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
       return;
     }
 
-    if (resume || abort) {
-      renderer.fatal('No active TDD session found. Nothing to resume or abort.');
+    const opts = await validateAndResolveOptions(options, renderer);
+    const stateStore = new JsonStateStore(fs, opts.featureName);
+
+    const stateExists = await stateStore.exists();
+    if (stateExists) {
+      renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
     }
 
-    const opts = await validateAndResolveOptions(options, renderer);
-    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION);
+    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
   });
 
 program.parse(process.argv);

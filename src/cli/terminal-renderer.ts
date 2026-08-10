@@ -8,7 +8,11 @@ import {
   SELF_CORRECTION_PASSES,
   GIT_COMMIT_PASSES,
 } from '../core/types.js';
-import type { PipelineContext } from '../core/types.js';
+import type {
+  PipelineContext,
+  FileChanges,
+  TargetSymbols,
+} from '../core/types.js';
 
 const require = createRequire(import.meta.url);
 export const PIPELINE_VERSION: string = (require('../../package.json') as { version: string }).version;
@@ -127,6 +131,47 @@ export class TerminalRenderer {
     this.#w.log('');
   }
 
+  /**
+   * Surface the post-commit change metadata captured by the WRITER: which
+   * files/symbols changed and at which line ranges (for edits to existing
+   * files). This is the human-readable summary of `targetSymbols` +
+   * `fileChanges` for the current pass.
+   */
+  logCapturedContext(
+    fileChanges?: FileChanges,
+    targetSymbols?: TargetSymbols,
+  ): void {
+    const changes = fileChanges ?? {};
+    const fileNames = Object.keys(changes);
+    const symbolOnlyFiles = Object.keys(targetSymbols ?? {}).filter(
+      (f) => !(f in changes),
+    );
+    if (fileNames.length === 0 && symbolOnlyFiles.length === 0) return;
+
+    this.#w.log(`  Change metadata captured:`);
+    for (const file of fileNames) {
+      const rec = changes[file]!;
+      const status = rec.kind === 'new-file' ? 'A' : 'M';
+      this.#w.log(`    [${status}] ${file}`);
+      for (const hunk of rec.hunks) {
+        const sym =
+          hunk.symbols.length > 0
+            ? hunk.symbols.join(', ')
+            : '(top-level)';
+        this.#w.log(
+          `      ${sym.padEnd(44)}  L${hunk.range.start}-${hunk.range.end} (${hunk.kind})`,
+        );
+      }
+    }
+    for (const file of symbolOnlyFiles) {
+      const syms = targetSymbols?.[file];
+      if (!syms || syms.length === 0) continue;
+      this.#w.log(`    ${file}`);
+      this.#w.log(`      ${syms.join(', ')}`);
+    }
+    this.#w.log('');
+  }
+
   logNoChanges(): void {
     this.#w.log(`  No files were changed.\n`);
   }
@@ -145,6 +190,28 @@ export class TerminalRenderer {
 
   logErrorMessage(msg: string): void {
     this.#w.error(`  [FATAL]  ${msg}`);
+  }
+
+  pausedBanner(msg: string): void {
+    const body = ['\u23F8  PAUSE', '', msg].join('\n');
+    this.#w.log(
+      boxen(body, {
+        width:       this.#boxWidth,
+        borderStyle: 'single',
+        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+      }),
+    );
+  }
+
+  resumedBanner(msg: string): void {
+    const body = ['\u25B6  RESUME', '', msg].join('\n');
+    this.#w.log(
+      boxen(body, {
+        width:       this.#boxWidth,
+        borderStyle: 'single',
+        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+      }),
+    );
   }
 
   logPipelineComplete(version: string): void {

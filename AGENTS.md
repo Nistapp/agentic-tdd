@@ -10,8 +10,7 @@ inside this repository. Read it in full before making any change.
 **agentic-tdd** is a Node.js / TypeScript library and CLI that orchestrates an
 **8-pass agentic TDD pipeline** for enterprise software development. It drives
 [opencode](https://opencode.ai) sub-agents through sequential, guarded passes
-(Design → Contracts → Tests → Implementation → Refactor → Security →
-Observability → Documentation), each producing an atomic git commit.
+(Design → Contracts → Tests → Implementation → Refactor → Observability → Security → Documentation), each producing an atomic git commit.
 
 Key design invariants:
 - The **Core Engine** (`src/core/`) is a pure state machine — zero knowledge of
@@ -113,7 +112,7 @@ codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
 
 > [!TIP]
 > After any significant code change, call
-> `index_repository(repo_path="/home/kc/Projects/UDAN/agentic-compress-before-github--6Jun26/agentic-tdd")`
+> `index_repository(repo_path=".")`
 > to keep the index fresh before querying.
 
 ### File Reading Policy

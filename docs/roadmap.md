@@ -35,9 +35,9 @@ Items in no particular order of priority. Contributions welcome — see the [arc
 
 ## Other architectural debates and discussions
 
-- [ ] Swap Pass 5 and Pass 6.
-    - [ ] New Pass 5: Observability & Error Handling. The agent builds the try/catch blocks, defines the error classes, and drops in the log statements.
-    - [ ] New Pass 6: Security Hardening (The Final Gate). The Security agent now reviews the complete feature—including the error handlers. It will see the raw logger.error from Pass 5 and correctly modify it to mask PII, and it will sanitize the API response so the stack trace isn't leaked to the client.
+- [x] Swap Pass 5 and Pass 6.
+    - [x] New Pass 5: Observability & Error Handling. The agent builds the try/catch blocks, defines the error classes, and drops in the log statements.
+    - [x] New Pass 6: Security Hardening (The Final Gate). The Security agent now reviews the complete feature—including the error handlers. It will see the raw logger.error from Pass 5 and correctly modify it to mask PII, and it will sanitize the API response so the stack trace isn't leaked to the client.
 - Relook at the compaction and context management. There is scope for further optimisation. 
 - [] We should use joern or some kind of solid code analysis too to provide better context to agents. This will reduce hallucination, reduce retries and thereby improve accuracy. This should also reduce costs as the context will be precise and have lesser retries. Better the code indexing, better the overall quality.  
 - [] We will improve the prompts of all agents in the system. 

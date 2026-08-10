@@ -2,19 +2,20 @@
  * Dependency Injection (DI) container for the agentic-tdd CLI.
  *
  * Responsible for wiring up all pipeline services: EventBus, CommandRunner,
- * HitlHandler, OpenCodeAgentRunner, SelfCorrectionRunner, and PipelineOrchestrator.
+ * HitlHandler, OpenCodeAgentRunner, and PipelineOrchestrator.
  */
 
 import { EventBus } from '../infrastructure/event-bus.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
 import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
-import { SelfCorrectionRunner } from '../core/runners/self-correction-runner.js';
 import { PipelineOrchestrator } from '../core/orchestrator.js';
+import { StateContextProvider } from '../core/context-provider.js';
+import { AstGrepSymbolResolver } from '../infrastructure/ast-grep-symbol-resolver.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
 import { loggers } from '../utils/logger.js';
 
-import type { PipelineConfig, IFileSystem, IGitService } from '../core/interfaces.js';
+import type { PipelineConfig, IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import type { PipelineContext } from '../core/types.js';
 import type { TerminalRenderer } from './terminal-renderer.js';
 
@@ -27,6 +28,8 @@ export interface ContainerOptions {
   git: IGitService;
   renderer: TerminalRenderer;
   version: string;
+  stateStore?: IStateStore;
+  noContextEnrich?: boolean;
 }
 
 export interface PipelineServices {
@@ -34,7 +37,7 @@ export interface PipelineServices {
 }
 
 export function createPipelineServices(opts: ContainerOptions): PipelineServices {
-  const { ctx, fs, git, renderer, version } = opts;
+  const { ctx, fs, git, renderer, version, stateStore, noContextEnrich } = opts;
 
   const events = new EventBus();
   attachTerminalListener(events, renderer, version);
@@ -51,13 +54,12 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
     fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner,
   );
 
-  const selfCorrectionRunner = new SelfCorrectionRunner(
-    agentRunner, cmdRunner, git, fs, events, new PinoLoggerAdapter(loggers.core),
-  );
+  const contextProvider = new StateContextProvider();
+  const symbolResolver = noContextEnrich ? undefined : new AstGrepSymbolResolver();
 
   const orchestrator = new PipelineOrchestrator(
-    git, fs, cmdRunner, agentRunner, selfCorrectionRunner, events,
-    new PinoLoggerAdapter(loggers.core), pipelineConfig, hitlHandler,
+    git, fs, cmdRunner, agentRunner, events,
+    new PinoLoggerAdapter(loggers.core), pipelineConfig, contextProvider, symbolResolver, stateStore, hitlHandler,
   );
 
   return { orchestrator };

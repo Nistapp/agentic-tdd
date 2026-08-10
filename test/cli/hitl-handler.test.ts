@@ -22,17 +22,21 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
     artefactDir: '/workspace/specs',
     designMmdPath: '/workspace/specs/auth.mmd',
     specGherkinPath: '/workspace/specs/auth.gherkin',
-    errorLogPath: '/workspace/specs/.opencode_error.log',
+    errorLogPath: '/workspace/.agentic-tdd/error-test-feature.log',
     ...overrides,
   };
 }
 
-function makeRl(onQuestion: (s: string) => void): ReadlineFactory {
-  return vi.fn((opts: { input: NodeJS.ReadableStream; output: NodeJS.WritableStream }) => {
+function makeRl(onQuestion?: (s: string) => void, answers: string[] = ['']): ReadlineFactory {
+  let idx = 0;
+  return vi.fn((_opts: { input: NodeJS.ReadableStream; output: NodeJS.WritableStream }) => {
     return {
-      question: (query: string, cb: (answer: string) => void) => {
-        onQuestion(query);
-        cb('');
+      question: (_query: string, cb: (answer: string) => void) => {
+        onQuestion?.(_query);
+        queueMicrotask(() => {
+          cb(answers[idx] ?? '');
+          idx++;
+        });
       },
       close: vi.fn(),
     } as import('node:readline').Interface;
@@ -142,7 +146,7 @@ describe('createHitlHandler — Pass 2 (TestGeneration)', () => {
     expect(combined).toContain('HUMAN-IN-THE-LOOP GATE (After Pass 2: Test Generation)');
     expect(combined).toContain('test/auth/login.test.ts');
     expect(combined).toContain('test/auth/token.test.ts');
-    expect(combined).toContain('advance to Pass 3 (Core Implementation)');
+    expect(combined).toContain('Pass 3 (Core Implementation)');
     expect(combined).toContain('Test suite approved');
   });
 
@@ -183,5 +187,88 @@ describe('createHitlHandler — Pass 2 (TestGeneration)', () => {
     expect(combined).toContain('HUMAN-IN-THE-LOOP GATE (After Pass 0)');
     expect(combined).toContain('Mermaid diagram');
     expect(combined).toContain('Gherkin spec');
+  });
+});
+
+describe('createHitlHandler — HitlAction return values', () => {
+  it("returns 'APPROVE' when user presses Enter (empty input)", async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler();
+
+    expect(result).toBe('APPROVE');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Design approved');
+  });
+
+  it("returns 'REWIND' when user types 'r'", async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['r']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler();
+
+    expect(result).toBe('REWIND');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Design rejected');
+    expect(combined).toContain('Rewinding');
+  });
+
+  it("returns 'REJECT' when user types 'x'", async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['x']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler();
+
+    expect(result).toBe('REJECT');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Design rejected by user');
+  });
+
+  it('re-prompts on invalid input then accepts valid input', async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['bad', '']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler();
+
+    expect(result).toBe('APPROVE');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Unrecognised input');
+    expect(combined).toContain('Design approved');
+  });
+
+  it("returns 'REWIND' for TestGeneration pass when user types 'r'", async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['r']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler(PipelinePass.TestGeneration, []);
+
+    expect(result).toBe('REWIND');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Test suite rejected');
+    expect(combined).toContain('Rewinding');
+  });
+
+  it("returns 'REJECT' for TestGeneration pass when user types 'x'", async () => {
+    const writes: string[] = [];
+    const write = (msg: string) => writes.push(msg);
+    const createRl = makeRl(() => {}, ['x']);
+
+    const handler = createHitlHandler(makeCtx(), createRl, write);
+    const result = await handler(PipelinePass.TestGeneration, []);
+
+    expect(result).toBe('REJECT');
+    const combined = writes.join('\n');
+    expect(combined).toContain('Test suite rejected by user');
   });
 });

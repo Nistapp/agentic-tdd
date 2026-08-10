@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, AgentRunRequest, AgentRunResult } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass, CreateFeatureBranchOutcome } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -44,7 +44,8 @@ export interface IGitService {
    * Parse git log to find the highest completed Pass number.
    *
    * Looks for commit messages matching `chore(ai): completed Pass N -- ...`
-   * where N is a number 0-7. Returns the highest N found, or null if none.
+   * (optionally suffixed with `- <feature-name>`) where N is a number 0-7.
+   * Returns the highest N found, or null if none.
    */
   getLastCompletedPass(): Promise<number | null>;
 
@@ -53,6 +54,34 @@ export interface IGitService {
 
   /** Execute `git reset --hard <sha>` and `git clean -fd` to rewind to a specific commit. */
   abortToSha(sha: string): Promise<void>;
+
+  /**
+   * Create (or check out) a feature branch for the given issue reference.
+   *
+   * @param issueRef - Free-form issue reference (e.g. "PAY-404", "Add OAuth").
+   * @param baseBranchOverride - Explicit base branch, or `null` to use the current branch.
+   * @param skipHitl - If `true`, skip user prompt when the target branch already exists.
+   * @param promptUser - Optional async callback for HITL prompts (defaults to rejecting).
+   * @returns An {@link CreateFeatureBranchOutcome} describing what happened.
+   */
+  createFeatureBranch(
+    issueRef: string,
+    baseBranchOverride: string | null,
+    skipHitl: boolean,
+    promptUser?: (question: string) => Promise<boolean>,
+  ): Promise<CreateFeatureBranchOutcome>;
+
+  /** Create a lightweight git tag pointing at the current HEAD commit. */
+  tag(name: string): Promise<void>;
+
+  /**
+   * Compute changed line ranges between two refs via `git diff --unified=0`.
+   *
+   * Returns per-file changed line ranges in the **new** file (1-based, inclusive).
+   * Implementations should cache the result for the same (fromRef, toRef) pair
+   * since multiple passes may request the same diff.
+   */
+  getDiffLineRanges(fromRef: string, toRef: string): Promise<DiffLineChange[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +106,9 @@ export interface IFileSystem {
 
   /** Rename *oldPath* to *newPath*. */
   renameFile(oldPath: string, newPath: string): Promise<void>;
+
+  /** List entries in a directory (non-recursive). Throws if dir is missing. */
+  readdir(path: string): Promise<string[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,10 +179,13 @@ export interface IEventBus {
 }
 
 // ---------------------------------------------------------------------------
-// IStateStore — persistence for pipeline session state (DEFERRED)
+// IStateStore — persistence for pipeline session state
 // ---------------------------------------------------------------------------
 
 export interface IStateStore {
+  /** Absolute path to the state file managed by this store. */
+  readonly path: string;
+
   save(ctx: PipelineContext): Promise<void>;
   load(): Promise<PipelineContext>;
   delete(): Promise<void>;
@@ -181,21 +216,41 @@ export interface PipelineConfig {
 }
 
 // ---------------------------------------------------------------------------
-// ISelfCorrectionRunner — runs a self-correction guarded pass (passes 3-6)
+// ISymbolResolver — maps git-diff line ranges to enclosing function/method names
 // ---------------------------------------------------------------------------
 
-export interface ISelfCorrectionRunner {
+export interface ISymbolResolver {
   /**
-   * Execute a self-correction guarded pass.
+   * For each {@link Range} in *ranges*, find the enclosing function, method,
+   * or class in *source* and return the qualified name (e.g. `Foo.methodA`).
    *
-   * The caller (orchestrator) has already set `ctx.currentPass` to one of
-   * the SELF_CORRECTION_PASSES. The runner owns the full loop: agent
-   * invocation → test execution → context compaction → retry bounds.
+   * Parsing is done entirely in-memory — the implementation MUST NOT read the
+   * filesystem. *filePath* is provided for language detection and for error
+   * messages; it is not opened by the resolver.
    *
-   * Emits: PASS_STARTED, TEST_RUN_STARTED, TEST_RUN_COMPLETED,
-   *        TEST_RUN_FAILED, SELF_CORRECTION_ATTEMPTED, PASS_COMPLETED.
+   * Ranges without an enclosing symbol are silently dropped.
+   * Malformed source returns an empty array (never throws).
    *
-   * @throws {Error} If tests still fail after all retries are exhausted.
+   * @returns Deduplicated, sorted array of qualified names.
    */
-  execute(ctx: PipelineContext): Promise<void>;
+  mapRangesToSymbols(filePath: string, source: string, ranges: Range[]): string[];
 }
+
+// ---------------------------------------------------------------------------
+// IContextProvider — pure synchronous assembler over ctx.history (READER)
+// ---------------------------------------------------------------------------
+
+export interface IContextProvider {
+  /**
+   * Assemble per-pass context from the persisted {@link PipelineContext}.
+   *
+   * This method is **pure and synchronous** — it performs no git, no AST,
+   * and no async calls.  It reads ``ctx.history`` (hydrated from the state
+   * file on resume), merges the ``targetSymbols`` from upstream passes
+   * according to {@link CONTEXT_RULES}, and returns a {@link BuiltContext}.
+   *
+   * Missing history entries are silently treated as empty — no exceptions.
+   */
+  build(ctx: PipelineContext, pass: PipelinePass): BuiltContext;
+}
+
