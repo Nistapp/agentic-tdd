@@ -929,7 +929,8 @@ export function createPipelineMachine(services: {
             pass === PipelinePass.Documentation &&
             (commitResult.kind === 'committed' || commitResult.kind === 'add_warning')
           ) {
-            await git.tag(`Completed - ${ctx.featureName}`);
+            const tagName = `Completed-${ctx.featureName.replace(/[^a-zA-Z0-9._/-]/g, '-')}`;
+            await git.tag(tagName);
           }
 
           // Always persist defined (possibly empty) descriptors so the state

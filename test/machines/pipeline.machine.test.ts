@@ -269,7 +269,7 @@ describe('Pipeline Machine', () => {
         expect(message).toContain('- my_module');
       }
       expect(m.git.tag).toHaveBeenCalledTimes(1);
-      expect(m.git.tag).toHaveBeenCalledWith('Completed - my_module');
+      expect(m.git.tag).toHaveBeenCalledWith('Completed-my_module');
     });
   });
 

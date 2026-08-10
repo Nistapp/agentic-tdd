@@ -244,8 +244,8 @@ describe('GitService', () => {
   it('tag creates a lightweight tag pointing at HEAD', async () => {
     execaMock.mockResolvedValue({ stdout: '' });
     const git = new GitService();
-    await git.tag('Completed - my_module');
-    expect(execaMock).toHaveBeenCalledWith('git', ['tag', 'Completed - my_module', 'HEAD']);
+    await git.tag('Completed-my_module');
+    expect(execaMock).toHaveBeenCalledWith('git', ['tag', 'Completed-my_module', 'HEAD']);
   });
 
   // -----------------------------------------------------------------------
