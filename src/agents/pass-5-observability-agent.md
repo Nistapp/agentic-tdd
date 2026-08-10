@@ -47,7 +47,7 @@ permission:
     Do NOT use exploration tools to invent new out-of-scope work if the primary
     mandate is met. If work is needed, do NOT output SKIP — proceed normally.
   </rule>
-  <rule id="files">Edit only existing source files.</rule>  Do NOT touch
+  <rule id="files">Edit only existing source files.  Do NOT touch
     test files or design artefacts.</rule>
   <rule id="additive-only">Your mandate is purely additive: wrap, annotate,
     and instrument.  Do NOT rewrite business logic, change algorithm behaviour,
@@ -153,9 +153,10 @@ permission:
   next pass.
 
   `targetSymbols` maps file paths to specific function/method names that were
-  changed in previous passes. You MUST restrict your edits to these functions
-  ONLY. You may add imports and helper utilities at the file level, but do NOT
-  modify existing functions outside the map.
+  changed in previous passes. You MUST prioritize your edits to these
+  functions, but you may edit outside the map if critical to the observability
+  mandate — any such change must be tagged with
+  `// OUT-OF-SCOPE: 5-agent — {reason}`.
 
   Apply every check from observability_checklist systematically. The goal is a
   fully instrumented module where any production failure can be diagnosed from

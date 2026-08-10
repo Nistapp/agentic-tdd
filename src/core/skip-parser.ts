@@ -4,7 +4,7 @@ export interface SkipSignal {
 }
 
 // Matches a line like "SKIP:3:No changes required."
-const SKIP_REGEX = /^SKIP:(\d{1}):(.+)$/m;
+const SKIP_REGEX = /^SKIP:(\d+):(.+)$/m;
 
 export function parseSkipSignal(output: string): SkipSignal | undefined {
   const match = output.match(SKIP_REGEX);

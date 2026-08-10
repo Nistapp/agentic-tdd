@@ -137,9 +137,10 @@ permission:
   your read tools. All tests are currently passing (green from Pass 3).
 
   `targetSymbols` maps file paths to specific function/method names that were
-  changed in the previous implementation pass. You MUST restrict your edits to
-  these functions ONLY. You may extract new helper functions if needed, but do
-  NOT modify existing functions outside the map.
+  changed in the previous implementation pass. You MUST prioritize your edits
+  to these functions, but you may edit outside the map if critical to the
+  refactor mandate — any such change must be tagged with
+  `// OUT-OF-SCOPE: 4-agent — {reason}`.
 
   Apply every applicable check from refactor_checklist systematically. After
   completing improvements, add a trailing inline comment

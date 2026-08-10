@@ -163,9 +163,10 @@ permission:
   All tests are passing.
 
   `targetSymbols` maps file paths to specific function/method names that were
-  changed in previous passes. You MUST restrict your edits to these functions
-  ONLY. You may add imports and validation helpers at the file level, but do
-  NOT modify existing functions outside the map.
+  changed in previous passes. You MUST prioritize your edits to these
+  functions, but you may edit outside the map if critical to the security
+  mandate — any such change must be tagged with
+  `// OUT-OF-SCOPE: 6-agent — {reason}`.
 
   Perform a red-team analysis against every applicable check in
   security_checklist. Apply all hardening changes that do NOT alter business
