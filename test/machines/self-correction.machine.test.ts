@@ -96,7 +96,7 @@ function makeMocks() {
 
   const git: IGitService = {
     commit: vi.fn(),
-    getPendingChanges: vi.fn().mockResolvedValue([]),
+    getPendingChanges: vi.fn().mockResolvedValue([{ status: 'M', file: 'some/file.ts' }]),
     getCurrentBranch: vi.fn(),
     isDirty: vi.fn(),
     getCurrentCommitSha: vi.fn(),
@@ -648,6 +648,71 @@ describe('SelfCorrection Machine', () => {
       for (const src of allSrcs) {
         expect(typeof src).toBe('string');
       }
+    });
+  });
+
+  describe('Assess-First Skip Logic (T4, T5)', () => {
+    it('Agent returns SKIP on first attempt -> exits via skipped state (T4)', async () => {
+      const m = makeMocks();
+      
+      m.agentRunner.execute = vi.fn().mockResolvedValue({ output: 'SKIP:3:No core changes' });
+      
+      const machine = createSelfCorrectionMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext();
+      
+      const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
+      actor.start();
+
+      await waitFor(actor, (s) => s.status === 'done');
+      
+      // Should exit via 'skipped'
+      const snapshot = actor.getPersistedSnapshot();
+      expect(snapshot.value).toBe('skipped');
+      
+      // Tests should not have run
+      expect(m.cmd.runTests).not.toHaveBeenCalled();
+      
+      // History should reflect skipped status
+      expect(ctx.history[PipelinePass.CoreImplementation]?.status).toBe('skipped');
+      expect(ctx.history[PipelinePass.CoreImplementation]?.skipReason).toBe('No core changes');
+    });
+    
+    it('Agent does not skip -> enters normal test-retry loop (T5)', async () => {
+      const m = makeMocks();
+      
+      m.agentRunner.execute = vi.fn().mockResolvedValue({ output: 'Normal output without skip' });
+      m.cmd.runTests = vi.fn().mockResolvedValue({ passed: true, output: '' });
+      
+      const machine = createSelfCorrectionMachine({
+        agentRunner: m.agentRunner,
+        cmd: m.cmd,
+        fs: m.fs,
+        git: m.git,
+        events: m.events,
+        logger: m.logger,
+        contextProvider: m.contextProvider,
+      });
+      const ctx = makeContext();
+      
+      const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
+      actor.start();
+
+      await waitFor(actor, (s) => s.status === 'done');
+      
+      // Should exit via 'done' normally
+      const snapshot = actor.getPersistedSnapshot();
+      expect(snapshot.value).toBe('done');
+      
+      // Tests should have run
+      expect(m.cmd.runTests).toHaveBeenCalledTimes(1);
     });
   });
 });

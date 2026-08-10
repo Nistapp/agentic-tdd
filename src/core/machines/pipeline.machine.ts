@@ -33,6 +33,7 @@ import type {
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
 import { sanitizeLogPayload } from '../log-sanitizer.js';
+import { parseSkipSignal } from '../skip-parser.js';
 
 import {
   createSelfCorrectionMachine,
@@ -819,7 +820,19 @@ export function createPipelineMachine(services: {
             artefacts,
             runId: ctx.runId,
           };
-          await agentRunner.execute(request);
+          const runResult = await agentRunner.execute(request);
+
+          const skip = parseSkipSignal(runResult.output);
+          if (skip) {
+            logger.info(`Agent returned skip signal for Pass ${pass}: ${skip.reason}`);
+            recordPassOutcome(ctx, pass, 'skipped');
+            const historyEntry = ctx.history[pass];
+            if (historyEntry) {
+              historyEntry.skipReason = skip.reason;
+            }
+            emit('PASS_COMPLETED', `Completed Pass ${pass} (Skipped)`, ctx, { files: [] });
+            return [];
+          }
 
           const changes = await git.getPendingChanges();
           const payload: PassCompletedPayload = { files: changes };
@@ -861,9 +874,38 @@ export function createPipelineMachine(services: {
           const pass = ctx.currentPass!;
           if (!GIT_COMMIT_PASSES.has(pass)) return;
 
+          const historyEntry = ctx.history[pass];
+          if (historyEntry?.status === 'skipped') {
+            emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Skipped)`, ctx, {
+              files: [],
+              targetSymbols: {},
+              fileChanges: {},
+              attempts: ctx.currentAttempt,
+            } satisfies PassCompletedPayload);
+            return;
+          }
+
           const fromRef = resolveFromRef(ctx, pass);
           const files = await git.getPendingChanges();
           const filesTouched = files.map((c) => c.file);
+
+          if (files.length === 0) {
+            logger.warn(`Pass ${pass} produced no changes without a skip signal; recording as implicit skip`);
+            recordPassOutcome(ctx, pass, 'skipped');
+            if (ctx.history[pass]) {
+              ctx.history[pass]!.skipReason = 'Implicit skip (no files changed)';
+            }
+            emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Implicit Skip)`, ctx, {
+              files: [],
+              targetSymbols: {},
+              fileChanges: {},
+              attempts: ctx.currentAttempt,
+            } satisfies PassCompletedPayload);
+            if (stateStore) {
+              await stateStore.save(ctx);
+            }
+            return;
+          }
 
           recordPassOutcome(ctx, pass, 'completed', { filesTouched });
 
@@ -949,10 +991,10 @@ export function createPipelineMachine(services: {
             }
           }
 
-          const historyEntry = ctx.history[pass];
-          if (historyEntry) {
-            historyEntry.targetSymbols = targetSymbols;
-            historyEntry.fileChanges = fileChanges;
+          const finalHistoryEntry = ctx.history[pass];
+          if (finalHistoryEntry) {
+            finalHistoryEntry.targetSymbols = targetSymbols;
+            finalHistoryEntry.fileChanges = fileChanges;
           }
 
           emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass}`, ctx, {

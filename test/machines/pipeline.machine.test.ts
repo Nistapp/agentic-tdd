@@ -98,7 +98,7 @@ function makeMocks() {
 
   const git: IGitService = {
     commit: vi.fn().mockResolvedValue({ kind: 'committed' as const, message: 'ok' }),
-    getPendingChanges: vi.fn().mockResolvedValue([] as FileChange[]),
+    getPendingChanges: vi.fn().mockResolvedValue([{ status: 'M', file: 'some/file.ts' }] as FileChange[]),
     getCurrentBranch: vi.fn().mockResolvedValue('feat/test'),
     isDirty: vi.fn().mockResolvedValue(false),
     getCurrentCommitSha: vi.fn().mockResolvedValue('abc123def456'),

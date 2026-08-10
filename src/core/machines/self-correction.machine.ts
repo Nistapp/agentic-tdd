@@ -24,6 +24,7 @@ import type {
 import { getAgentContextPayload } from '../runners/shared.js';
 import { buildArtefacts } from '../runners/shared.js';
 import { sanitizeLogPayload } from '../log-sanitizer.js';
+import { parseSkipSignal } from '../skip-parser.js';
 
 // ---------------------------------------------------------------------------
 // Emit helper (closed over IEventBus)
@@ -65,6 +66,7 @@ export interface SelfCorrectionMachineContext {
   ctx: PipelineContext;
   attempt: number;
   _testResult?: TestRunResult;
+  _lastOutput?: string;
 }
 
 export interface SelfCorrectionMachineInput {
@@ -101,6 +103,13 @@ export const selfCorrectionMachineConfig: any = setup({
         return doneEvent.output;
       },
     }),
+    storeAgentOutput: assign({
+      _lastOutput: ({ event }: { event: unknown }) => {
+        const doneEvent = event as { output: { output: string } };
+        return doneEvent.output.output;
+      }
+    }),
+    recordSkipAndEmit: () => {},
   },
   guards: {
     testsPassed: ({ context }: { context: SelfCorrectionMachineContext }) =>
@@ -108,6 +117,9 @@ export const selfCorrectionMachineConfig: any = setup({
 
     canRetry: ({ context }: { context: SelfCorrectionMachineContext }) =>
       context.attempt < context.ctx.maxCorrectionRetries + 1,
+
+    isSkipped: ({ context }: { context: SelfCorrectionMachineContext }) =>
+      context._lastOutput ? parseSkipSignal(context._lastOutput) !== undefined : false,
   },
 }).createMachine({
   id: 'selfCorrection',
@@ -115,6 +127,7 @@ export const selfCorrectionMachineConfig: any = setup({
     ctx: input.ctx,
     attempt: 1,
     _testResult: undefined as TestRunResult | undefined,
+    _lastOutput: undefined as string | undefined,
   }),
   initial: 'dispatching_agent',
   states: {
@@ -130,7 +143,10 @@ export const selfCorrectionMachineConfig: any = setup({
           pass: context.ctx.currentPass!,
           attempt: context.attempt,
         }),
-        onDone: 'running_tests',
+        onDone: {
+          target: 'evaluating_skip',
+          actions: 'storeAgentOutput',
+        },
         onError: {
           target: 'failed',
           actions: [
@@ -146,6 +162,18 @@ export const selfCorrectionMachineConfig: any = setup({
           ],
         },
       },
+    },
+
+    evaluating_skip: {
+      always: [
+        {
+          guard: 'isSkipped',
+          target: 'skipped',
+        },
+        {
+          target: 'running_tests',
+        },
+      ],
     },
 
     running_tests: {
@@ -276,6 +304,11 @@ export const selfCorrectionMachineConfig: any = setup({
         );
       },
     },
+
+    skipped: {
+      type: 'final',
+      entry: 'recordSkipAndEmit',
+    },
   },
 });
 
@@ -301,7 +334,7 @@ export function createSelfCorrectionMachine(services: {
       context: {} as SelfCorrectionMachineContext,
     },
     actors: {
-      dispatchAgent: fromPromise<void, {
+      dispatchAgent: fromPromise<{ output: string }, {
         ctx: PipelineContext;
         pass: PipelinePass;
         attempt: number;
@@ -342,7 +375,8 @@ export function createSelfCorrectionMachine(services: {
             artefacts,
             runId: ctx.runId,
           };
-          await agentRunner.execute(request);
+          const runResult = await agentRunner.execute(request);
+          return { output: runResult.output };
         },
       ),
 
@@ -447,6 +481,25 @@ export function createSelfCorrectionMachine(services: {
           return doneEvent.output;
         },
       }),
+
+      storeAgentOutput: assign({
+        _lastOutput: ({ event }: { event: unknown }) => {
+          const doneEvent = event as { output: { output: string } };
+          return doneEvent.output.output;
+        }
+      }),
+
+      recordSkipAndEmit: ({ context }: { context: SelfCorrectionMachineContext }) => {
+        const skip = parseSkipSignal(context._lastOutput ?? '');
+        const pass = context.ctx.currentPass!;
+        if (!context.ctx.history[pass]) {
+          context.ctx.history[pass] = { status: 'skipped', attempts: context.attempt, filesTouched: [] };
+        } else {
+          context.ctx.history[pass]!.status = 'skipped';
+        }
+        context.ctx.history[pass]!.skipReason = skip?.reason;
+        emit('PASS_COMPLETED', `Completed Pass ${pass} (Skipped)`, context.ctx, { files: [] });
+      },
     },
 
     guards: {
@@ -455,6 +508,9 @@ export function createSelfCorrectionMachine(services: {
 
       canRetry: ({ context }: { context: SelfCorrectionMachineContext }) =>
         context.attempt < context.ctx.maxCorrectionRetries + 1,
+
+      isSkipped: ({ context }: { context: SelfCorrectionMachineContext }) =>
+        context._lastOutput ? parseSkipSignal(context._lastOutput) !== undefined : false,
     },
   }).createMachine({
     id: 'selfCorrection',
@@ -462,6 +518,7 @@ export function createSelfCorrectionMachine(services: {
       ctx: input.ctx,
       attempt: 1,
       _testResult: undefined as TestRunResult | undefined,
+      _lastOutput: undefined as string | undefined,
     }),
     initial: 'dispatching_agent',
     states: {
@@ -477,7 +534,10 @@ export function createSelfCorrectionMachine(services: {
             pass: context.ctx.currentPass!,
             attempt: context.attempt,
           }),
-          onDone: 'running_tests',
+          onDone: {
+            target: 'evaluating_skip',
+            actions: 'storeAgentOutput',
+          },
           onError: {
             target: 'failed',
             actions: [
@@ -493,6 +553,18 @@ export function createSelfCorrectionMachine(services: {
             ],
           },
         },
+      },
+
+      evaluating_skip: {
+        always: [
+          {
+            guard: 'isSkipped',
+            target: 'skipped',
+          },
+          {
+            target: 'running_tests',
+          },
+        ],
       },
 
       running_tests: {
@@ -622,6 +694,11 @@ export function createSelfCorrectionMachine(services: {
             `Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`,
           );
         },
+      },
+
+      skipped: {
+        type: 'final',
+        entry: 'recordSkipAndEmit',
       },
     },
   });

@@ -97,10 +97,11 @@ export type SourceType = 'file' | 'string' | 'github';
 export type TargetSymbols = Record<string, string[]>;
 
 export interface PassHistory {
-  status: 'completed' | 'failed' | 'aborted';
+  status: 'completed' | 'failed' | 'aborted' | 'skipped';
   filesTouched: string[];
   attempts: number;
   lastError?: string;
+  skipReason?: string;
   /**
    * The commit hash is only known after the git commit. It is written to the
    * state file immediately post-commit (dirty in working tree) and committed

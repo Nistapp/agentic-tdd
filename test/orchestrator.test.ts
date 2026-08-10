@@ -19,6 +19,7 @@ import type {
   IContextProvider,
 } from '../src/core/interfaces.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { parseSkipSignal } from '../src/core/skip-parser.js';
 
 // ---------------------------------------------------------------------------
 // Factory for a minimal PipelineContext (all artefact paths in specs/)
@@ -101,7 +102,7 @@ function makeMocks(): Mocks {
 
   const git: IGitService = {
     commit: vi.fn().mockResolvedValue({ kind: 'committed' as const, message: 'ok' }),
-    getPendingChanges: vi.fn().mockResolvedValue([]),
+    getPendingChanges: vi.fn().mockResolvedValue([{ status: 'M', file: 'some/file.ts' }]),
     getCurrentBranch: vi.fn().mockResolvedValue('feat/test'),
     isDirty: vi.fn().mockResolvedValue(false),
     getCurrentCommitSha: vi.fn().mockResolvedValue('abc123def456'),
@@ -699,6 +700,48 @@ describe('PipelineOrchestrator', () => {
       expect(result).toBe(true);
       // Falls back to startPass path
       expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+    });
+  });
+
+  describe('Assess-First Skip Logic (Passes 1-7)', () => {
+    it('parseSkipSignal correctly parses valid signals (T6, T7)', () => {
+      expect(parseSkipSignal('SKIP:5:No changes.')).toEqual({ pass: 5, reason: 'No changes.' });
+      expect(parseSkipSignal('SKIP:1:Feature already exists')).toEqual({ pass: 1, reason: 'Feature already exists' });
+      expect(parseSkipSignal('some random output\nSKIP:2:Ok')).toEqual({ pass: 2, reason: 'Ok' });
+      
+      expect(parseSkipSignal('some random output')).toBeUndefined();
+      expect(parseSkipSignal('SKIP::Invalid')).toBeUndefined();
+    });
+
+    it('Agent returning SKIP causes pass to be recorded as skipped with empty files (T1, T2, T8)', async () => {
+      const m = makeMocks();
+      
+      // Make agent return SKIP on pass 1
+      m.agentRunner.execute = vi.fn().mockImplementation(async (req) => {
+        if (req.pass === 1) return { output: 'SKIP:1:No contract changes.' };
+        return { output: 'Normal output' };
+      });
+      
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      
+      // Pass 1 should be recorded as skipped
+      expect(ctx.history[1]?.status).toBe('skipped');
+      expect(ctx.history[1]?.skipReason).toBe('No contract changes.');
+      
+      // Downstream context building should see it was skipped (T8 concept)
+      expect(ctx.history[2]?.status).toBe('completed');
+      
+      // Since Pass 1 is skipped, doAtomicCommit returns early without committing.
+      // Normally we have commits for 0, 1, 2, 3, 4, 5, 6, 7 (8 commits total).
+      // Since Pass 1 is skipped, we expect 7 commits.
+      const commitCalls = (m.git.commit as import('vitest').Mock).mock.calls;
+      expect(commitCalls.length).toBe(7);
+      expect(commitCalls.some((c: unknown[]) => typeof c[1] === 'string' && c[1].includes('Pass 1'))).toBe(false);
     });
   });
 });
