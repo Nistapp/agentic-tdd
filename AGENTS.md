@@ -22,49 +22,33 @@ Key design invariants:
 
 ---
 
-## 2. Repository Layout
+## 2. Architectural Boundaries
 
-```
-src/
-  core/
-    orchestrator.ts     # 8-pass state machine engine
-    types.ts            # Enums, PipelineContext, event shapes (single source of truth)
-    interfaces.ts       # DI port interfaces (IFileSystem, ICommandRunner, …)
-  infrastructure/
-    command-runner.ts   # ICommandRunner → CommandRunner (execa, opencode invocation)
-    file-system.ts      # IFileSystem → NodeFileSystem
-    git-service.ts      # IGitService → GitService
-    event-bus.ts        # IEventBus → EventBus
-  agents/               # Agent prompt .md files (pass-0 … pass-7)
-  cli/
-    index.ts            # Commander.js entry point; wires DI and runs pipeline
-  utils/                # Shared helpers (logger, paths — see refactor plan)
+> **Use `codebase_memory-mcp: get_architecture(aspects=["structure", "dependencies"])` to understand the current repository layout and file tree.**
 
-test/
-  orchestrator.test.ts  # Vitest suite (currently 72 tests)
-  infrastructure/       # Infrastructure adapter tests
-
-docs/
-  architecture-manifesto.md  # Full design rationale
-  roadmap.md
-  debugging.md
-
-```
+While the exact file tree may evolve, agents MUST respect these structural rules:
+- **Core Engine (`src/core/`)**: Must remain a pure state machine with zero OS dependencies.
+- **Dependency Injection**: All DI interfaces live in `src/core/interfaces.ts`. `src/core/` must never import from `src/infrastructure/`.
+- **Infrastructure (`src/infrastructure/`)**: All filesystem, git, and OS-level operations belong here.
+- **Why?**: See `docs/architecture/adrs/0001-pure-core-engine.md` for the rationale behind these boundaries.
 
 ---
 
 ## 3. Tech Stack & Tooling
 
+> **Refer to `package.json` for exact package versions.** Do not hallucinate versions.
+
 | Concern | Tool |
 |---|---|
-| Language | TypeScript 6.x (`strict`, `noUncheckedIndexedAccess`, `isolatedModules`) |
-| Runtime | Node.js ≥ 18 (ESM `"type": "module"`) |
+| Language | TypeScript (`strict`, `noUncheckedIndexedAccess`, `isolatedModules`) |
+| Runtime | Node.js (ESM `"type": "module"`) |
 | Module system | `NodeNext` — always use `.js` extensions in `import` paths |
-| Test runner | Vitest 4.x — run with `npm test` |
+| Pipeline State | `xstate` (Core state machine engine) |
+| Test runner | Vitest — run with `npm test` |
 | Type-check | `npm run lint` (`tsc --noEmit`) |
 | Build | `npm run build` (tsc + copy agents) |
-| Process runner | `execa` 9.x |
-| Logging | `pino` 10.x with child loggers |
+| Process runner | `execa` |
+| Logging | `pino` with child loggers |
 
 ---
 
@@ -203,13 +187,13 @@ codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
 ## 7. Git Conventions
 
 - **Branch naming**: `feat/<issue-ref>-<slug>`, `fix/<slug>`, `refactor/<slug>`
-- **Commit message format**:
+- **Commit message format (Human)**:
   ```
   <type>(<scope>): <short imperative description>
-
-  - Bullet list of substantive changes (optional)
   ```
   Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+- **Commit message format (Agent)**:
+  Agents MUST use the strict pipeline format: `chore(ai): pass-[N] – <description>`
 - **One logical change per commit.** The 8-pass pipeline itself enforces this —
   mirror the same discipline in your own commits.
 - Never commit directly to `main`. Always branch and PR.
@@ -232,6 +216,7 @@ editing them:
 
 - `.env` holds `OPENROUTER_API_KEY`. Never commit secrets.
 - `.env.example` is the committed template.
+- **NEVER** log, echo, or output the contents of `.env` to the terminal to prevent secret leakage into agent transcripts.
 - The orchestrator must never read `process.env` directly — see § 5 (Architecture).
 - LiteLLM proxy (optional): see `infra/docker-compose.yml` for enterprise routing.
 
