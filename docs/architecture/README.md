@@ -24,6 +24,22 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [glossary.md](glossary.md) | Canonical definitions of domain terms |
 | [overview.md](overview.md) | C4-style system map (TODO: create from wiki-structure.md §2) |
 
+## User Overview (Adopter Track)
+
+> [!NOTE]
+> Progressive-disclosure entry points for evaluators. See `artefacts/documentation-prep/wiki/wiki-structure.md` for the full planned tree. Most pages are still placeholders awaiting drafting.
+
+| Page | Status |
+|---|---|
+| [1. Why This Exists — Problem & Philosophy](user-overview/01-why-this-exists.md) | Drafted (1 open item: FAQ placeholder) |
+| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Placeholder |
+| [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Placeholder |
+| [4. The Core Engine](user-overview/04-core-engine.md) | Placeholder |
+| [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Placeholder |
+| [6. Token Economy & Cost Control](user-overview/06-token-economy.md) | Placeholder |
+| [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Placeholder |
+| [14. ADRs & Roadmap (Contributor)](contributor-deep-dive/14-adrs-roadmap.md) | Placeholder |
+
 > [!TIP]
 > When adding a new ADR, assign the next sequence number and add a row to
 > the index table above before merging.
