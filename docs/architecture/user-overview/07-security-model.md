@@ -2,28 +2,26 @@
 
 > **Target Audience:** Users — CTOs, Security Leads, and Architects.
 > **Status:** PLACEHOLDER — not yet drafted.
-> **Source of truth for structure:** [wiki-structure.md §7](../../../artefacts/documentation-prep/wiki/wiki-structure.md).
 
 ---
 
 ## Outline
 
 - **Agent Sandbox:** file-glob permission locking.
-- **DLP Masking:** PII stripping before external API calls via LiteLLM.
+- **DLP Masking:** PII stripping before external API calls via LiteLLM (planned — verify).
 - **Hard-Fail Gates:** Semgrep runs between guarded passes (PLANNED).
 
 ---
 
 ## Existing material to mine
 
-- Manifesto [§2.3 Deterministic Environments](../../architecture-manifesto.md) (DevContainer/Nix — **implementation pending**).
-- Manifesto [§4.2 Agent Isolation and Scope Locking](../../architecture-manifesto.md) (prevents Agent Trampling).
-- Manifesto [§4.3 Semgrep hard-fail gates](../../architecture-manifesto.md) (**planned**).
-- Manifesto appendix "Security and PII" Mermaid diagram.
+- Agent isolation and scope locking (prevents Agent Trampling) — see [page 1](01-why-this-exists.md) and the glossary's *Agent Trampling* entry.
+- Deterministic environments: DevContainer/Nix sandboxing (**implementation pending**).
 - Security pass prompt: `src/agents/pass-6-security-agent.md`.
+- `src/core/log-sanitizer.ts`.
 
 > [!NOTE] Planned vs. shipped
-> Several security features in the manifesto (Semgrep gates, DevContainer sandboxing, PII masking via LiteLLM) are **planned, not shipped**. This page MUST use explicit notice banners per STYLE_GUIDE and NOT present them as existing capabilities.
+> Several security features — Semgrep hard-fail gates, DevContainer sandboxing, PII masking via LiteLLM — are **planned, not shipped**. This page MUST use explicit notice banners per STYLE_GUIDE and NOT present them as existing capabilities.
 
 ---
 

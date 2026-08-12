@@ -2,7 +2,6 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects.
 > **Status:** PLACEHOLDER — not yet drafted.
-> **Source of truth for structure:** [wiki-structure.md §2](../../../artefacts/documentation-prep/wiki/wiki-structure.md).
 
 ---
 
@@ -14,7 +13,7 @@
 
 ---
 
-## Notes from Misc-stuff-to-include-in-wiki.md (tagged for this page)
+## Notes (design rationale for this page)
 
 - **B.1 — Language: Node.js / TypeScript (not Python):** initially started in Python, shifted to Node/TS for ecosystem interoperability.
 - **B.2 — State machine: XState:** XState helps manage transitions more robustly.
@@ -28,6 +27,6 @@
 
 | # | Topic | What is missing |
 |---|---|---|
-| A-1 | C4 Level 1 & 2 diagrams | Reuse the existing Mermaid diagrams from `docs/architecture-manifesto.md` (do not redraw). Link them here. |
+| A-1 | C4 Level 1 & 2 diagrams | Draft Mermaid diagrams from the existing C4-style diagrams (do not redraw). Link them here. |
 | A-2 | Data flow diagram | `Dev → CLI → Orchestrator → Agent Runner → LLM → Parse → Commit` — verify against `src/cli/index.ts` and `src/core/orchestrator.ts`. |
 | A-3 | Diátaxis placement | This is an Explanation/Architecture doc — follow `docs/templates/architecture-doc-template.md`. |

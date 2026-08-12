@@ -8,7 +8,7 @@
 <!-- TODO: Agents need to know *which* methods changed in a git diff (targetSymbols), not just which files. Subprocess approaches (tree-sitter CLI, semgrep) add latency and process-management complexity. -->
 
 ## Decision
-<!-- TODO: Use @ast-grep/napi (^0.45.1) — embedded, in-process, zero-config language-agnostic AST parser. AstGrepSymbolResolver maps git-diff line ranges to enclosing method/class symbols. No subprocess latency. See architecture-manifesto.md §4.4 for sign-off. -->
+<!-- TODO: Use @ast-grep/napi (^0.45.1) — embedded, in-process, zero-config language-agnostic AST parser. AstGrepSymbolResolver maps git-diff line ranges to enclosing method/class symbols. No subprocess latency. See the Approved Runtime Dependencies sign-off in AGENTS.md §10. -->
 
 ## Consequences
 ### Positive

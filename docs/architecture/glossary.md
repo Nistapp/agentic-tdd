@@ -15,7 +15,7 @@ Both humans and AI agents should use these terms consistently.
 | **Agent Trampling** | When one agent unintentionally overwrites verified work from a previous pass by exceeding its declared scope. Prevented via file-glob permission locks in agent frontmatter. |
 | **targetSymbols** | A map of `filePath → [qualified symbol names]` passed to each agent, identifying exactly which methods/classes were modified by upstream passes. Populated by `AstGrepSymbolResolver`. |
 | **Context Compaction** | See above. |
-| **Self-Correction Loop** | The retry mechanism (max 2 attempts) within a guarded pass. If the agent's output fails the test gate, the error log is fed back and the agent retries. Implemented in `createSelfCorrectionMachine`. |
+| **Self-Correction Loop** | The retry mechanism (up to 3 retries — `DEFAULT_MAX_CORRECTION_RETRIES = 3`) within a guarded pass. If the agent's output fails the test gate, the error log is fed back and the agent retries. Implemented in `createSelfCorrectionMachine`. |
 | **Guarded Pass** | A pass that has an automated test gate (Passes 3–6). Failure triggers the Self-Correction Loop. |
 | **Artifact-Driven Development** | The practice where `.mmd` (Mermaid diagrams) and `.gherkin` (BDD specs) are the primary source of truth; code is generated to satisfy them, not the reverse. |
 | **DI (Dependency Injection)** | All infrastructure dependencies are injected into the core engine via interfaces. `src/core/` never imports from `src/infrastructure/`. |
