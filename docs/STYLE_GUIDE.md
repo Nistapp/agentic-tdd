@@ -22,8 +22,8 @@ Documentation must be written with a distinct tone depending on the intended aud
 
 ### 2.1 Executive & Architecture Tone (For CTOs, Team Leads, & Architects)
 - **Voice:** Authoritative, strategic, declarative, and concise.
-- **Focus:** Systems context, operational efficiency, financial/token impact, safety guardrails, and architectural trade-offs.
-- **Format:** High-level C4 diagrams, summary tables, metric callouts (`> [!NOTE]`), and clear rationale ("The Decision" vs. "The Rationale").
+- **Focus:** Systems context, prioritising accuracy and code hygiene, operational efficiency, financial/token impact, safety guardrails, and architectural trade-offs.
+- **Format:** High-level C4 diagrams, summary tables, metric callouts (`> [!NOTE]`), and clear rationale ("The Decision" vs. "The Rationale"). Prioritise diagrams (C4 / flowcharts) over text to explain architecture.
 - **Avoid:** Implementation nitpicks, temporary setup quirks, or verbose line-by-line code dumps.
 
 ### 2.2 Tactical & Engineering Tone (For Senior Engineers & Contributor Agents)
