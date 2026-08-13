@@ -31,7 +31,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | Page | Status |
 |---|---|
 | [1. Why This Exists — Problem & Philosophy](user-overview/01-why-this-exists.md) | Drafted (1 open item: FAQ placeholder) |
-| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Placeholder |
+| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Drafted (C4 L1 + at-a-glance flow; open items H-1–H-3) |
 | [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Placeholder |
 | [4. The Core Engine](user-overview/04-core-engine.md) | Drafted (overview) |
 | [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Drafted (overview) |
@@ -42,7 +42,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 ## Contributor Deep Dive
 
 > [!NOTE]
-> Full implementation detail, grounded in `src/`. Pages 11–15 are placeholders.
+> Full implementation detail, grounded in `src/`. Pages 11, 13–15 are placeholders.
 
 | Page | Status |
 |---|---|
@@ -50,7 +50,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [9. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/09-prompt-engineering.md) | Drafted |
 | [10. Context Engineering — Context Builder & Payload](contributor-deep-dive/10-context-engineering.md) | Drafted |
 | [11. Infrastructure Adapters](contributor-deep-dive/11-infrastructure-adapters.md) | Placeholder |
-| [12. CLI & Dependency Injection Wiring](contributor-deep-dive/12-cli-di-wiring.md) | Placeholder |
+| [12. CLI & Dependency Injection Wiring](contributor-deep-dive/12-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
 | [13. Observability, Logging, & Operations](contributor-deep-dive/13-observability-operations.md) | Placeholder |
 | [14. Testing Strategy & Mock Patterns](contributor-deep-dive/14-testing-strategy.md) | Placeholder |
 | [15. Developer Guide](contributor-deep-dive/15-developer-guide.md) | Placeholder |
