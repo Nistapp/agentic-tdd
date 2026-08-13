@@ -20,6 +20,48 @@ Both are **pure functions**: they perform no filesystem, git, or process I/O dir
 
 ---
 
+## The Host: `PipelineOrchestrator`
+
+`PipelineOrchestrator` ([`src/core/orchestrator.ts#L22-L189`](../../../src/core/orchestrator.ts#L22-L189)) is the engine's entry point. Its [`run()`](../../../src/core/orchestrator.ts#L80-L188) method:
+
+1. **Builds the machine** — wires the two XState machines with the injected services.
+2. **Creates the actor** — resumes from a persisted `xstateSnapshot` when `--resume` is used, otherwise starts from the requested pass.
+3. **Bridges the HITL gate** — subscribes to `HITL_REQUIRED` events and forwards the human decision (approve / rewind / reject) into the machine.
+4. **Persists state** — saves the context and snapshot on completion or failure.
+
+It is a **thin coordinator**: the actual orchestration logic lives in the state machines below; the orchestrator just hosts them. The engine's public surface is [`src/core/index.ts`](../../../src/core/index.ts) — `PipelineOrchestrator`, types, DI interfaces, and the machines.
+
+## Engine Module Map
+
+The machines are supported by these pure-core modules:
+
+| Module | File | Role |
+|---|---|---|
+| **Context provider** | [`src/core/context-provider.ts`](../../../src/core/context-provider.ts) | Pure per-pass context assembly from session history. |
+| **Context builder** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`, Static Prefix). |
+| **Payload & artefacts** | [`src/core/runners/shared.ts`](../../../src/core/runners/shared.ts) | `getAgentContextPayload` / `buildArtefacts` — the JSON handed to each agent. |
+| **Skip protocol** | [`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts) | Parses `SKIP:N:reason` agent signals. |
+| **Log sanitisation** | [`src/core/log-sanitizer.ts`](../../../src/core/log-sanitizer.ts) | Strips control chars / truncates before log emission. |
+| **Contracts** | [`src/core/types.ts`](../../../src/core/types.ts) · [`src/core/interfaces.ts`](../../../src/core/interfaces.ts) | Pass sets, events, context shape, and the DI ports. |
+
+Deep dives for the context/payload modules live on [10. Context Engineering](10-context-engineering.md).
+
+---
+
+## Boundaries
+
+```mermaid
+graph LR
+    CLI["src/cli/ — entry, DI container, session"] -->|"injects adapters"| Core["src/core/ — pure engine (state machines, context, types)"]
+    Core -->|"depends only on"| DI["DI interfaces (src/core/interfaces.ts)"]
+    Infra["src/infrastructure/ — git, fs, opencode runner, logger"] -->|"implements"| DI
+```
+
+> [!IMPORTANT]
+> The dependency arrows are **one-way**. `src/cli/` and `src/infrastructure/` may import `src/core/`, but `src/core/` must never import back. The engine never touches `NodeFileSystem`, `GitService`, or `OpenCodeAgentRunner` directly — it sees only `IFileSystem`, `IGitService`, and `IAgentRunner` ([ADR-0001](../adrs/0001-pure-core-engine.md)). See [12. CLI & DI Wiring](12-cli-di-wiring.md) for the full adapter wiring.
+
+---
+
 ## 1. The Pipeline Machine
 
 ### 1.1 State Map
