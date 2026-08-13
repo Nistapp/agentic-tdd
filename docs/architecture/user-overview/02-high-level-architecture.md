@@ -90,7 +90,6 @@ The whole system is one explicit flow: eight specialised agents in strict sequen
 stateDiagram-v2
     classDef human fill:#08427b,color:#fff,stroke:#052e56,stroke-width:2px
     classDef agent fill:#1168bd,color:#fff,stroke:#0b4884,stroke-width:2px
-    classDef testGate fill:#2dd4bf,color:#000,stroke:#0f766e,stroke-width:2px
 
     [*] --> Pass_0
 
@@ -116,56 +115,31 @@ stateDiagram-v2
     Pass_3 : Pass 3 - Core Logic [Green Phase]
     class Pass_3 agent
 
-    Gate_3 : Test Runner (Verify Core)
-    class Gate_3 testGate
-
-    Pass_3 --> Gate_3
-    Gate_3 --> Pass_3 : Tests Failed (Fix Core)
-    Gate_3 --> Pass_4 : Tests Passed
+    Pass_3 --> Pass_4
 
     Pass_4 : Pass 4 - Clean Code & Refactor
     class Pass_4 agent
 
-    Gate_4 : Test Runner (Verify Refactor)
-    class Gate_4 testGate
+    Pass_4 --> Pass_5
 
-    Pass_4 --> Gate_4
-    Gate_4 --> Pass_4 : Refactor Broke Logic (Revert & Fix)
-    Gate_4 --> Pass_5 : Tests Passed
-
-    Pass_5 : Pass 5 - Security Hardening
+    Pass_5 : Pass 5 - Observability & Logs
     class Pass_5 agent
 
-    Gate_5 : Test Runner (Verify Security)
-    class Gate_5 testGate
+    Pass_5 --> Pass_6
 
-    Pass_5 --> Gate_5
-    Gate_5 --> Pass_5 : Security Blocked Valid Logic (Fix)
-    Gate_5 --> Pass_6 : Tests Passed
-
-    Pass_6 : Pass 6 - Observability & Logs
+    Pass_6 : Pass 6 - Security Hardening
     class Pass_6 agent
 
-    Gate_6 : Test Runner (Verify Observability)
-    class Gate_6 testGate
-
-    Pass_6 --> Gate_6
-    Gate_6 --> Pass_6 : Logs Broke Scopes/Types (Fix)
-    Gate_6 --> Pass_7 : Tests Passed
+    Pass_6 --> Pass_7
 
     Pass_7 : Pass 7 - Sync Docs & Spec Artifacts
     class Pass_7 agent
 
-    Gate_7 : Final CI/CD Verification
-    class Gate_7 testGate
-
-    Pass_7 --> Gate_7
-    Gate_7 --> Pass_7 : Spec Drift Detected (Update Specs)
-    Gate_7 --> [*] : Branch Ready for PR
+    Pass_7 --> [*] : Branch Ready for PR
 ```
 
 > [!NOTE]
-> Each pass is handled by a specialist agent; the human approves the design after Pass 0; guarded passes (3–7) run your test suite and self-correct before advancing. Per-pass detail lives on [3. The 8-Pass Pipeline](03-8-pass-pipeline.md).
+> This is the simplified flow. The full diagram including the **test gates** and self-correction loops after each guarded pass (3–7) — and the per-pass atomic-commit story that powers rollback, pause, resume, and abort — is on **[3. The 8-Pass Pipeline](03-8-pass-pipeline.md)**.
 
 ---
 

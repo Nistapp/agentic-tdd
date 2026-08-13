@@ -31,8 +31,8 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | Page | Status |
 |---|---|
 | [1. Why This Exists — Problem & Philosophy](user-overview/01-why-this-exists.md) | Drafted (1 open item: FAQ placeholder) |
-| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Drafted (C4 L1 + at-a-glance flow; open items H-1–H-3) |
-| [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Placeholder |
+| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Drafted (C4 L1 + at-a-glance flow; open items H-1–H-2) |
+| [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Drafted (pass table, HITL, atomic commits & rollback) |
 | [4. The Core Engine](user-overview/04-core-engine.md) | Drafted (overview) |
 | [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Drafted (overview) |
 | [6. Token Economy & Cost Control](user-overview/06-token-economy.md) | Drafted (overview) |
