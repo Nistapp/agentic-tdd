@@ -20,13 +20,13 @@ Every piece of documentation written in this repository must uphold these five f
 
 Documentation must be written with a distinct tone depending on the intended audience:
 
-### 2.1 Executive & Architecture Tone (For CTOs, Team Leads, & Architects)
+### 2.1 Executive & Architecture Tone (For Users and leadership who will evaluate agentic-tdd for their teams: CTOs, Team Leads, & Architects)
 - **Voice:** Authoritative, strategic, declarative, and concise.
 - **Focus:** Systems context, prioritising accuracy and code hygiene, operational efficiency, financial/token impact, safety guardrails, and architectural trade-offs.
 - **Format:** High-level C4 diagrams, summary tables, metric callouts (`> [!NOTE]`), and clear rationale ("The Decision" vs. "The Rationale"). Prioritise diagrams (C4 / flowcharts) over text to explain architecture.
 - **Avoid:** Implementation nitpicks, temporary setup quirks, or verbose line-by-line code dumps.
 
-### 2.2 Tactical & Engineering Tone (For Senior Engineers & Contributor Agents)
+### 2.2 Tactical & Engineering Tone (For Human Contributors and Contributor Agents)
 - **Voice:** Precise, unambiguous, prescriptive, and empirical.
 - **Focus:** Concrete API contracts, DI interfaces, line-anchored file maps, state machine transitions, exact shell commands, and error handling.
 - **Format:** Step-by-step numbered recipes, typed tables, code blocks with syntax highlighting, and explicit failure criteria.
@@ -49,6 +49,27 @@ All documentation fits into one of four Diátaxis categories:
 | **Reference** | `docs/api/` | Auto-generated API specs from JSDoc | Neutral, formal, type-accurate |
 | **Explanation / Architecture** | `docs/architecture/` | Design rationale, ADRs, manifesto | Strategic, analytical, structural |
 
+### 3.1 Architecture Doc Tracks (Progressive Disclosure)
+
+`docs/architecture/` is split into two audience tracks to avoid "Audience Confusion".
+`docs/architecture/README.md` is the router/index into both tracks.
+
+| Track | Directory | Audience | Depth |
+|---|---|---|---|
+| **User Overview** | `docs/architecture/user-overview/` | Evaluators — CTOs, Team Leads, Architects | **Overview only.** What it is, why use it, is it secure, what it costs. No implementation detail; link out to the matching Contributor Deep Dive page. |
+| **Contributor Deep Dive** | `docs/architecture/contributor-deep-dive/` | Human contributors & contributor agents | **Deeper technical detail** grounded in `src/`: state machines, DI contracts, adapters, testing strategy. |
+
+Rules:
+- User Overview pages **MUST NOT** descend into implementation internals — link to the matching Contributor Deep Dive page instead.
+- Contributor Deep Dive pages **MUST** ground every claim in a source file/symbol and may assume the concepts from the User Overview.
+- Stable topic buckets (numbered page titles drift; the buckets don't):
+
+  **User Overview** — problem & philosophy · high-level architecture (C4 L1/L2) · the 8-pass pipeline & rollback · core engine (concept) · agent prompt system & routing · token economy & cost · security model & sandboxing · engineering-concepts glossary.
+
+  **Contributor Deep Dive** — core engine internals (XState) · prompt engineering · context engineering · infrastructure adapters · CLI & DI wiring · observability & operations · testing & mock patterns · developer guide · ADRs & roadmap.
+
+  New pages belong to exactly one track, never both.
+
 ---
 
 ## 4. Master File Location Mappings
@@ -61,12 +82,14 @@ Use this master index to determine exact file paths and naming conventions for a
 | **System Architecture Overview** | `docs/architecture/overview.md` | `overview.md` | Top-level system architecture, C4 diagrams |
 | **Architectural Decision Records** | `docs/architecture/adrs/` | `NNNN-short-title.md` | Formal decision records (e.g. `0001-pure-core-engine.md`) |
 | **Architecture Index & ADR List** | `docs/architecture/README.md` | `README.md` | Table of all ADRs and key design documents |
+| **User Overview Track** | `docs/architecture/user-overview/` | `NN-short-title.md` | Overview of why/what/security/cost for evaluators |
+| **Contributor Deep Dive Track** | `docs/architecture/contributor-deep-dive/` | `NN-short-title.md` | Implementation deep dives grounded in `src/` |
 | **Domain Glossary** | `docs/architecture/glossary.md` | `glossary.md` | Single source of truth for project terminology |
 | **Pass Reference Guides** | `docs/how-to/passes/` | `pass-N-name.md` | Detailed specs for pipeline passes 0–7 |
 | **Operations & Debugging** | `docs/how-to/` | `debugging.md`, `observability.md` | Tactical guides for logging and troubleshooting |
 | **API Reference (Generated)** | `docs/api/` | TypeDoc generated | Auto-generated from source JSDoc comments |
 | **Document Templates** | `docs/templates/` | `<type>-template.md` | Reusable Markdown scaffolds for new docs |
-| **In-Progress Wiki Prep** | `artefacts/documentation-prep/wiki/` | `wiki-structure.md` | Working drafts and wiki planning |
+| **In-Progress Wiki Prep** | `artefacts/documentation-prep/wiki/` | *transient* | Working drafts & planning notes; promoted to `docs/architecture/` tracks once drafted |
 | **Transient Agent Work** | `artefacts/` | `Imp-Plan-*.md`, `Research-*.md` | Temporary scratch files & sub-agent plans |
 
 ### 4.1 Standard Document Templates (`docs/templates/`)
@@ -111,7 +134,7 @@ When drafting new documentation, agents and humans **MUST** copy and extend the 
 AI coding assistants (Antigravity, Claude Code, Gemini CLI, etc.) **MUST** adhere to the following workflow when creating or modifying documentation:
 
 ### 6.1 Verification First
-1. Query `codebase-memory-mcp` (`search_graph`, `get_code_snippet`) before writing to verify symbol signatures and file locations against the current codebase state.
+1. **Query-first (codebase-memory-mcp):** If a codebase-memory-mcp index exists for this repo, agents **MUST** consult it (`search_graph`, `get_code_snippet`, `get_architecture`) before grepping or reading whole files, to verify symbol signatures and file locations against the current codebase state. Only fall back to `grep`/`read` when the graph cannot answer the question.
 2. Check existing files in `docs/` to update rather than duplicate documentation.
 3. Check `docs/architecture/adrs/` for the next available sequence number before drafting a new ADR.
 
@@ -124,6 +147,7 @@ When code changes occur:
 1. Run `detect_changes` on `codebase-memory-mcp`.
 2. Update all affected documentation pages and code link line anchors.
 3. Update the ADR index in `docs/architecture/README.md` whenever ADR statuses change.
+4. When `AGENTS.md` or `docs/architecture/` change, update the affected pages and the index in `docs/architecture/README.md` in the same change set.
 
 ---
 
@@ -153,8 +177,8 @@ New ADRs are created in `docs/architecture/adrs/` using [`docs/templates/adr-tem
 ```
 
 ### 7.1 Tombstone Policy for Superseded ADRs
-Sequence numbers are permanent. When an ADR is superseded:
-1. Create the new ADR file (e.g. `0009-new-approach.md`).
+Sequence numbers are permanent. When an ADR is superseded: 
+1. Create the new ADR file (e.g. `0009-new-approach.md`). (TODO - Research this more and come up with a better approach. We can probably preserve/edit the existing file since it is versioned. We can just add stubs to olderversion atsd the bottom.)
 2. Replace the body of the older ADR with a **tombstone stub** pointing to the new ADR and git history:
 
 ```markdown
