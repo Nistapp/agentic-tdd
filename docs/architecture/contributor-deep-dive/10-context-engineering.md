@@ -112,6 +112,9 @@ On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, s
 3. `extractAnchor` captures ~5 non-empty source lines at the hunk start — a **drift-resistant anchor** because absolute line numbers shift when later passes edit the same file.
 4. Persist `targetSymbols` + `fileChanges` to `ctx.history[pass]` and the state store.
 
+> [!TIP] Real worked example
+> See [docs/architecture/examples/example-state-file.json](../examples/example-state-file.json) — a verbatim session state file from a real run. It shows `history[0..6].fileChanges` in practice: scoped hunks, drift-resistant anchors, and the `commitHash` provenance that makes each entry retrievable via `git show <sha>:<file>`. The descriptor *chases the changes* from pass to pass (contracts → tests → implementation → refactor → observability → security).
+
 > [!NOTE] Non-fatal degradation
 > If diff/symbol resolution fails, the commit still lands with empty metadata (`catch {}`). Design intent: context enrichment must never block the pipeline.
 
@@ -129,6 +132,6 @@ See [9. Prompt Engineering §3](09-prompt-engineering.md#3-the-directive-catalog
 
 ## Related
 
-- [6. Token Economy & Cost Control (User view)](../user-overview/06-token-economy.md)
+- [6. Context Engineering — Code Indexing & Token Savings (User view)](../user-overview/06-context-and-token-savings.md)
 - [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0006 Static Prefix](../adrs/0006-context-control-optimisation.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
 - [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md)

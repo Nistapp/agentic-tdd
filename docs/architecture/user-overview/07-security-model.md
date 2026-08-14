@@ -5,7 +5,7 @@
 
 ---
 
-## Outline
+## Outline - This whole section is aspirational. Say with complete honesty that these will be solved sometime this year. 
 
 - **Agent Sandbox:** file-glob permission locking.
 - **DLP Masking:** PII stripping before external API calls via LiteLLM (planned — verify).

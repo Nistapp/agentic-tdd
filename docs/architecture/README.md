@@ -35,7 +35,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Drafted (pass table, HITL, atomic commits & rollback) |
 | [4. The Core Engine](user-overview/04-core-engine.md) | Drafted (concept: state machines & fit; impl linked to deep-dive) |
 | [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Drafted (overview) |
-| [6. Token Economy & Cost Control](user-overview/06-token-economy.md) | Drafted (overview) |
+| [6. Context Engineering — Code Indexing & Token Savings](user-overview/06-context-and-token-savings.md) | Drafted (overview) |
 | [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Placeholder |
 | [8. Engineering Concepts — Buzzword Map](user-overview/08-engineering-concepts.md) | Drafted |
 

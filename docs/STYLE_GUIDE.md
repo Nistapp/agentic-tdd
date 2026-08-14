@@ -64,7 +64,7 @@ Rules:
 - Contributor Deep Dive pages **MUST** ground every claim in a source file/symbol and may assume the concepts from the User Overview.
 - Stable topic buckets (numbered page titles drift; the buckets don't):
 
-  **User Overview** — problem & philosophy · high-level architecture (C4 L1/L2) · the 8-pass pipeline & rollback · core engine (concept) · agent prompt system & routing · token economy & cost · security model & sandboxing · engineering-concepts glossary.
+  **User Overview** — problem & philosophy · high-level architecture (C4 L1/L2) · the 8-pass pipeline & rollback · core engine (concept) · agent prompt system & routing · context engineering & token savings · security model & sandboxing · engineering-concepts glossary.
 
   **Contributor Deep Dive** — core engine internals (XState) · prompt engineering · context engineering · infrastructure adapters · CLI & DI wiring · observability & operations · testing & mock patterns · developer guide · ADRs & roadmap.
 

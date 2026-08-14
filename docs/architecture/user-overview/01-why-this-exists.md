@@ -102,7 +102,7 @@ The mechanisms (each detailed on its own wiki page):
 | Mechanism | Wiki Page | Summary |
 |---|---|---|
 | Code indexing (`codebase-memory-mcp`) | [2. High-Level Architecture](02-high-level-architecture.md) | Semantic/AST index so agents get the right context and stop hallucinating existing APIs. |
-| Controlled context building | [6. Token Economy & Cost Control](06-token-economy.md) | Static Prefix ordering + Context Compaction keep context minimal and cacheable. |
+| Controlled context building | [6. Context Engineering — Code Indexing & Token Savings](06-context-and-token-savings.md) | Index-first context + Static Prefix ordering + Context Compaction keep context accurate, minimal, and cacheable. |
 | Agent guardrails | [5. Agent Prompt System & Routing](05-agent-prompt-system.md) | Scope-locked agents; file-glob permissions prevent Agent Trampling. |
 | Multi-pass with self-correction | [3. The 8-Pass Pipeline](03-8-pass-pipeline.md) | Narrow per-pass scope; failing tests feed the error back for up to 3 retries. |
 
@@ -177,7 +177,7 @@ Topics that surfaced during drafting. Most are now resolved; those still open ar
 
 | # | Topic | Status / resolution | Where it will live |
 |---|---|---|---|
-| P-1 | **Token-cost savings benchmarks** | Not yet benchmarked for *this* framework. Independent studies claim ~10× reduction in token consumption for code-graph-based exploration vs. file-by-file: the [codebase-memory-mcp README](https://github.com/DeusData/codebase-memory-mcp) and the paper [*Codebase-Memory: Tree-Sitter-Based Knowledge Graphs for LLM Code Exploration via MCP*](https://arxiv.org/abs/2603.27277) (31 real repos, 10× fewer tokens, 2.1× fewer tool calls). Treat as external evidence, not a claim about agentic-tdd. | [6. Token Economy](06-token-economy.md) |
+| P-1 | **Token-cost savings benchmarks** | Not yet benchmarked for *this* framework. Independent studies claim ~10× reduction in token consumption for code-graph-based exploration vs. file-by-file: the [codebase-memory-mcp README](https://github.com/DeusData/codebase-memory-mcp) and the paper [*Codebase-Memory: Tree-Sitter-Based Knowledge Graphs for LLM Code Exploration via MCP*](https://arxiv.org/abs/2603.27277) (31 real repos, 10× fewer tokens, 2.1× fewer tool calls). Treat as external evidence, not a claim about agentic-tdd. | [6. Context Engineering & Token Savings](06-context-and-token-savings.md) |
 | P-2 | **Model routing strategy** | Routing is **static** in the shipped `src/agents/pass-*.md` files (`deepseek-v4-pro`, docs → `deepseek-v4-flash`). Users can override per-pass models by editing those agent files. A **config file** for easy user configuration is planned for a future version. | [5. Agent Prompt System](05-agent-prompt-system.md) |
 | P-3 | **Repo/URL canonicalisation** | There is **no** `agentic-tdd-node` repo. The canonical home is `github.com/Nistapp/agentic-tdd`; community discussions live at [`Nistapp/agentic-tdd/discussions`](https://github.com/Nistapp/agentic-tdd/discussions). `package.json`'s `repository` field is stale and should be corrected. | Wiki footer / Home |
 | P-4 | **FAQ (why no TSDocs? larger goal?)** | **OPEN** — preserved as placeholder; expand later in [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md). | [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md) |

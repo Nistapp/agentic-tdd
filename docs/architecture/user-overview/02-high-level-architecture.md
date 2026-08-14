@@ -164,7 +164,7 @@ These decisions shape the structure you see above. Each is a one-line summary he
 
 | # | Topic | What is missing |
 |---|---|---|
-| H-1 | **LiteLLM status** | `infra/docker-compose.yml` + `litellm_config.yaml` exist; confirm whether the SSO/budget features are exercised anywhere. Re-check when infra matures (see [6. Token Economy](06-token-economy.md) T-2). |
+| H-1 | **LiteLLM status** | `infra/docker-compose.yml` + `litellm_config.yaml` exist; confirm whether the SSO/budget features are exercised anywhere. Re-check when infra matures (see [6. Context Engineering](06-context-and-token-savings.md) C-2). |
 | H-2 | **Harness swap (`pi`)** | `pi` as default harness is planned, not shipped — diagram/actor list must be updated if the default harness changes. |
 
 
