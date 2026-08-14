@@ -197,7 +197,7 @@ Environ/config reads go through `PipelineConfig` (constructed in `di-container.t
 
 | # | Topic | What is missing |
 |---|---|---|
-| G-1 | End-to-end quickstart walkthrough | A full worked example running the pipeline against a sample `specs/*.md` and showing expected artefacts/commits/output. Pointers: `docs/roadmap.md` ("Command to run") and `specs/` are thin. |
+| G-1 | End-to-end quickstart walkthrough | A full worked example running the pipeline against a sample `specs/*.md` and showing expected artefacts/commits/output. The `specs/` directory and [9. ADRs & Roadmap §3](../contributor-deep-dive/09-adrs-roadmap.md) remain thin on runnable examples. |
 | G-2 | Copyable pass skeleton | There is no template-only pass file; contributors must clone `pass-N-*.md`. Consider extracting a `docs/templates/pass-template.md` (and wiring it into STYLE_GUIDE §4.1). |
 | G-3 | MCP/first-run validation | No automated check that `opencode` and `codebase-memory-mcp` are present before the first spawn; the failure surfaces late. A preflight in `index.ts` (like the `OPENROUTER_API_KEY` check) is proposed. |
 

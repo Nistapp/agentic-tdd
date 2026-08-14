@@ -143,7 +143,7 @@ AI coding assistants (Antigravity, Claude Code, Gemini CLI, etc.) **MUST** adher
 
 ### 6.2 Accuracy & Status Tagging
 - Never state aspirational or planned capabilities as working code.
-- If a feature is planned, tag it with `> [!NOTE] Planned feature. See docs/roadmap.md`.
+- If a feature is planned, tag it with `> [!NOTE] Planned. See [9. ADRs & Roadmap](architecture/contributor-deep-dive/09-adrs-roadmap.md)`.
 
 ### 6.3 Doc Maintenance Trigger
 When code changes occur:

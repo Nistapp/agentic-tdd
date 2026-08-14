@@ -97,26 +97,26 @@ It is a *guarded* pass: its output must pass the deterministic test gate or the 
 
 ## 3. Planned Controls — the Roadmap
 
-Each of these is referenced in [`docs/roadmap.md`](../../../roadmap.md) and the [architecture manifesto](../../../architecture-manifesto.md). **None is implemented today.**
+These are tracked on the [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md) page. **None is implemented today.** (The former `docs/roadmap.md` and `docs/architecture-manifesto.md` were retired into the wiki structure.)
 
 ### 3.1 Hard-fail static-analysis gates (Semgrep)
 
-> [!NOTE] Planned — see roadmap · [architecture manifesto § 4.3](../../../architecture-manifesto.md)
+> [!NOTE] Planned — [9. ADRs & Roadmap §3.1](../contributor-deep-dive/09-adrs-roadmap.md#31-verification--quality-gates)
 > Semgrep (or similar) would run as a deterministic **hard-fail gate between guarded passes**: if the implementation pass ships a hardcoded secret or an injection flaw, the gate intercepts it and feeds the error trace back to the agent for self-correction — before any human sees the code. Today the equivalent review is done *by the Pass 6 agent* (a model), not by a deterministic tool.
 
 ### 3.2 Deterministic environments (DevContainer / Nix sandbox)
 
-> [!NOTE] Planned — see roadmap · [architecture manifesto § 2.3](../../../architecture-manifesto.md)
+> [!NOTE] Planned — [9. ADRs & Roadmap §3.3](../contributor-deep-dive/09-adrs-roadmap.md#33-guardrails--tooling)
 > Today tests and passes run directly on the developer's machine. The plan is to bind agent execution to a **containerized environment** (DevContainer or Nix flake): reproducible builds, isolation of the host from rogue agent scripts, and elimination of the "wrong Node version → agent rewrites good code to fix a non-problem" failure mode.
 
 ### 3.3 Gateway security: SSO, budgets, and DLP/PII masking (LiteLLM)
 
 > [!NOTE] Planned / aspirational — verified against `infra/`
-> The `infra/` configs exist ([`docker-compose.yml`](../../../infra/docker-compose.yml), [`litellm_config.yaml`](../../../infra/litellm_config.yaml)) but are **routing-only today**: they multiplex to OpenRouter, and `LITELLM_DISABLE_AUTH` **defaults to `True`** — authentication is off unless an operator explicitly enables it. No SSO, no budget quotas, no DLP/PII-stripping middleware is configured. The full gateway story from [architecture manifesto § 2.1](../../../architecture-manifesto.md) — SSO identity, per-developer budgets (HTTP 402), and prompt-side PII stripping before data leaves the network — is **aspirational**.
+> The `infra/` configs exist ([`docker-compose.yml`](../../../infra/docker-compose.yml), [`litellm_config.yaml`](../../../infra/litellm_config.yaml)) but are **routing-only today**: they multiplex to OpenRouter, and `LITELLM_DISABLE_AUTH` **defaults to `True`** — authentication is off unless an operator explicitly enables it. No SSO, no budget quotas, no DLP/PII-stripping middleware is configured. The full gateway story from the roadmap — SSO identity, per-developer budgets (HTTP 402), and prompt-side PII stripping before data leaves the network — is **aspirational** (see [9. ADRs & Roadmap §3.3](../contributor-deep-dive/09-adrs-roadmap.md#33-guardrails--tooling)).
 
 ### 3.4 Finer-grained sandboxing (the gap list)
 
-> [!NOTE] Planned — see [architecture manifesto § 4.2](../../../architecture-manifesto.md)
+> [!NOTE] Planned — [9. ADRs & Roadmap §3.3](../contributor-deep-dive/09-adrs-roadmap.md#33-guardrails--tooling)
 > The manifesto's design goal is **per-phase write-locks** (e.g. "Pass 2 may only write `*.spec.ts`", "Pass 7 may only edit comments/docstrings"). Shipped today is the coarser *tool-level* deny profile; the file-glob write-locks are not yet enforced.
 
 ### 3.5 Specialist security agents & governance patterns
@@ -165,7 +165,7 @@ Each of these is referenced in [`docs/roadmap.md`](../../../roadmap.md) and the 
 | S-4 | `--dangerously-skip-permissions` semantics | Verify against the pinned opencode version whether frontmatter `deny` rules are still enforced when the runner passes this flag ([`open-code-agent-runner.ts#L67`](../../../src/infrastructure/open-code-agent-runner.ts#L67)). |
 | S-5 | `.env` default denial vs `read: allow` | Confirm opencode's built-in `*.env: deny` default still holds when an agent declares `read: allow` in its frontmatter. |
 | S-6 | Threat model for trusted-local context | Research what "security" means when the harness runs locally on a trusted codebase (skeleton TODO). |
-| S-7 | Per-pass file-glob write-locks | Planned design ([manifesto § 4.2](../../../architecture-manifesto.md)); not yet implemented — no agreed enforcement mechanism. |
+| S-7 | Per-pass file-glob write-locks | Planned design ([9. ADRs & Roadmap §3.3](../contributor-deep-dive/09-adrs-roadmap.md#33-guardrails--tooling)); not yet implemented — no agreed enforcement mechanism. |
 | S-8 | PII detection in log sanitizer | Not implemented; decide whether to add key/pattern-based redaction ahead of gateway DLP. |
 
 ---

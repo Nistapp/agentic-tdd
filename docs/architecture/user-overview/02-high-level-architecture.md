@@ -19,7 +19,7 @@
 The hard architectural rule ([ADR-0001 — Pure Core Engine](../adrs/0001-pure-core-engine.md)): **`src/core/` MUST NOT import from `src/infrastructure/` or `src/cli/`.** Every OS side-effect is expressed as an interface in [`src/core/interfaces.ts`](../../../src/core/interfaces.ts) and injected into the engine at construction time.
 
 > [!TIP]
-> This page is C4 Level 1 for the *shipped* system. The broader enterprise vision — SSO, budget enforcement, cross-repo indexing, sandboxing — lives in [the architecture manifesto](../../architecture-manifesto.md) and is flagged `planned` here because it is not yet shipped.
+> This page is C4 Level 1 for the *shipped* system. The broader enterprise vision — SSO, budget enforcement, cross-repo indexing, sandboxing — lives in [8. Engineering Concepts — planned list](08-engineering-concepts.md#concepts-that-are-planned-not-shipped) and [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md), and is flagged `planned` here because it is not yet shipped.
 
 ---
 
@@ -27,7 +27,7 @@ The hard architectural rule ([ADR-0001 — Pure Core Engine](../adrs/0001-pure-c
 
 ```mermaid
 graph LR
-    %% C4-inspired style definitions (consistent with architecture-manifesto.md)
+    %% C4-inspired style definitions
     classDef actor fill:#08427b,stroke:#052e56,stroke-width:2px,color:#fff
     classDef coreSystem fill:#1168bd,stroke:#0b4884,stroke-width:2px,color:#fff
     classDef extSystem fill:#999999,stroke:#666666,stroke-width:2px,color:#fff
@@ -176,4 +176,4 @@ These decisions shape the structure you see above. Each is a one-line summary he
 - Next: [3. The 8-Pass Pipeline](03-8-pass-pipeline.md)
 - Deep dives: [4. The Core Engine](04-core-engine.md) · [1. Core Engine Internals](../contributor-deep-dive/01-core-engine-internals.md) · [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md)
 - ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0002 XState Machines](../adrs/0002-xstate-machines.md) · [0007 AST-Grep Symbol Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
-- Vision: [The Enterprise Agentic Software Development Framework](../../architecture-manifesto.md)
+- Vision: [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md) · [8. Engineering Concepts](08-engineering-concepts.md)

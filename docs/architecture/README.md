@@ -42,7 +42,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 ## Contributor Deep Dive
 
 > [!NOTE]
-> Full implementation detail, grounded in `src/`. Page 9 is a placeholder.
+> Full implementation detail, grounded in `src/`.
 
 | Page | Status |
 |---|---|
@@ -54,7 +54,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Drafted (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
 | [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Drafted (3-tier pyramid, DI mock inventory, machine & orchestrator patterns; open items T-3–T-5) |
 | [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Drafted (prereqs: opencode + codebase-memory-mcp, local setup, opencode.json, verification, pass/DI extension; open items G-1–G-3) |
-| [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Placeholder |
+| [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Drafted (ADR index/status, roadmap from retired `roadmap.md`, open debates; open items R-1–R-3) |
 
 > [!TIP]
 > When adding a new ADR, assign the next sequence number and add a row to

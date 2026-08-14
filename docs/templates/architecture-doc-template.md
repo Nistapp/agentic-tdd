@@ -60,4 +60,5 @@ graph TD
 ## 6. Related Specifications & ADRs
 
 - [ADR-000X: Related Decision](../architecture/adrs/0001-pure-core-engine.md)
-- [Design Spec / Artifact](../../docs/architecture-manifesto.md)
+- [Design Spec / Artifact](../architecture/glossary.md)
+- [Roadmap: Planned Work](../architecture/contributor-deep-dive/09-adrs-roadmap.md)
