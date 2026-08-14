@@ -36,7 +36,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [4. The Core Engine](user-overview/04-core-engine.md) | Drafted (concept: state machines & fit; impl linked to deep-dive) |
 | [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Drafted (overview) |
 | [6. Context Engineering — Code Indexing & Token Savings](user-overview/06-context-and-token-savings.md) | Drafted (overview) |
-| [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Placeholder |
+| [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Drafted (shipped hygiene vs. planned controls; open items S-4–S-8) |
 | [8. Engineering Concepts — Buzzword Map](user-overview/08-engineering-concepts.md) | Drafted |
 
 ## Contributor Deep Dive
