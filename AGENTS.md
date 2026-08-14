@@ -224,8 +224,7 @@ editing them:
 
 ## 10. Do Not Do
 
-- Do not introduce runtime dependencies without checking `docs/architecture-manifesto.md`
-  § 4 (agent guardrails) for approval.
+- Do not introduce runtime dependencies without documenting the decision as an Architecture Decision Record (see `docs/architecture/README.md` for the ADR process and index).
 - Do not use `const enum` — it breaks `isolatedModules`. Use regular `enum`.
 - Do not use `as any` or `// @ts-ignore` as a shortcut.
 - Do not merge failing tests — fix them. Or ask the user if you are unable to fix.

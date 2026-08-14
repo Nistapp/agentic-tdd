@@ -224,7 +224,7 @@ The pipeline enforces that agents can only:
 - **Write**: only the files appropriate to their pass (e.g., the Docs agent can only edit comments)
 - **Execute**: nothing — no bash, no web fetch
 
-See `docs/architecture-manifesto.md` § 4 for the full agent guardrail design.
+See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/architecture/contributor-deep-dive/02-prompt-engineering.md) for the full agent guardrail design.
 
 ---
 

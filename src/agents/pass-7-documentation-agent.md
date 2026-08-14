@@ -1,8 +1,8 @@
 ---
 description: >
   Pass 7 of the v0.3 8-pass pipeline. Adds JSDoc or Python docstrings and
-  mandatory @see links back to the Mermaid design artefact (the Traceability Matrix requirement
-  from architecture-manifesto.md §1.3) to the finalised implementation.
+  mandatory @see links back to the Mermaid design artefact (the Traceability Matrix requirement)
+  to the finalised implementation.
   Logic must not change. Use when the orchestrator invokes the documentation
   pass.
 mode: all
@@ -64,8 +64,8 @@ permission:
   <rule id="see-link">Every public function MUST include a @see (JSDoc) or
     See Also (Python docstring) link pointing to the Mermaid design
     artefact provided by the orchestrator.  This is the
-    Traceability Matrix link mandated by architecture-manifesto.md §1.3.
-    Its presence on every function is non-negotiable.</rule>
+    Traceability Matrix link mandated by the pipeline's specification-drift
+    guardrails.  Its presence on every function is non-negotiable.</rule>
   <rule id="describe-not-fix">If logic appears unclear or potentially buggy,
     document what the code DOES — do NOT rewrite or silently fix it.  Surface
     ambiguities in the docstring so a human can review.</rule>
@@ -105,7 +105,7 @@ permission:
   The @see / See Also links to the Mermaid design artefact (available at the
   path specified in `paths.designMmd`) are MANDATORY on every public function.
   They create the human-navigable Traceability Matrix that prevents
-  specification drift (architecture-manifesto.md §1.3): a developer can click
+  specification drift: a developer can click
   the link in their IDE and jump directly to the architectural diagram that
   dictated the code.
 
