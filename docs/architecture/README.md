@@ -42,7 +42,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 ## Contributor Deep Dive
 
 > [!NOTE]
-> Full implementation detail, grounded in `src/`. Pages 6–9 are placeholders.
+> Full implementation detail, grounded in `src/`. Pages 7–9 are placeholders.
 
 | Page | Status |
 |---|---|
@@ -51,7 +51,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [3. Context Engineering — Context Builder & Payload](contributor-deep-dive/03-context-engineering.md) | Drafted |
 | [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Drafted (port→adapter map, lifecycle edge cases; open items O-4–O-6) |
 | [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
-| [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Placeholder |
+| [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Drafted (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
 | [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Placeholder |
 | [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Placeholder |
 | [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Placeholder |
