@@ -46,15 +46,15 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 
 | Page | Status |
 |---|---|
-| [8. Core Engine Internals — Harness Engineering (XState)](contributor-deep-dive/08-core-engine-internals.md) | Drafted |
-| [9. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/09-prompt-engineering.md) | Drafted |
-| [10. Context Engineering — Context Builder & Payload](contributor-deep-dive/10-context-engineering.md) | Drafted |
-| [11. Infrastructure Adapters](contributor-deep-dive/11-infrastructure-adapters.md) | Placeholder |
-| [12. CLI & Dependency Injection Wiring](contributor-deep-dive/12-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
-| [13. Observability, Logging, & Operations](contributor-deep-dive/13-observability-operations.md) | Placeholder |
-| [14. Testing Strategy & Mock Patterns](contributor-deep-dive/14-testing-strategy.md) | Placeholder |
-| [15. Developer Guide](contributor-deep-dive/15-developer-guide.md) | Placeholder |
-| [16. ADRs & Roadmap](contributor-deep-dive/16-adrs-roadmap.md) | Placeholder |
+| [1. Core Engine Internals — Harness Engineering (XState)](contributor-deep-dive/01-core-engine-internals.md) | Drafted |
+| [2. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/02-prompt-engineering.md) | Drafted |
+| [3. Context Engineering — Context Builder & Payload](contributor-deep-dive/03-context-engineering.md) | Drafted |
+| [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Placeholder |
+| [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
+| [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Placeholder |
+| [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Placeholder |
+| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Placeholder |
+| [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Placeholder |
 
 > [!TIP]
 > When adding a new ADR, assign the next sequence number and add a row to

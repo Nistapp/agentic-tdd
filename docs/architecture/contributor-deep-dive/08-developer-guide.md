@@ -16,9 +16,9 @@
 
 ## Related
 
-- [9. Prompt Engineering §5](09-prompt-engineering.md#5-adding--modifying-a-pass) — pass-addition recipe
-- [12. CLI & DI Wiring](12-cli-di-wiring.md) — DI extension
-- [14. Testing Strategy & Mock Patterns](14-testing-strategy.md)
+- [2. Prompt Engineering §5](02-prompt-engineering.md#5-adding--modifying-a-pass) — pass-addition recipe
+- [5. CLI & DI Wiring](05-cli-di-wiring.md) — DI extension
+- [7. Testing Strategy & Mock Patterns](07-testing-strategy.md)
 
 ---
 

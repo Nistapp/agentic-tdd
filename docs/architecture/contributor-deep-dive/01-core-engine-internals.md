@@ -2,7 +2,7 @@
 
 > **Target Audience:** Contributors extending the pipeline.
 > **Status:** DRAFT — grounded in the implemented state machines.
-> **Prev:** [7. Security Model & Sandboxing](../user-overview/07-security-model.md) · **Next:** [9. Prompt Engineering](09-prompt-engineering.md)
+> **Prev:** [7. Security Model & Sandboxing](../user-overview/07-security-model.md) · **Next:** [2. Prompt Engineering](02-prompt-engineering.md)
 
 ---
 
@@ -44,7 +44,7 @@ The machines are supported by these pure-core modules:
 | **Log sanitisation** | [`src/core/log-sanitizer.ts`](../../../src/core/log-sanitizer.ts) | Strips control chars / truncates before log emission. |
 | **Contracts** | [`src/core/types.ts`](../../../src/core/types.ts) · [`src/core/interfaces.ts`](../../../src/core/interfaces.ts) | Pass sets, events, context shape, and the DI ports. |
 
-Deep dives for the context/payload modules live on [10. Context Engineering](10-context-engineering.md).
+Deep dives for the context/payload modules live on [3. Context Engineering](03-context-engineering.md).
 
 ---
 
@@ -58,7 +58,7 @@ graph LR
 ```
 
 > [!IMPORTANT]
-> The dependency arrows are **one-way**. `src/cli/` and `src/infrastructure/` may import `src/core/`, but `src/core/` must never import back. The engine never touches `NodeFileSystem`, `GitService`, or `OpenCodeAgentRunner` directly — it sees only `IFileSystem`, `IGitService`, and `IAgentRunner` ([ADR-0001](../adrs/0001-pure-core-engine.md)). See [12. CLI & DI Wiring](12-cli-di-wiring.md) for the full adapter wiring.
+> The dependency arrows are **one-way**. `src/cli/` and `src/infrastructure/` may import `src/core/`, but `src/core/` must never import back. The engine never touches `NodeFileSystem`, `GitService`, or `OpenCodeAgentRunner` directly — it sees only `IFileSystem`, `IGitService`, and `IAgentRunner` ([ADR-0001](../adrs/0001-pure-core-engine.md)). See [5. CLI & DI Wiring](05-cli-di-wiring.md) for the full adapter wiring.
 
 ---
 
@@ -233,4 +233,4 @@ See [ADR-0003](../adrs/0003-atomic-commits-per-pass.md) for the rationale. Mecha
 - [ADR-0002 — XState Machines](../adrs/0002-xstate-machines.md)
 - [ADR-0003 — Atomic Commits Per Pass](../adrs/0003-atomic-commits-per-pass.md)
 - [ADR-0005 — Context Compaction](../adrs/0005-context-compaction.md)
-- [10. Context Engineering](10-context-engineering.md) · [9. Prompt Engineering](09-prompt-engineering.md)
+- [3. Context Engineering](03-context-engineering.md) · [2. Prompt Engineering](02-prompt-engineering.md)

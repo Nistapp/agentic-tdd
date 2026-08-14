@@ -2,7 +2,7 @@
 
 > **Target Audience:** Contributors touching entry points, DI, or the end-to-end wiring.
 > **Status:** DRAFT — component map + data flow grounded in `src/`; remaining outline items partially drafted.
-> **Prev:** [11. Infrastructure Adapters](11-infrastructure-adapters.md) · **Next:** [13. Observability, Logging, & Operations](13-observability-operations.md)
+> **Prev:** [4. Infrastructure Adapters](04-infrastructure-adapters.md) · **Next:** [6. Observability, Logging, & Operations](06-observability-operations.md)
 
 ---
 
@@ -187,7 +187,7 @@ sequenceDiagram
 8. **Completion** — on `pipeline_complete` the session ends and the state file is deleted.
 
 > [!NOTE]
-> Step 6 implements the main cost lever: **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). Static Prefix ([ADR-0006](../adrs/0006-context-control-optimisation.md)) is **deprecated / low priority** pending research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). See [10. Context Engineering](10-context-engineering.md).
+> Step 6 implements the main cost lever: **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). Static Prefix ([ADR-0006](../adrs/0006-context-control-optimisation.md)) is **deprecated / low priority** pending research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). See [3. Context Engineering](03-context-engineering.md).
 
 ---
 
@@ -216,6 +216,6 @@ sequenceDiagram
 ## Related
 
 - [2. High-Level Architecture (User)](../user-overview/02-high-level-architecture.md)
-- [8. Core Engine Internals](08-core-engine-internals.md) — how the orchestrator consumes injected services
-- [11. Infrastructure Adapters](11-infrastructure-adapters.md) — per-adapter deep dives
+- [1. Core Engine Internals](01-core-engine-internals.md) — how the orchestrator consumes injected services
+- [4. Infrastructure Adapters](04-infrastructure-adapters.md) — per-adapter deep dives
 - ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)

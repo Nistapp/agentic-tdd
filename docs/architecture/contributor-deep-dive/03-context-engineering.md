@@ -2,7 +2,7 @@
 
 > **Target Audience:** Contributors extending context selection or payload shape.
 > **Status:** DRAFT — grounded in `src/core/context-builder.ts`, `context-provider.ts`, `runners/shared.ts`.
-> **Prev:** [9. Prompt Engineering](09-prompt-engineering.md) · **Next:** [11. Infrastructure Adapters](11-infrastructure-adapters.md)
+> **Prev:** [2. Prompt Engineering](02-prompt-engineering.md) · **Next:** [4. Infrastructure Adapters](04-infrastructure-adapters.md)
 
 ---
 
@@ -102,7 +102,7 @@ Conditionally attaches `--file` paths ([`src/core/runners/shared.ts#L31-L68`](..
 
 ## 5. Context Compaction (ADR-0005)
 
-On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, so retries of later passes start clean instead of being polluted by stale failure noise. See [ADR-0005](../adrs/0005-context-compaction.md) and [8. Core Engine Internals §2.1](08-core-engine-internals.md#21-the-loop).
+On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, so retries of later passes start clean instead of being polluted by stale failure noise. See [ADR-0005](../adrs/0005-context-compaction.md) and [1. Core Engine Internals §2.1](01-core-engine-internals.md#21-the-loop).
 
 ## 6. Context Enrichment — anchored change descriptors
 
@@ -127,7 +127,7 @@ On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, s
 - `target-symbols-priority`: focus edits on listed symbols, with an `OUT-OF-SCOPE` justification gate for discoveries.
 - `use-file-changes`: navigate by `range` + `anchor` + `commitHash` (`git show <sha>:<file>`), not absolute lines.
 
-See [9. Prompt Engineering §3](09-prompt-engineering.md#3-the-directive-catalogue-cross-pass-patterns).
+See [2. Prompt Engineering §3](02-prompt-engineering.md#3-the-directive-catalogue-cross-pass-patterns).
 
 ---
 

@@ -213,5 +213,5 @@ The commit-per-pass boundary is what makes pause/resume/abort safe — the repo 
 
 - Previous: [2. High-Level Architecture](02-high-level-architecture.md)
 - Next: [4. The Core Engine](04-core-engine.md)
-- Deep dives: [8. Core Engine Internals — State Machines](../contributor-deep-dive/08-core-engine-internals.md) · [12. CLI & DI Wiring — data flow](../contributor-deep-dive/12-cli-di-wiring.md)
+- Deep dives: [1. Core Engine Internals — State Machines](../contributor-deep-dive/01-core-engine-internals.md) · [5. CLI & DI Wiring — data flow](../contributor-deep-dive/05-cli-di-wiring.md)
 - ADRs: [0003 Atomic Commits Per Pass](../adrs/0003-atomic-commits-per-pass.md) · [0004 HITL Gate](../adrs/0004-hitl-gate-after-pass-0.md) · [0008 Observability Before Security](../adrs/0008-observability-before-security.md)

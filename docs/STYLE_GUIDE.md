@@ -70,6 +70,9 @@ Rules:
 
   New pages belong to exactly one track, never both.
 
+- **Page numbering is independent per track.** Each track's pages are numbered sequentially starting at `01`, zero-padded to two digits (`docs/architecture/user-overview/NN-*.md` and `docs/architecture/contributor-deep-dive/NN-*.md`). The number is a per-track ordering key — it is **not** a global document ID and is **not** continued across tracks.
+- **Renumbering:** the numbers are allowed to change (pages move tracks, buckets are reordered). When a file is renamed, **all** cross-references — link paths and numbered display labels such as `[3. Context Engineering]` — **MUST** be updated in the same change set (invariant #2, Zero Specification Drift). The topic bucket is the stable identity, never the number.
+
 ---
 
 ## 4. Master File Location Mappings

@@ -80,7 +80,7 @@ Every agent file has the same skeleton. The two parts are *structurally differen
 | `<security_checklist>` (Pass 6) | OWASP Top-10 checks | Security checklist |
 | `<task>` | End-to-end instruction referencing the payload | The task |
 
-The instruction body is written in **strict XML tags** (`` `<directives>` ``, `` `<task>` ``), not Markdown headers. This is the project's primary **prompt-injection defence**: instructions and payload are *semantically walled off*, so a `#` comment in a source file can never be interpreted as a command. Full anatomy: [9. Prompt Engineering — File Anatomy](../contributor-deep-dive/09-prompt-engineering.md#1-file-anatomy).
+The instruction body is written in **strict XML tags** (`` `<directives>` ``, `` `<task>` ``), not Markdown headers. This is the project's primary **prompt-injection defence**: instructions and payload are *semantically walled off*, so a `#` comment in a source file can never be interpreted as a command. Full anatomy: [2. Prompt Engineering — File Anatomy](../contributor-deep-dive/02-prompt-engineering.md#1-file-anatomy).
 
 ---
 
@@ -144,7 +144,7 @@ The split is deliberate: the *heavy reasoning* passes (design, contracts, tests,
 Routing lives in the agent files precisely so it is **user-editable without a rebuild of the engine's logic**. To change a pass's model, edit the `model:` line in the corresponding `src/agents/pass-*.md` and re-run `npm run build` (which copies the prompts to `dist/agents/`).
 
 > [!NOTE] Config-file routing is planned
-> Editing agent files directly is a developer-desk workflow. A user-facing **config file** for runtime behaviour (e.g. per-agent models) is the planned next step — tracked in [discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52). This is the project's config-driven-evolution direction (see [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md)).
+> Editing agent files directly is a developer-desk workflow. A user-facing **config file** for runtime behaviour (e.g. per-agent models) is the planned next step — tracked in [discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52). This is the project's config-driven-evolution direction (see [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md)).
 
 > [!NOTE] Aspirational vs shipped
 > The widely-cited "Sonnet for design, DeepSeek for logic, Flash for docs, GPT-4.5 for security" routing is **aspirational**, not what ships. The `model:` fields in the table above are the source of truth (see P-2 on [page 1](01-why-this-exists.md)). We have tested with GLM, DeepSeek, and Gemini; the shipped files currently pin DeepSeek.
@@ -170,10 +170,10 @@ The implementation of everything above lives in the Contributor Track:
 
 | Topic | Where |
 |---|---|
-| Full file anatomy, the directive catalogue (`assess-first`, `indexer-first`, `target-symbols-priority`, `use-file-changes`), and the permission matrix | [9. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/09-prompt-engineering.md) |
-| How the runner spawns opencode, attaches artefacts, and persists logs | [11. Infrastructure Adapters](../contributor-deep-dive/11-infrastructure-adapters.md) · [`open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) |
-| How SKIP / retries are orchestrated by the machines | [8. Core Engine Internals §6 — Skip Signals](../contributor-deep-dive/08-core-engine-internals.md#6-skip-signals) |
-| Adding / modifying a pass end-to-end | [9. Prompt Engineering §5](../contributor-deep-dive/09-prompt-engineering.md#5-adding--modifying-a-pass) · [15. Developer Guide](../contributor-deep-dive/15-developer-guide.md) |
+| Full file anatomy, the directive catalogue (`assess-first`, `indexer-first`, `target-symbols-priority`, `use-file-changes`), and the permission matrix | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
+| How the runner spawns opencode, attaches artefacts, and persists logs | [4. Infrastructure Adapters](../contributor-deep-dive/04-infrastructure-adapters.md) · [`open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) |
+| How SKIP / retries are orchestrated by the machines | [1. Core Engine Internals §6 — Skip Signals](../contributor-deep-dive/01-core-engine-internals.md#6-skip-signals) |
+| Adding / modifying a pass end-to-end | [2. Prompt Engineering §5](../contributor-deep-dive/02-prompt-engineering.md#5-adding--modifying-a-pass) · [8. Developer Guide](../contributor-deep-dive/08-developer-guide.md) |
 
 ---
 
@@ -191,5 +191,5 @@ The implementation of everything above lives in the Contributor Track:
 
 - Previous: [4. The Core Engine](04-core-engine.md)
 - Next: [6. Context Engineering — Code Indexing & Token Savings](06-context-and-token-savings.md)
-- Deep dives: [9. Prompt Engineering](../contributor-deep-dive/09-prompt-engineering.md) · [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md)
+- Deep dives: [2. Prompt Engineering](../contributor-deep-dive/02-prompt-engineering.md) · [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md)
 - Related: [3. The 8-Pass Pipeline](03-8-pass-pipeline.md) · [8. Engineering Concepts](08-engineering-concepts.md) · [Glossary](../glossary.md)

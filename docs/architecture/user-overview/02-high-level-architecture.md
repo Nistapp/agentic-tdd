@@ -174,6 +174,6 @@ These decisions shape the structure you see above. Each is a one-line summary he
 
 - Previous: [Architecture index](../README.md)
 - Next: [3. The 8-Pass Pipeline](03-8-pass-pipeline.md)
-- Deep dives: [4. The Core Engine](04-core-engine.md) · [8. Core Engine Internals](../contributor-deep-dive/08-core-engine-internals.md) · [12. CLI & DI Wiring](../contributor-deep-dive/12-cli-di-wiring.md)
+- Deep dives: [4. The Core Engine](04-core-engine.md) · [1. Core Engine Internals](../contributor-deep-dive/01-core-engine-internals.md) · [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md)
 - ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0002 XState Machines](../adrs/0002-xstate-machines.md) · [0007 AST-Grep Symbol Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
 - Vision: [The Enterprise Agentic Software Development Framework](../../architecture-manifesto.md)

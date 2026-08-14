@@ -2,7 +2,7 @@
 
 > **Target Audience:** Contributors designing or modifying pass prompts.
 > **Status:** DRAFT — grounded in `src/agents/pass-*.md`.
-> **Prev:** [8. Core Engine Internals](08-core-engine-internals.md) · **Next:** [10. Context Engineering](10-context-engineering.md)
+> **Prev:** [1. Core Engine Internals](01-core-engine-internals.md) · **Next:** [3. Context Engineering](03-context-engineering.md)
 
 ---
 
@@ -90,7 +90,7 @@ Every pass opens with `assess-first` ([src/core/skip-parser.ts](../../../src/cor
 
 > Before making any file changes, assess the existing codebase against your pass mandate. If the existing code already fully satisfies the requirements, output exactly: `SKIP:{pass_number}:{reason}` … Do NOT use exploration tools to invent new out-of-scope work if the primary mandate is met.
 
-This makes passes **idempotent no-ops** when work isn't needed, saving tokens and avoiding churn. The machine detects `SKIP:` and records `status: 'skipped'` (see [8. Core Engine Internals §6](08-core-engine-internals.md#6-skip-signals)).
+This makes passes **idempotent no-ops** when work isn't needed, saving tokens and avoiding churn. The machine detects `SKIP:` and records `status: 'skipped'` (see [1. Core Engine Internals §6](01-core-engine-internals.md#6-skip-signals)).
 
 ### 3.2 `indexer-first`
 
@@ -147,7 +147,7 @@ Passes 3–6 are told to navigate via the `fileChanges` change descriptors (per-
 4. Add the pass to the pipeline machine (`pass_N_*` state), `SELF_CORRECTION_PASSES` / `GIT_COMMIT_PASSES` in `src/core/types.ts`, and `CONTEXT_RULES` in `src/core/context-builder.ts`.
 5. Rebuild: `npm run build`.
 
-See [15. Developer Guide](15-developer-guide.md) for the end-to-end recipe.
+See [8. Developer Guide](08-developer-guide.md) for the end-to-end recipe.
 
 ---
 
@@ -155,5 +155,5 @@ See [15. Developer Guide](15-developer-guide.md) for the end-to-end recipe.
 
 - [5. Agent Prompt System & Routing (User view)](../user-overview/05-agent-prompt-system.md)
 - [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md) — why context is advisory, not restrictive
-- [10. Context Engineering](10-context-engineering.md) — what the payload contains
-- [8. Core Engine Internals](08-core-engine-internals.md) — how SKIP / retries are orchestrated
+- [3. Context Engineering](03-context-engineering.md) — what the payload contains
+- [1. Core Engine Internals](01-core-engine-internals.md) — how SKIP / retries are orchestrated

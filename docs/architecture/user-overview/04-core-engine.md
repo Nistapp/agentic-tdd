@@ -13,7 +13,7 @@ The core engine is the part of agentic-tdd that **orchestrates the pipeline**: i
 This page explains, in plain terms, what a state machine is, what it buys you, and why it is an unusually good fit for *orchestrating AI*.
 
 > [!NOTE]
-> This page is conceptual. If you want the concrete implementation — `PipelineOrchestrator`, the XState machines, the DI boundaries — see **[8. Core Engine Internals (Contributor)](../contributor-deep-dive/08-core-engine-internals.md)**.
+> This page is conceptual. If you want the concrete implementation — `PipelineOrchestrator`, the XState machines, the DI boundaries — see **[1. Core Engine Internals (Contributor)](../contributor-deep-dive/01-core-engine-internals.md)**.
 
 ---
 
@@ -86,9 +86,9 @@ The implementation of everything above lives in the Contributor Track:
 
 | Topic | Where |
 |---|---|
-| `PipelineOrchestrator` — the host that runs the machines, bridges HITL, persists state | [8. Core Engine Internals — The Host `PipelineOrchestrator`](../contributor-deep-dive/08-core-engine-internals.md) |
-| The two XState machines (`createPipelineMachine`, `createSelfCorrectionMachine`) | [8. Core Engine Internals — Harness Engineering (XState)](../contributor-deep-dive/08-core-engine-internals.md) |
-| Engine module map & DI boundaries | [8. Core Engine Internals — Boundaries](../contributor-deep-dive/08-core-engine-internals.md) · [12. CLI & DI Wiring](../contributor-deep-dive/12-cli-di-wiring.md) |
+| `PipelineOrchestrator` — the host that runs the machines, bridges HITL, persists state | [1. Core Engine Internals — The Host `PipelineOrchestrator`](../contributor-deep-dive/01-core-engine-internals.md) |
+| The two XState machines (`createPipelineMachine`, `createSelfCorrectionMachine`) | [1. Core Engine Internals — Harness Engineering (XState)](../contributor-deep-dive/01-core-engine-internals.md) |
+| Engine module map & DI boundaries | [1. Core Engine Internals — Boundaries](../contributor-deep-dive/01-core-engine-internals.md) · [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md) |
 | Why pure + XState (the decisions) | [ADR-0001](../adrs/0001-pure-core-engine.md) · [ADR-0002](../adrs/0002-xstate-machines.md) |
 
 ---
@@ -97,7 +97,7 @@ The implementation of everything above lives in the Contributor Track:
 
 | # | Topic | What is missing |
 |---|---|---|
-| C-1 | Config-driven evolution | Since we have XState, the engine can easily evolve into a **config-driven framework** — planned, not shipped. Track in [16. ADRs & Roadmap]. |
+| C-1 | Config-driven evolution | Since we have XState, the engine can easily evolve into a **config-driven framework** — planned, not shipped. Track in [9. ADRs & Roadmap]. |
 
 ---
 
@@ -105,5 +105,5 @@ The implementation of everything above lives in the Contributor Track:
 
 - Previous: [3. The 8-Pass Pipeline](03-8-pass-pipeline.md)
 - Next: [5. Agent Prompt System & Routing](05-agent-prompt-system.md)
-- Deep dives: [8. Core Engine Internals — Harness Engineering (XState)](../contributor-deep-dive/08-core-engine-internals.md) · [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md) · [12. CLI & DI Wiring](../contributor-deep-dive/12-cli-di-wiring.md)
+- Deep dives: [1. Core Engine Internals — Harness Engineering (XState)](../contributor-deep-dive/01-core-engine-internals.md) · [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md) · [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md)
 - ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0002 XState Machines](../adrs/0002-xstate-machines.md)

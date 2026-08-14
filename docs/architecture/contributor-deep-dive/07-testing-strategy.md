@@ -16,7 +16,7 @@
 ## Existing material to mine
 
 - `test/orchestrator.test.ts` — `StubLogger`, `makeMocks`, `findEvents`.
-- [12. CLI & DI Wiring](12-cli-di-wiring.md) — how stubs map to the container.
+- [5. CLI & DI Wiring](05-cli-di-wiring.md) — how stubs map to the container.
 
 ---
 

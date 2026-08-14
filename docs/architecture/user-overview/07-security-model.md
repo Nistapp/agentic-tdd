@@ -143,15 +143,15 @@ Each of these is referenced in [`docs/roadmap.md`](../../../roadmap.md) and the 
 
 | Topic | Where |
 |---|---|
-| Permission matrix, agent file anatomy, directive catalogue | [9. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/09-prompt-engineering.md) |
-| Log sanitizer & logging architecture | [13. Observability, Logging, & Operations](../contributor-deep-dive/13-observability-operations.md) (placeholder) |
-| Runner invocation & `--dangerously-skip-permissions` | [12. CLI & DI Wiring](../contributor-deep-dive/12-cli-di-wiring.md) |
+| Permission matrix, agent file anatomy, directive catalogue | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
+| Log sanitizer & logging architecture | [6. Observability, Logging, & Operations](../contributor-deep-dive/06-observability-operations.md) (placeholder) |
+| Runner invocation & `--dangerously-skip-permissions` | [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md) |
 | Pass 6 prompt, checklist, directives | [`src/agents/pass-6-security-agent.md`](../../../src/agents/pass-6-security-agent.md) |
 | Why Security runs after Observability | [ADR-0008](../adrs/0008-observability-before-security.md) |
 | Git service guards & rollback | [`src/infrastructure/git-service.ts`](../../../src/infrastructure/git-service.ts) · [3. § 4](03-8-pass-pipeline.md#4-one-atomic-commit-per-pass--rollback-pause-resume-abort) |
 
 > [!NOTE] Contributor-track gap
-> There is no dedicated Contributor Deep Dive page for the security model yet; the observability/logging page ([13](../contributor-deep-dive/13-observability-operations.md)) is also still a placeholder. Once one is drafted, this section should link to it rather than to `src/` files directly.
+> There is no dedicated Contributor Deep Dive page for the security model yet; the observability/logging page ([13](../contributor-deep-dive/06-observability-operations.md)) is also still a placeholder. Once one is drafted, this section should link to it rather than to `src/` files directly.
 
 ---
 
@@ -174,6 +174,6 @@ Each of these is referenced in [`docs/roadmap.md`](../../../roadmap.md) and the 
 
 - Previous: [6. Context Engineering — Code Indexing & Token Savings](06-context-and-token-savings.md)
 - Next: [8. Engineering Concepts — Buzzword Map](08-engineering-concepts.md)
-- Deep dives: [9. Prompt Engineering](../contributor-deep-dive/09-prompt-engineering.md) · [13. Observability, Logging, & Operations](../contributor-deep-dive/13-observability-operations.md)
+- Deep dives: [2. Prompt Engineering](../contributor-deep-dive/02-prompt-engineering.md) · [6. Observability, Logging, & Operations](../contributor-deep-dive/06-observability-operations.md)
 - ADRs: [0008 Observability Before Security](../adrs/0008-observability-before-security.md)
 - Related: [5. Agent Prompt System & Routing](05-agent-prompt-system.md) · [3. The 8-Pass Pipeline](03-8-pass-pipeline.md) · [1. Why This Exists](01-why-this-exists.md) · [glossary: *Agent Trampling* / *LiteLLM*](../glossary.md)

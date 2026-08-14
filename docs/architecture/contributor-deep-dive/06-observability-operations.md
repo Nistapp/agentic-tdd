@@ -19,7 +19,7 @@
 - [`src/core/log-sanitizer.ts`](../../../src/core/log-sanitizer.ts)
 - [`src/infrastructure/pino-logger.ts`](../../../src/infrastructure/pino-logger.ts)
 - [`src/infrastructure/event-bus.ts`](../../../src/infrastructure/event-bus.ts)
-- Event catalogue: [8. Core Engine Internals §1.3](08-core-engine-internals.md#13-events)
+- Event catalogue: [1. Core Engine Internals §1.3](01-core-engine-internals.md#13-events)
 
 ---
 

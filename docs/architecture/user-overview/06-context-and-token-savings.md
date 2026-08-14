@@ -69,7 +69,7 @@ The orchestrator also tells each pass *exactly which files matter*, via a declar
 | 6 Security | Pass 4 implementation |
 | 7 Documentation | Pass 3,4,5,6 implementation |
 
-The result is **surgical context instead of context stuffing**: each agent sees only the upstream artefacts it is directly responsible for honouring. See [10. Context Engineering § 1 (Contributor)](../contributor-deep-dive/10-context-engineering.md#1-context_rules--the-per-pass-selection-table) for the full table.
+The result is **surgical context instead of context stuffing**: each agent sees only the upstream artefacts it is directly responsible for honouring. See [3. Context Engineering § 1 (Contributor)](../contributor-deep-dive/03-context-engineering.md#1-context_rules--the-per-pass-selection-table) for the full table.
 
 ---
 
@@ -140,7 +140,7 @@ When context is accurate, costs fall *mechanically*:
 | **Fewer file reads** | Agent queries the graph and reads only the payload-listed files | It already knows where the change is |
 | **Fewer reasoning iterations** | Starts from verified structure, not guesswork | No speculative "find it yourself" loops |
 | **Fewer self-correction retries** | Right context → right code → tests pass first time | Retries (up to 3) are for real failures, not context misses |
-| **Context Compaction** | Per-pass error logs deleted on success | See [ADR-0005](../adrs/0005-context-compaction.md) & [10. § 5](../contributor-deep-dive/10-context-engineering.md#5-context-compaction-adr-0005) |
+| **Context Compaction** | Per-pass error logs deleted on success | See [ADR-0005](../adrs/0005-context-compaction.md) & [3. § 5](../contributor-deep-dive/03-context-engineering.md#5-context-compaction-adr-0005) |
 | **SKIP protocol** | `assess-first` lets a pass declare a no-op (`SKIP:N:reason`) | No wasted tokens on already-satisfied passes ([`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts)) |
 
 > [!NOTE] Static Prefix caching is deprecated
@@ -158,7 +158,7 @@ Each of these individually saves tokens; together, with accuracy as the driver, 
 For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.yml`, `infra/litellm_config.yaml`) can enforce SSO auth and hard budget caps (HTTP 402). This is **orthogonal** to the accuracy story above — it caps spend at the gateway; context engineering reduces the spend in the first place.
 
 > [!NOTE] LiteLLM status
-> The `infra/` configs exist; verify whether the SSO/budget features are exercised anywhere (see [2. § H-1](02-high-level-architecture.md) and [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md)).
+> The `infra/` configs exist; verify whether the SSO/budget features are exercised anywhere (see [2. § H-1](02-high-level-architecture.md) and [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md)).
 
 ---
 
@@ -177,10 +177,10 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 
 | Topic | Where |
 |---|---|
-| `CONTEXT_RULES`, `StateContextProvider`, payload & artefact construction | [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md) |
-| Context Compaction (ADR-0005) | [10. § 5](../contributor-deep-dive/10-context-engineering.md#5-context-compaction-adr-0005) · [ADR-0005](../adrs/0005-context-compaction.md) |
-| AST-grep symbol resolution & anchored change descriptors | [10. § 6](../contributor-deep-dive/10-context-engineering.md#6-context-enrichment--anchored-change-descriptors) · [ADR-0007](../adrs/0007-ast-grep-symbol-resolver.md) |
-| How agents consume context (`indexer-first`, `use-file-changes`) | [9. Prompt Engineering § 3](../contributor-deep-dive/09-prompt-engineering.md#3-the-directive-catalogue-cross-pass-patterns) |
+| `CONTEXT_RULES`, `StateContextProvider`, payload & artefact construction | [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md) |
+| Context Compaction (ADR-0005) | [3. § 5](../contributor-deep-dive/03-context-engineering.md#5-context-compaction-adr-0005) · [ADR-0005](../adrs/0005-context-compaction.md) |
+| AST-grep symbol resolution & anchored change descriptors | [3. § 6](../contributor-deep-dive/03-context-engineering.md#6-context-enrichment--anchored-change-descriptors) · [ADR-0007](../adrs/0007-ast-grep-symbol-resolver.md) |
+| How agents consume context (`indexer-first`, `use-file-changes`) | [2. Prompt Engineering § 3](../contributor-deep-dive/02-prompt-engineering.md#3-the-directive-catalogue-cross-pass-patterns) |
 
 ---
 
@@ -198,6 +198,6 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 
 - Previous: [5. Agent Prompt System & Routing](05-agent-prompt-system.md)
 - Next: [7. Security Model & Sandboxing](07-security-model.md)
-- Deep dives: [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md) · [9. Prompt Engineering](../contributor-deep-dive/09-prompt-engineering.md)
+- Deep dives: [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md) · [2. Prompt Engineering](../contributor-deep-dive/02-prompt-engineering.md)
 - ADRs: [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)
 - Related: [1. Why This Exists § 2.4](01-why-this-exists.md#24-reducing-the-non-determinism-of-genai) · [8. Engineering Concepts](08-engineering-concepts.md)

@@ -127,7 +127,7 @@ The harness is built **independent of any particular coding harness**. Agents ar
 - `pi` looks the most lightweight and is the probable default harness in future versions (planned).
 
 > [!NOTE] Planned
-> Harness-independence is a design principle; the default harness today is [opencode](https://opencode.ai) (see [ADR/index](../README.md)). Support for additional harnesses is future work — see the placeholder in [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md).
+> Harness-independence is a design principle; the default harness today is [opencode](https://opencode.ai) (see [ADR/index](../README.md)). Support for additional harnesses is future work — see the placeholder in [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md).
 
 ### 2.7 Build on Standard, Time-Tested Libraries
 
@@ -180,7 +180,7 @@ Topics that surfaced during drafting. Most are now resolved; those still open ar
 | P-1 | **Token-cost savings benchmarks** | Not yet benchmarked for *this* framework. Independent studies claim ~10× reduction in token consumption for code-graph-based exploration vs. file-by-file: the [codebase-memory-mcp README](https://github.com/DeusData/codebase-memory-mcp) and the paper [*Codebase-Memory: Tree-Sitter-Based Knowledge Graphs for LLM Code Exploration via MCP*](https://arxiv.org/abs/2603.27277) (31 real repos, 10× fewer tokens, 2.1× fewer tool calls). Treat as external evidence, not a claim about agentic-tdd. | [6. Context Engineering & Token Savings](06-context-and-token-savings.md) |
 | P-2 | **Model routing strategy** | Routing is **static** in the shipped `src/agents/pass-*.md` files (`deepseek-v4-pro`, docs → `deepseek-v4-flash`). Users can override per-pass models by editing those agent files. A **config file** for easy user configuration is planned for a future version. | [5. Agent Prompt System](05-agent-prompt-system.md) |
 | P-3 | **Repo/URL canonicalisation** | There is **no** `agentic-tdd-node` repo. The canonical home is `github.com/Nistapp/agentic-tdd`; community discussions live at [`Nistapp/agentic-tdd/discussions`](https://github.com/Nistapp/agentic-tdd/discussions). `package.json`'s `repository` field is stale and should be corrected. | Wiki footer / Home |
-| P-4 | **FAQ (why no TSDocs? larger goal?)** | **OPEN** — preserved as placeholder; expand later in [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md). | [16. ADRs & Roadmap](../contributor-deep-dive/16-adrs-roadmap.md) |
+| P-4 | **FAQ (why no TSDocs? larger goal?)** | **OPEN** — preserved as placeholder; expand later in [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md). | [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md) |
 | P-5 | **Nistapp-internal provenance** | Leave as-is — already covered by [§ 6. Is This For You?](#6-is-this-for-you). No further action. | — |
 | P-6 | **License** | The project is **AGPL-3.0** (as in `LICENSE` and the README badge). `package.json`'s `ISC` field is a metadata inconsistency to fix; it does not change the license. | Wiki footer / this page |
 
