@@ -10,7 +10,7 @@ Both humans and AI agents should use these terms consistently.
 | **Pass** | One phase of the 8-pass pipeline, handled by a dedicated agent. Referred to as "Pass N" (e.g., Pass 3) when specific, "pass" (lowercase) when generic. |
 | **Pipeline** | The full sequence of 8 passes orchestrated by `PipelineOrchestrator`. Always lowercase. |
 | **HITL** | Human-in-the-Loop. The approval gate after Pass 0 where a developer reviews and approves `.mmd` and `.gherkin` artifacts before code generation begins. |
-| **Static Prefix** | The practice of placing stable files (contracts, specs) first in every agent context payload to maximise LLM provider-level KV cache hits. Always capitalised. |
+| **Static Prefix** | The practice of placing stable files (contracts, specs) first in every agent context payload to maximise LLM provider-level KV cache hits. Always capitalised. **Deprecated / low priority** — with per-pass LLM configuration, its value is unclear; under research in [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). |
 | **Context Compaction** | Deleting per-pass error logs after a successful pass, preventing stale failure noise from polluting future context windows. Always capitalised. |
 | **Agent Trampling** | When one agent unintentionally overwrites verified work from a previous pass by exceeding its declared scope. Prevented via file-glob permission locks in agent frontmatter. |
 | **targetSymbols** | A map of `filePath → [qualified symbol names]` passed to each agent, identifying exactly which methods/classes were modified by upstream passes. Populated by `AstGrepSymbolResolver`. |

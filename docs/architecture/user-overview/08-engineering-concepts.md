@@ -29,7 +29,7 @@
 | **Self-correction loop** | Guarded passes retry (up to 3) with the failing test log fed back | `createSelfCorrectionMachine` | [8. Core Engine Internals §2](../contributor-deep-dive/08-core-engine-internals.md#2-the-self-correction-machine) |
 | **Atomic commits & deterministic rollback** | One commit per pass; `git revert` a single step; `--abort` rewinds via `originalBaseSha` | `doAtomicCommit`; `abortToSha` | [ADR-0003](../adrs/0003-atomic-commits-per-pass.md) |
 | **Skip signals** | Agents declare a pass a no-op with `SKIP:N:reason` | `parseSkipSignal` — `src/core/skip-parser.ts` | [8. Core Engine Internals §6](../contributor-deep-dive/08-core-engine-internals.md#6-skip-signals) |
-| **Static Prefix** | Stable files (contracts/specs) ordered first for KV-cache hits | `CONTEXT_RULES` ordering | [10. Context Engineering §4](../contributor-deep-dive/10-context-engineering.md#4-static-prefix-adr-0006) · [ADR-0006](../adrs/0006-context-control-optimisation.md) |
+| **Static Prefix** *(deprecated)* | Stable files (contracts/specs) ordered first for KV-cache hits — **deferred**, value unclear with per-pass LLM config ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) | `CONTEXT_RULES` ordering | [10. Context Engineering §4](../contributor-deep-dive/10-context-engineering.md#4-static-prefix-adr-0006) · [ADR-0006](../adrs/0006-context-control-optimisation.md) |
 | **Context Compaction** | Per-pass error logs deleted on success | `cleanupAfterSuccess` | [10. Context Engineering §5](../contributor-deep-dive/10-context-engineering.md#5-context-compaction-adr-0005) · [ADR-0005](../adrs/0005-context-compaction.md) |
 | **Context enrichment** | Git-diff hunks mapped to AST symbols + drift-resistant anchors | `AstGrepSymbolResolver`; `extractAnchor` | [10. Context Engineering §6](../contributor-deep-dive/10-context-engineering.md#6-context-enrichment--anchored-change-descriptors) · [ADR-0007](../adrs/0007-ast-grep-symbol-resolver.md) |
 | **Prompt-injection defence** | XML semantic walls separate instructions from payload | `<directives>` / `<task>` XML sections | [9. Prompt Engineering §1](../contributor-deep-dive/09-prompt-engineering.md#1-file-anatomy) |
@@ -48,6 +48,7 @@ These appear in the enterprise manifesto but are **not implemented in `src/`/`in
 
 - Semgrep hard-fail gates between passes
 - LiteLLM SSO / budget enforcement (402) — `infra/` config exists, verify status
+- Static Prefix (deprecated — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53))
 - Bloop cross-repo semantic indexing
 - DevContainer / Nix deterministic sandboxing
 - Config-file model routing

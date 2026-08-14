@@ -102,7 +102,7 @@ The mechanisms (each detailed on its own wiki page):
 | Mechanism | Wiki Page | Summary |
 |---|---|---|
 | Code indexing (`codebase-memory-mcp`) | [2. High-Level Architecture](02-high-level-architecture.md) | Semantic/AST index so agents get the right context and stop hallucinating existing APIs. |
-| Controlled context building | [6. Context Engineering — Code Indexing & Token Savings](06-context-and-token-savings.md) | Index-first context + Static Prefix ordering + Context Compaction keep context accurate, minimal, and cacheable. |
+| Controlled context building | [6. Context Engineering — Code Indexing & Token Savings](06-context-and-token-savings.md) | Index-first context + Context Compaction keep context accurate and minimal. |
 | Agent guardrails | [5. Agent Prompt System & Routing](05-agent-prompt-system.md) | Scope-locked agents; file-glob permissions prevent Agent Trampling. |
 | Multi-pass with self-correction | [3. The 8-Pass Pipeline](03-8-pass-pipeline.md) | Narrow per-pass scope; failing tests feed the error back for up to 3 retries. |
 

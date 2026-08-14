@@ -87,7 +87,7 @@ graph TD
 | **PipelineOrchestrator** | [`src/core/orchestrator.ts#L22-L188`](../../../src/core/orchestrator.ts#L22-L188) | Thin DI wrapper over the XState actor: creates the machine, resumes from `xstateSnapshot`, bridges HITL events, persists state. |
 | **Pipeline machine** | [`src/core/machines/pipeline.machine.ts`](../../../src/core/machines/pipeline.machine.ts) | XState v5 machine orchestrating the 8 passes, HITL gates, atomic commits, pause/resume. |
 | **Self-correction machine** | [`src/core/machines/self-correction.machine.ts`](../../../src/core/machines/self-correction.machine.ts) | Per-pass retry loop (up to 3 retries) feeding failing test logs back to the agent. |
-| **Context builder/provider** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts), [`src/core/context-provider.ts`](../../../src/core/context-provider.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`, Static Prefix). |
+| **Context builder/provider** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts), [`src/core/context-provider.ts`](../../../src/core/context-provider.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`). |
 | **Payload & artefacts** | [`src/core/runners/shared.ts`](../../../src/core/runners/shared.ts) | `getAgentContextPayload`, `buildArtefacts` — assembles the JSON context + anchored `fileChanges`/`targetSymbols`. |
 | **Agent runner** | [`src/infrastructure/open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) | Builds opencode argv from a pass + payload, spawns it, persists the pass log. |
 | **Git service** | [`src/infrastructure/git-service.ts`](../../../src/infrastructure/git-service.ts) | Atomic commits, diff line ranges, branch creation, abort/rewind. |
@@ -151,7 +151,7 @@ sequenceDiagram
     MACH->>RUN: agentRunner.execute({ pass, ctx })
     RUN->>RUN: getAgentContextPayload + buildArtefacts
     RUN->>OPEN: spawn opencode (scoped prompt + payload)
-    OPEN->>LLM: prompt (Static Prefix context)
+    OPEN->>LLM: prompt (curated context)
     LLM-->>OPEN: response (edits)
     OPEN-->>RUN: stdout output
     RUN->>GIT: persist pass log
@@ -187,7 +187,7 @@ sequenceDiagram
 8. **Completion** — on `pipeline_complete` the session ends and the state file is deleted.
 
 > [!NOTE]
-> Steps 5–6 implement the two cost levers: **Static Prefix** (stable context first for KV-cache hits, [ADR-0006](../adrs/0006-context-control-optimisation.md)) and **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). See [10. Context Engineering](10-context-engineering.md).
+> Step 6 implements the main cost lever: **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). Static Prefix ([ADR-0006](../adrs/0006-context-control-optimisation.md)) is **deprecated / low priority** pending research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). See [10. Context Engineering](10-context-engineering.md).
 
 ---
 
@@ -218,4 +218,4 @@ sequenceDiagram
 - [2. High-Level Architecture (User)](../user-overview/02-high-level-architecture.md)
 - [8. Core Engine Internals](08-core-engine-internals.md) — how the orchestrator consumes injected services
 - [11. Infrastructure Adapters](11-infrastructure-adapters.md) — per-adapter deep dives
-- ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0006 Static Prefix](../adrs/0006-context-control-optimisation.md) · [0005 Context Compaction](../adrs/0005-context-compaction.md)
+- ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)

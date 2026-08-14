@@ -38,7 +38,7 @@ The machines are supported by these pure-core modules:
 | Module | File | Role |
 |---|---|---|
 | **Context provider** | [`src/core/context-provider.ts`](../../../src/core/context-provider.ts) | Pure per-pass context assembly from session history. |
-| **Context builder** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`, Static Prefix). |
+| **Context builder** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`). |
 | **Payload & artefacts** | [`src/core/runners/shared.ts`](../../../src/core/runners/shared.ts) | `getAgentContextPayload` / `buildArtefacts` — the JSON handed to each agent. |
 | **Skip protocol** | [`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts) | Parses `SKIP:N:reason` agent signals. |
 | **Log sanitisation** | [`src/core/log-sanitizer.ts`](../../../src/core/log-sanitizer.ts) | Strips control chars / truncates before log emission. |

@@ -201,7 +201,7 @@ Project domain terms MUST be capitalized consistently according to [`docs/archit
 | Term | Canonical Form | Usage Rule |
 |---|---|---|
 | Human-in-the-Loop | **HITL** | Use abbreviation after first mention |
-| Static Prefix | **Static Prefix** | Always capitalized |
+| Static Prefix | **Static Prefix** | Always capitalized; deprecated/low-priority pending research ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) |
 | Context Compaction | **Context Compaction** | Always capitalized |
 | Agent Trampling | **Agent Trampling** | Always capitalized |
 | pass | **pass** / **Pass N** | Lowercase when generic ("each pass"), capitalized when specific ("Pass 3") |

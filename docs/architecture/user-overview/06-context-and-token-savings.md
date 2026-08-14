@@ -140,9 +140,11 @@ When context is accurate, costs fall *mechanically*:
 | **Fewer file reads** | Agent queries the graph and reads only the payload-listed files | It already knows where the change is |
 | **Fewer reasoning iterations** | Starts from verified structure, not guesswork | No speculative "find it yourself" loops |
 | **Fewer self-correction retries** | Right context → right code → tests pass first time | Retries (up to 3) are for real failures, not context misses |
-| **Static Prefix caching** | Stable files (contracts/specs) ordered first for provider KV-cache hits | See [ADR-0006](../adrs/0006-context-control-optimisation.md) & [10. § 4](../contributor-deep-dive/10-context-engineering.md#4-static-prefix-adr-0006) |
 | **Context Compaction** | Per-pass error logs deleted on success | See [ADR-0005](../adrs/0005-context-compaction.md) & [10. § 5](../contributor-deep-dive/10-context-engineering.md#5-context-compaction-adr-0005) |
 | **SKIP protocol** | `assess-first` lets a pass declare a no-op (`SKIP:N:reason`) | No wasted tokens on already-satisfied passes ([`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts)) |
+
+> [!NOTE] Static Prefix caching is deprecated
+> An earlier cost lever — **Static Prefix** (ordering stable files first to maximise provider KV-cache hits, [ADR-0006](../adrs/0006-context-control-optimisation.md)) — is **deprecated / low priority**. Each pass can now be configured with its own LLM, and whether prefix engineering still helps is under research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). The savings above do **not** depend on it.
 
 Each of these individually saves tokens; together, with accuracy as the driver, they compound. But note the framing: **we never optimised for tokens first** — we optimised for the agent seeing exactly what it needs, and the waste simply disappeared.
 
@@ -166,7 +168,7 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 |---|---|
 | **Why should I trust the output?** | Because the agent starts from a verified knowledge graph + precise change descriptors, not from guessing which files matter. Structure-first context reduces hallucination and duplicate utilities at the source. |
 | **Is the model "smarter"?** | No — the *context* is better. Same model, less searching, more accurate edits. |
-| **Is the token saving real?** | Mechanically yes: fewer reads, fewer iterations, fewer retries, cache-friendly ordering, token-free verification. We have no own benchmarks yet — see [Placeholders](#placeholders--open-questions). |
+| **Is the token saving real?** | Mechanically yes: fewer reads, fewer iterations, fewer retries, token-free verification. We have no own benchmarks yet — see [Placeholders](#placeholders--open-questions). |
 | **Do I lose control?** | No — the payload is a *starting point*; the `indexer-first` rule actively encourages the agent to supplement it with its own structural exploration (see [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md)). |
 
 ---
@@ -176,7 +178,7 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 | Topic | Where |
 |---|---|
 | `CONTEXT_RULES`, `StateContextProvider`, payload & artefact construction | [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md) |
-| Static Prefix (ADR-0006) & Context Compaction (ADR-0005) | [10. § 4-5](../contributor-deep-dive/10-context-engineering.md#4-static-prefix-adr-0006) · [ADR-0006](../adrs/0006-context-control-optimisation.md) · [ADR-0005](../adrs/0005-context-compaction.md) |
+| Context Compaction (ADR-0005) | [10. § 5](../contributor-deep-dive/10-context-engineering.md#5-context-compaction-adr-0005) · [ADR-0005](../adrs/0005-context-compaction.md) |
 | AST-grep symbol resolution & anchored change descriptors | [10. § 6](../contributor-deep-dive/10-context-engineering.md#6-context-enrichment--anchored-change-descriptors) · [ADR-0007](../adrs/0007-ast-grep-symbol-resolver.md) |
 | How agents consume context (`indexer-first`, `use-file-changes`) | [9. Prompt Engineering § 3](../contributor-deep-dive/09-prompt-engineering.md#3-the-directive-catalogue-cross-pass-patterns) |
 
@@ -188,7 +190,7 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 |---|---|---|
 | C-1 | Benchmark numbers | Own token-savings figures for agentic-tdd; today we cite external studies only. |
 | C-2 | LiteLLM status | Verify whether `infra/docker-compose.yml` + `litellm_config.yaml` SSO/budget features are shipped or aspirational. |
-| C-3 | Context-cache optimisation | Context building tuned for cache hits is tracked upstream ([issue #51](https://github.com/Nistapp/agentic-tdd/issues/51)). |
+| C-3 | Static Prefix caching (deprecated) | Whether prefix engineering still helps given per-pass LLM config is under research — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). Re-evaluate before investing. |
 
 ---
 
@@ -197,5 +199,5 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 - Previous: [5. Agent Prompt System & Routing](05-agent-prompt-system.md)
 - Next: [7. Security Model & Sandboxing](07-security-model.md)
 - Deep dives: [10. Context Engineering](../contributor-deep-dive/10-context-engineering.md) · [9. Prompt Engineering](../contributor-deep-dive/09-prompt-engineering.md)
-- ADRs: [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0006 Static Prefix](../adrs/0006-context-control-optimisation.md) · [0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
+- ADRs: [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)
 - Related: [1. Why This Exists § 2.4](01-why-this-exists.md#24-reducing-the-non-determinism-of-genai) · [8. Engineering Concepts](08-engineering-concepts.md)

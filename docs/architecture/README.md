@@ -12,7 +12,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0003](adrs/0003-atomic-commits-per-pass.md) | Atomic Git Commits Per Pass (Not Squashed) | Accepted | 2026-06-01 |
 | [0004](adrs/0004-hitl-gate-after-pass-0.md) | HITL Gate After Pass 0 Only | Accepted | 2026-06-01 |
 | [0005](adrs/0005-context-compaction.md) | Context Compaction — Delete Error Logs on Pass Success | Accepted | 2026-07-01 |
-| [0006](adrs/0006-context-control-optimisation.md) | Static Prefix Ordering for Prompt Cache Hits | Accepted | 2026-07-01 |
+| [0006](adrs/0006-context-control-optimisation.md) | Static Prefix Ordering for Prompt Cache Hits | Deprecated (low priority — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) | 2026-07-01 |
 | [0007](adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for In-Process Symbol Resolution | Accepted | 2026-08-08 |
 | [0008](adrs/0008-observability-before-security.md) | Swap Pass Order — Observability Before Security | Accepted | 2026-08-01 |
 

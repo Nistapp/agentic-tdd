@@ -15,7 +15,7 @@ Items in no particular order of priority. Contributions welcome — see the [arc
 - [ ] Better HITL overall - this will keep improving once we start using this tool in real projects and tickets.
 - [ ] Semgrep integration as a hard-fail gate between passes (see architecture manifesto § 4.3)
 - [ ] DevContainer / Nix flake for deterministic agent sandboxing (see architecture manifesto § 2.3)
-- [ ] Benchmarking: quantify token savings from Static Prefix caching across model providers
+- [ ] **Low priority:** Research whether Static Prefix caching still helps now that each pass can have its own LLM — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)
 - [ ] Improve security agent - input sanitisation, zip bombs, size restrictions etc. Do we need different frameworks for frontend, backend and desktop apps ?
 - [ ] Pass 0 - better workflow - make a git branch before working on the problem.
 - [ ] Have a maker-checker pattern for soem critical parts like specs and mmd. 
@@ -61,7 +61,7 @@ Items in no particular order of priority. Contributions welcome — see the [arc
 ## Completed
 
 - [x] 8-pass pipeline orchestrator (`src/pipeline_v3_1.py`)
-- [x] Static Prefix anchoring (immutable file ordering for cache hits)
+- [x] Static Prefix anchoring (immutable file ordering for cache hits) — **now deprecated / low priority**, see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)
 - [x] Context Compaction (disposable error logs, clean pass starts)
 - [x] Self-correction loop (max 2 retries per guarded pass)
 - [x] Human-in-the-Loop gate after Pass 0

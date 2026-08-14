@@ -97,7 +97,8 @@ Conditionally attaches `--file` paths ([`src/core/runners/shared.ts#L31-L68`](..
 
 ## 4. Static Prefix (ADR-0006)
 
-Context payloads place **stable files first** (contracts/specs) to maximise provider-level KV **cache hits** across passes. Ordering is a hidden contract — changing `CONTEXT_RULES` can silently break cache reuse. See [ADR-0006](../adrs/0006-context-control-optimisation.md).
+> [!NOTE] Deprecated / low priority
+> Static Prefix ordering (placing **stable files first** — contracts/specs — to maximise provider-level KV **cache hits** across passes) is **deprecated** pending research. Each pass can now be configured with its own LLM, and whether prefix engineering still helps is unclear. See [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53) and [ADR-0006](../adrs/0006-context-control-optimisation.md). Do not invest further in cache-hit ordering until that question is settled.
 
 ## 5. Context Compaction (ADR-0005)
 
@@ -133,5 +134,5 @@ See [9. Prompt Engineering §3](09-prompt-engineering.md#3-the-directive-catalog
 ## Related
 
 - [6. Context Engineering — Code Indexing & Token Savings (User view)](../user-overview/06-context-and-token-savings.md)
-- [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0006 Static Prefix](../adrs/0006-context-control-optimisation.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
+- [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
 - [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md)
