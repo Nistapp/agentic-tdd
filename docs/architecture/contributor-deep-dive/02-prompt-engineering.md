@@ -1,4 +1,4 @@
-# 9. Prompt Engineering — Agent Files & Guardrails
+# 2. Prompt Engineering — Agent Files & Guardrails
 
 > **Target Audience:** Contributors designing or modifying pass prompts.
 > **Status:** DRAFT — grounded in `src/agents/pass-*.md`.

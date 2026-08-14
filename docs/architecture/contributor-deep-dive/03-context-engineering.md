@@ -1,4 +1,4 @@
-# 10. Context Engineering — Context Builder & Payload
+# 3. Context Engineering — Context Builder & Payload
 
 > **Target Audience:** Contributors extending context selection or payload shape.
 > **Status:** DRAFT — grounded in `src/core/context-builder.ts`, `context-provider.ts`, `runners/shared.ts`.

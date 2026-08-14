@@ -1,4 +1,4 @@
-# 15. Developer Guide
+# 8. Developer Guide
 
 > **Target Audience:** Contributors setting up locally and extending the pipeline.
 > **Status:** PLACEHOLDER — not yet drafted.

@@ -1,4 +1,4 @@
-# 14. Testing Strategy & Mock Patterns
+# 7. Testing Strategy & Mock Patterns
 
 > **Target Audience:** Contributors writing or extending the test suite.
 > **Status:** PLACEHOLDER — not yet drafted.

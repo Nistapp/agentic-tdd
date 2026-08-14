@@ -1,4 +1,4 @@
-# 8. Core Engine Internals — Harness Engineering (XState)
+# 1. Core Engine Internals — Harness Engineering (XState)
 
 > **Target Audience:** Contributors extending the pipeline.
 > **Status:** DRAFT — grounded in the implemented state machines.

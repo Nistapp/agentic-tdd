@@ -1,4 +1,4 @@
-# 16. Architecture Decision Records (ADRs) & Roadmap
+# 9. Architecture Decision Records (ADRs) & Roadmap
 
 > **Target Audience:** Contributors and users interested in the project's trajectory.
 > **Status:** PLACEHOLDER — not yet drafted.

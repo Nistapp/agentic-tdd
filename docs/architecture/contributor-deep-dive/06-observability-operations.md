@@ -1,4 +1,4 @@
-# 13. Observability, Logging, & Operations
+# 6. Observability, Logging, & Operations
 
 > **Target Audience:** Contributors debugging passes or extending logging.
 > **Status:** PLACEHOLDER — not yet drafted.

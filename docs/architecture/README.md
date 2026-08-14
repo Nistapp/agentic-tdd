@@ -42,14 +42,14 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 ## Contributor Deep Dive
 
 > [!NOTE]
-> Full implementation detail, grounded in `src/`. Pages 11, 13–15 are placeholders.
+> Full implementation detail, grounded in `src/`. Pages 6–9 are placeholders.
 
 | Page | Status |
 |---|---|
 | [1. Core Engine Internals — Harness Engineering (XState)](contributor-deep-dive/01-core-engine-internals.md) | Drafted |
 | [2. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/02-prompt-engineering.md) | Drafted |
 | [3. Context Engineering — Context Builder & Payload](contributor-deep-dive/03-context-engineering.md) | Drafted |
-| [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Placeholder |
+| [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Drafted (port→adapter map, lifecycle edge cases; open items O-4–O-6) |
 | [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
 | [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Placeholder |
 | [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Placeholder |
