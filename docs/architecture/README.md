@@ -42,7 +42,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 ## Contributor Deep Dive
 
 > [!NOTE]
-> Full implementation detail, grounded in `src/`. Pages 8–9 are placeholders.
+> Full implementation detail, grounded in `src/`. Page 9 is a placeholder.
 
 | Page | Status |
 |---|---|
@@ -53,7 +53,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
 | [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Drafted (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
 | [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Drafted (3-tier pyramid, DI mock inventory, machine & orchestrator patterns; open items T-3–T-5) |
-| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Placeholder |
+| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Drafted (prereqs: opencode + codebase-memory-mcp, local setup, opencode.json, verification, pass/DI extension; open items G-1–G-3) |
 | [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Placeholder |
 
 > [!TIP]
