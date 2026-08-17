@@ -5,7 +5,7 @@
 > _"Stop asking AI to write code. Start orchestrating AI to build software."_
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue)](https://www.typescriptlang.org)
 
 ---
@@ -34,7 +34,7 @@ Pass 6  Security Hardening     →  Secure Code + OWASP         [self-correction
 Pass 7  Documentation          →  docstrings + @see links
 ```
 
-Each guarded pass runs your local test suite and self-corrects (up to 2 retries) before advancing. Every pass produces an **atomic git commit** — so if an agent breaks something, you `git revert` one step and retry.
+Each guarded pass runs your local test suite and self-corrects (up to 3 retries) before advancing. Every pass produces an **atomic git commit** — so if an agent breaks something, you `git revert` one step and retry.
 
 ---
 
@@ -137,12 +137,24 @@ stateDiagram-v2
 
 ---
 
+## Documentation
+
+The full documentation lives in [`docs/`](docs/), split into two audience tracks:
+
+- **[User Overview](docs/architecture/user-overview/)** — for evaluators: why this exists, the high-level architecture, the 8-pass pipeline, security model, and cost/context engineering.
+- **[Contributor Deep Dive](docs/architecture/contributor-deep-dive/)** — for those extending the pipeline: core engine internals, prompt engineering, DI wiring, and testing strategy.
+- **[Architecture Decision Records](docs/architecture/adrs/)** — the immutable decision log.
+
+Start at the [architecture index](docs/architecture/README.md).
+
+---
+
 
 ## Quick Start
 
 ### Prerequisites
 
-- **Node.js >= 22**
+- **Node.js >= 18**
 - [opencode CLI](https://opencode.ai) 
 - An API key - [OpenRouter](https://openrouter.ai) or Claude or openAi codex (or configure opencode to use free models on openrouter or opencode Zen.)
 - `git` initialized in your working directory
@@ -224,7 +236,7 @@ The pipeline enforces that agents can only:
 - **Write**: only the files appropriate to their pass (e.g., the Docs agent can only edit comments)
 - **Execute**: nothing — no bash, no web fetch
 
-See `docs/architecture-manifesto.md` § 4 for the full agent guardrail design.
+See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/architecture/contributor-deep-dive/02-prompt-engineering.md) for the full agent guardrail design.
 
 ---
 
