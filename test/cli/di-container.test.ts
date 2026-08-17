@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createPipelineServices } from '../../src/cli/di-container.js';
+import { createPipelineServices, buildPipelineConfig } from '../../src/cli/di-container.js';
 import type { IFileSystem, IGitService } from '../../src/core/interfaces.js';
 import type { PipelineContext } from '../../src/core/types.js';
 import { TerminalRenderer } from '../../src/cli/terminal-renderer.js';
@@ -86,5 +86,25 @@ describe('createPipelineServices', () => {
       version: '1.0.0',
     });
     expect(typeof orchestrator.run).toBe('function');
+  });
+});
+
+describe('buildPipelineConfig', () => {
+  it('merges modelConfig.models into PipelineConfig.models', () => {
+    const config = buildPipelineConfig({
+      modelConfig: { models: { 'pass-0-design-agent': 'deepseek/deepseek-v4-pro' } },
+    });
+    expect(config.models).toEqual({ 'pass-0-design-agent': 'deepseek/deepseek-v4-pro' });
+  });
+
+  it('leaves models undefined when no modelConfig is provided', () => {
+    const config = buildPipelineConfig({});
+    expect(config.models).toBeUndefined();
+  });
+
+  it('still exposes opencodeLogPath and apiKeySet', () => {
+    const config = buildPipelineConfig({});
+    expect(config.opencodeLogPath).toBeTruthy();
+    expect(['present', 'missing']).toContain(config.apiKeySet);
   });
 });

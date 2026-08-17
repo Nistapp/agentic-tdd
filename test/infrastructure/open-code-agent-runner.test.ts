@@ -67,7 +67,7 @@ interface Mocks {
   spawner: IOpencodeSpawner;
 }
 
-function makeMocks(): Mocks {
+function makeMocks(configOverrides: Partial<PipelineConfig> = {}): Mocks {
   const fs: IFileSystem = {
     exists: vi.fn().mockResolvedValue(true),
     readFile: vi.fn().mockResolvedValue('model: test-model-v1\n---\n'),
@@ -81,6 +81,7 @@ function makeMocks(): Mocks {
   const config: PipelineConfig = {
     opencodeLogPath: '/home/fake/.local/share/opencode/log/opencode.log',
     apiKeySet: 'present',
+    ...configOverrides,
   };
 
   const spawner: IOpencodeSpawner = {
@@ -208,6 +209,31 @@ describe('OpenCodeAgentRunner', () => {
       expect(skipPermIdx).toBeGreaterThan(-1);
       expect(args[skipPermIdx + 1]).toBe('MY_TEST_PROMPT');
     });
+
+    it('R1: appends --model <value> before --dangerously-skip-permissions when models[agent] is set', async () => {
+      const m = makeMocks({ models: { [AGENT_NAMES[PipelinePass.Design]]: 'deepseek/custom-model' } });
+      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+
+      await runner.execute(makeRequest({ pass: PipelinePass.Design }));
+
+      const args = (m.spawner.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
+      expect(args).toContain('--model');
+      expect(args).toContain('deepseek/custom-model');
+      const modelIdx = args.indexOf('--model');
+      const skipPermIdx = args.indexOf('--dangerously-skip-permissions');
+      expect(modelIdx).toBeGreaterThan(-1);
+      expect(modelIdx).toBeLessThan(skipPermIdx);
+    });
+
+    it('R2: does NOT append --model when no model is configured (frontmatter fallback)', async () => {
+      const m = makeMocks();
+      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+
+      await runner.execute(makeRequest());
+
+      const args = (m.spawner.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
+      expect(args).not.toContain('--model');
+    });
   });
 
   describe('execute() — pre-flight logging', () => {
@@ -239,6 +265,36 @@ describe('OpenCodeAgentRunner', () => {
       const readFileCalls = (m.fs.readFile as ReturnType<typeof vi.fn>).mock.calls as string[][];
       const agentMdCall = readFileCalls.find(c => c[0].endsWith('.md'));
       expect(agentMdCall).toBeTruthy();
+    });
+
+    it('R3: logs the effective model from config when configured', async () => {
+      const m = makeMocks({ models: { [AGENT_NAMES[PipelinePass.Design]]: 'deepseek/from-config' } });
+      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+
+      await runner.execute(makeRequest({ pass: PipelinePass.Design }));
+
+      const preFlightCall = m.logger.calls.find(c =>
+        c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
+      );
+      expect(preFlightCall).toBeTruthy();
+      const payload = preFlightCall!.args[0] as Record<string, unknown>;
+      expect(payload.model).toBe('deepseek/from-config');
+      expect(payload.modelSource).toBe('config');
+    });
+
+    it('falls back to the frontmatter model in pre-flight when not configured', async () => {
+      const m = makeMocks();
+      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+
+      await runner.execute(makeRequest());
+
+      const preFlightCall = m.logger.calls.find(c =>
+        c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
+      );
+      expect(preFlightCall).toBeTruthy();
+      const payload = preFlightCall!.args[0] as Record<string, unknown>;
+      expect(payload.model).toBe('test-model-v1');
+      expect(payload.modelSource).toBe('frontmatter');
     });
   });
 

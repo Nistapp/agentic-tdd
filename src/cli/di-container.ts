@@ -18,6 +18,7 @@ import { loggers } from '../utils/logger.js';
 import type { PipelineConfig, IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import type { PipelineContext } from '../core/types.js';
 import type { TerminalRenderer } from './terminal-renderer.js';
+import type { ModelConfig } from './model-config.js';
 
 import { attachTerminalListener } from './terminal-event-listener.js';
 import { createHitlHandler } from './hitl-handler.js';
@@ -30,10 +31,21 @@ export interface ContainerOptions {
   version: string;
   stateStore?: IStateStore;
   noContextEnrich?: boolean;
+  /** Resolved per-agent model config (see `resolveModelConfig`). */
+  modelConfig?: ModelConfig;
 }
 
 export interface PipelineServices {
   orchestrator: PipelineOrchestrator;
+}
+
+/** Build the runtime `PipelineConfig` DI seam from container options. */
+export function buildPipelineConfig(opts: Pick<ContainerOptions, 'modelConfig'>): PipelineConfig {
+  return {
+    opencodeLogPath: getOpencodeLogPath(),
+    apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+    models: opts.modelConfig?.models,
+  };
 }
 
 export function createPipelineServices(opts: ContainerOptions): PipelineServices {
@@ -45,10 +57,7 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
   const cmdRunner = new CommandRunner();
   const hitlHandler = createHitlHandler(ctx, undefined, (msg) => renderer.log(msg));
 
-  const pipelineConfig: PipelineConfig = {
-    opencodeLogPath: getOpencodeLogPath(),
-    apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
-  };
+  const pipelineConfig: PipelineConfig = buildPipelineConfig(opts);
 
   const agentRunner = new OpenCodeAgentRunner(
     fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner,

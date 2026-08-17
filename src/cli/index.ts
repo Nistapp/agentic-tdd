@@ -75,6 +75,8 @@ program
   .option('--resume', 'Resume an active Agentic TDD session')
   .option('--abort', 'Abort the active session and rewind Git history')
   .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
+  .option('--model <model>', 'Override the model for every agent (provider/model)')
+  .option('--config <path>', 'Path to an alternate config.json (overrides .agentic-tdd/config.json)')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -113,7 +115,19 @@ program
         await abortSession(stateStore, git);
       }
 
-      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
+      const model = typeof options.model === 'string' ? options.model : undefined;
+      const configPath = typeof options.config === 'string' ? options.config : undefined;
+
+      await resumeSession(
+        stateStore,
+        fs,
+        git,
+        renderer,
+        PIPELINE_VERSION,
+        noContextEnrich,
+        model,
+        configPath,
+      );
       return;
     }
 

@@ -55,16 +55,16 @@ Supporting constants live in `src/utils/`: state/log path helpers in [`paths.ts`
 
 ## 2. `OpenCodeAgentRunner` — the agent invocation seam
 
-`OpenCodeAgentRunner` ([`open-code-agent-runner.ts#L11-L107`](../../../src/infrastructure/open-code-agent-runner.ts#L11-L107)) translates a high-level `AgentRunRequest` into a concrete `opencode run` argv and owns the per-pass output log.
+`OpenCodeAgentRunner` ([`open-code-agent-runner.ts#L11-L119`](../../../src/infrastructure/open-code-agent-runner.ts#L11-L119)) translates a high-level `AgentRunRequest` into a concrete `opencode run` argv and owns the per-pass output log.
 
 ### 2.1 Execution flow
 
 [`execute()`](../../../src/infrastructure/open-code-agent-runner.ts#L29-L38) runs four steps:
 
-1. **`#logPreFlight`** ([#L71-L91](../../../src/infrastructure/open-code-agent-runner.ts#L71-L91)) — reads the agent file from `PACKAGE_AGENTS_DIR` to extract the shipped `model:`, logs the pass, agent name, model, and API-key presence (`PipelineConfig.apiKeySet`) at `debug` level.
-2. **`#buildArgs`** ([#L42-L69](../../../src/infrastructure/open-code-agent-runner.ts#L42-L69)) — assembles the argv (below).
+1. **`#logPreFlight`** ([#L76-L99](../../../src/infrastructure/open-code-agent-runner.ts#L76-L99)) — logs the pass, agent name, the **effective** model (config value, else the agent file's frontmatter `model:`), its source (`config` | `frontmatter` | `none`), and API-key presence (`PipelineConfig.apiKeySet`) at `debug` level.
+2. **`#buildArgs`** ([#L42-L74](../../../src/infrastructure/open-code-agent-runner.ts#L42-L74)) — assembles the argv (below), appending `--model <m>` when a model is configured for the pass.
 3. **`#spawner.spawn(args)`** — delegates process lifecycle to the `IOpencodeSpawner` (the shared `CommandRunner`).
-4. **`#persistPassLog`** ([#L93-L106](../../../src/infrastructure/open-code-agent-runner.ts#L93-L106)) — writes the combined output to `<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log` ([`getLogDir`](../../../src/utils/paths.ts#L24-L26)); failures only warn, never throw.
+4. **`#persistPassLog`** ([#L101-L114](../../../src/infrastructure/open-code-agent-runner.ts#L101-L114)) — writes the combined output to `<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log` ([`getLogDir`](../../../src/utils/paths.ts#L24-L26)); failures only warn, never throw.
 
 ### 2.2 The argv contract
 
@@ -73,12 +73,14 @@ opencode run
   --agent pass-N-*-agent
   [--file <designMmd>] [--file <specGherkin>] [--file <specFile>] [--file <errorLog>]
   [--print-logs --log-level DEBUG]      # only when ILogger.level is debug/trace
+  [--model <provider/model>]            # effective model from config, when configured
   --dangerously-skip-permissions <prompt>
 ```
 
 - Agent selection uses `AGENT_NAMES[pass]` ([`types.ts#L26-L35`](../../../src/core/types.ts#L26-L35)).
 - `--file` attachments mirror `AgentArtefacts` ([`types.ts#L408-L414`](../../../src/core/types.ts#L408-L414)): the design Mermaid, Gherkin spec, the original feature spec, and — on self-correction retries — the error log. The prompt itself is the **positional** argument.
 - `--print-logs` / `--log-level DEBUG` are injected only when the engine's log level is `debug`/`trace`, so noisy agent output doesn't leak by default.
+- `--model` is appended when `PipelineConfig.models[AGENT_NAMES[pass]]` resolves (from `config.default.json` + `.agentic-tdd/config.json`; see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)); otherwise opencode falls back to the agent file's frontmatter `model:`.
 
 > [!NOTE] Guardrail interaction — verify
 > The runner passes `--dangerously-skip-permissions`, which suppresses opencode's interactive permission prompts. The tool-level deny profile in each agent file (see [2. Prompt Engineering §2.2](02-prompt-engineering.md#22-permission-matrix)) is the shipped guardrail against **Agent Trampling**; whether `--dangerously-skip-permissions` weakens opencode's own permission system beyond the agent's `permission:` block is an open question (O-4 below) and should be verified against the opencode version in use.

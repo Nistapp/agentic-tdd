@@ -118,7 +118,7 @@ Wiring happens in one place — [`createPipelineServices`](../../../src/cli/di-c
 
 1. A single `EventBus` is created and subscribed to by `attachTerminalListener` (progress rendering).
 2. `CommandRunner` (test runner + opencode spawner), the HITL handler, and `OpenCodeAgentRunner` are constructed.
-3. `PipelineConfig` is assembled from `getOpencodeLogPath()` and the presence of `OPENROUTER_API_KEY`.
+3. `PipelineConfig` is assembled via `buildPipelineConfig` from `getOpencodeLogPath()`, the presence of `OPENROUTER_API_KEY`, and the resolved per-agent model config ([`resolveModelConfig`](../../../src/cli/model-config.ts), [ADR-0009](../adrs/0009-configurable-per-agent-models.md)).
 4. All of it — plus `StateContextProvider`, the optional `AstGrepSymbolResolver`, and `JsonStateStore` — is passed to the `PipelineOrchestrator` constructor as interfaces.
 
 > [!NOTE] Where to add a new adapter

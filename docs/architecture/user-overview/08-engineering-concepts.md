@@ -35,7 +35,7 @@
 | **Prompt-injection defence** | XML semantic walls separate instructions from payload | `<directives>` / `<task>` XML sections | [2. Prompt Engineering §1](../contributor-deep-dive/02-prompt-engineering.md#1-file-anatomy) |
 | **Scope guardrails / anti-Trampling** | Tool deny-lists + per-pass write scope prevent one pass undoing another | YAML `permission` block | [2. Prompt Engineering §2.2](../contributor-deep-dive/02-prompt-engineering.md#22-permission-matrix) |
 | **Harness independence** | Agents not embedded in a specific harness; opencode today, others later | `IAgentRunner` / `IOpencodeSpawner` ports | [1. Why This Exists §2.6](01-why-this-exists.md#26-harness-independence) |
-| **Model routing** | Per-pass model via agent-file frontmatter (static, user-overridable) | `model:` in `src/agents/pass-*.md` | [2. Prompt Engineering §2.1](../contributor-deep-dive/02-prompt-engineering.md#21-model-routing) |
+| **Model routing** | Per-agent model via `config.default.json` + `.agentic-tdd/config.json`, passed as `--model`; frontmatter is the fallback | `agents.models` in `config.default.json`; `resolveModelConfig` | [2. Prompt Engineering §2.1](../contributor-deep-dive/02-prompt-engineering.md#21-model-routing) · [ADR-0009](../adrs/0009-configurable-per-agent-models.md) |
 | **Event-bus pub/sub** | Decoupled UI/telemetry via typed events | `IEventBus`; event catalogue | [1. Core Engine Internals §1.3](../contributor-deep-dive/01-core-engine-internals.md#13-events) |
 | **Structured logging + sanitisation** | pino child loggers; control chars stripped, strings truncated | `log-sanitizer.ts`; `pino-logger.ts` | [6. Observability & Operations](../contributor-deep-dive/06-observability-operations.md) |
 | **Session persistence / snapshot resume** | XState snapshot persisted; `--resume` replays it | `stateStore`; `actor.getPersistedSnapshot()` | [1. Core Engine Internals §5](../contributor-deep-dive/01-core-engine-internals.md#5-pause--resume) |
@@ -51,7 +51,6 @@ These appear in the enterprise manifesto but are **not implemented in `src/`/`in
 - Static Prefix (deprecated — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53))
 - Bloop cross-repo semantic indexing
 - DevContainer / Nix deterministic sandboxing
-- Config-file model routing
 - True spec parity (see [1. Why This Exists §2.3](01-why-this-exists.md#23-minimising-specification-drift))
 
 ---

@@ -64,6 +64,11 @@ export class OpenCodeAgentRunner implements IAgentRunner {
       args.push('--print-logs', '--log-level', 'DEBUG');
     }
 
+    const model = this.#config.models?.[AGENT_NAMES[request.pass]];
+    if (model) {
+      args.push('--model', model);
+    }
+
     args.push('--dangerously-skip-permissions', request.prompt);
     return args;
   }
@@ -72,20 +77,23 @@ export class OpenCodeAgentRunner implements IAgentRunner {
     const agentName = AGENT_NAMES[request.pass];
     const agentFile = resolve(PACKAGE_AGENTS_DIR, `${agentName}.md`);
 
-    let model = '<unknown>';
+    let frontmatterModel: string | undefined;
     try {
       if (await this.#fs.exists(agentFile)) {
         const content = await this.#fs.readFile(agentFile);
         const match = content.match(/^model:\s*(.+)$/m);
-        if (match) model = (match[1] ?? '').trim() || '<unknown>';
+        if (match) frontmatterModel = (match[1] ?? '').trim() || undefined;
       }
     } catch {
       logger.warn({ agentFile }, 'Could not read agent model');
     }
 
+    const model = this.#config.models?.[agentName] ?? frontmatterModel ?? '<unknown>';
+    const modelSource = this.#config.models?.[agentName] ? 'config' : frontmatterModel ? 'frontmatter' : 'none';
+
     const apiKeySet = this.#config.apiKeySet;
     logger.debug(
-      { pass: request.pass, agent: agentName, model, apiKey: apiKeySet },
+      { pass: request.pass, agent: agentName, model, modelSource, apiKey: apiKeySet },
       'Pre-flight: invoking opencode agent',
     );
   }

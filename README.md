@@ -219,6 +219,8 @@ agentic-tdd -feature-desc-file <spec_file> [options]
 | --skip-hitl | Skip human-in-the-loop prompts |
 | --base-branch <branch> | Base branch to create the feature branch from |
 | --log-level <level> | Log level (DEBUG, INFO, WARNING, ERROR) (default: "INFO") |
+| --model <model> | Override the model for every agent (provider/model) |
+| --config <path> | Path to an alternate config.json (overrides .agentic-tdd/config.json) |
 | --resume | Resume an active Agentic TDD session |
 | --abort | Abort the active session and rewind Git history |
 | -h, --help | display help for command |
@@ -228,7 +230,30 @@ agentic-tdd -feature-desc-file <spec_file> [options]
 
 ## Agent Configuration
 
-Agents are defined in `src/agents/`. Each agent file has YAML frontmatter that locks the model, permissions, and scope.
+Agents are defined in `src/agents/`. Each agent file has YAML frontmatter that defines its scope and a fallback `model:`. The **effective model per agent** is resolved at runtime from `config.json` (see below).
+
+### Configuring agent models
+
+Copy the committed template to the git-ignored override location and edit it:
+
+```bash
+cp config.default.json .agentic-tdd/config.json
+```
+
+`config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to an opencode `provider/model` string:
+
+```jsonc
+{
+  "agents": {
+    "models": {
+      "pass-0-design-agent": "deepseek/deepseek-v4-pro",
+      "pass-3-core-implementation-agent": "deepseek/deepseek-v4-flash"
+    }
+  }
+}
+```
+
+Precedence (highest first): `--model <m>` → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter. Shipped defaults: passes 0–2 on `deepseek-v4-pro`, passes 3–7 on `deepseek-v4-flash`.
 
 The pipeline enforces that agents can only:
 
@@ -236,7 +261,7 @@ The pipeline enforces that agents can only:
 - **Write**: only the files appropriate to their pass (e.g., the Docs agent can only edit comments)
 - **Execute**: nothing — no bash, no web fetch
 
-See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/architecture/contributor-deep-dive/02-prompt-engineering.md) for the full agent guardrail design.
+See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/architecture/contributor-deep-dive/02-prompt-engineering.md) for the full agent guardrail design, and [ADR-0009](docs/architecture/adrs/0009-configurable-per-agent-models.md) for the config-driven routing decision.
 
 ---
 
