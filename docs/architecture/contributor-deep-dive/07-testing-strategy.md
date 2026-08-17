@@ -1,7 +1,7 @@
 # 7. Testing Strategy & Mock Patterns
 
 > **Target Audience:** Contributors writing or extending the test suite.
-> **Status:** DRAFT — grounded in `test/`, `vitest.config.ts`, and the DI contracts in `src/core/interfaces.ts`.
+> **Status:** Published — grounded in `test/`, `vitest.config.ts`, and the DI contracts in `src/core/interfaces.ts`.
 > **Prev:** [6. Observability, Logging, & Operations](06-observability-operations.md) · **Next:** [8. Developer Guide](08-developer-guide.md)
 
 ---

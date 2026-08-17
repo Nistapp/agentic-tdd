@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects evaluating agentic-tdd.
 > **Key Goal:** Explain how the 8 passes are *driven* — the Markdown agent files that define each sub-agent, the scope guardrails that keep them from trampling each other, and the model-routing strategy — so evaluators can judge safety, customisation, and cost.
-> **Status:** Draft — wiki page 5 of the User Overview. Grounded in `src/agents/pass-*.md` and `src/infrastructure/open-code-agent-runner.ts`; deep prompt-engineering detail is in the Contributor Track.
+> **Status:** Published (v0.1.0-Beta) — Page 5 of the User Overview. Grounded in `src/agents/pass-*.md` and `src/infrastructure/open-code-agent-runner.ts`; deep prompt-engineering detail is in the Contributor Track.
 
 ---
 

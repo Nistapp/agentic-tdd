@@ -2,7 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-06-01 (estimated)
-* **Deciders:** <!-- @github-handle -->
+* **Deciders:** @kcramakrishna
 
 > [!WARNING] Title vs. shipped behaviour
 > The title records the original decision (a single gate after Pass 0). The **shipped code implements two gates** — after Pass 0 (Design) and after Pass 2 (Test Generation). This ADR documents the shipped behaviour as authoritative; the title should be amended (see [Placeholders — H-2](#placeholders--open-items)).

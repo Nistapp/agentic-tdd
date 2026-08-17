@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects evaluating agentic-tdd.
 > **Key Goal:** Explain the 8-pass flow — what each pass does, its inputs and gates — and how *one atomic git commit per pass* makes the pipeline deterministic, resumable, and safe to roll back.
-> **Status:** Draft — wiki page 3 of the User Overview. Diagram and table are grounded in `src/agents/pass-*.md` and `src/core/types.ts`; the rollback section is grounded in `src/core/machines/pipeline.machine.ts` and `src/cli/session.ts`.
+> **Status:** Published (v0.1.0-Beta) — Page 3 of the User Overview. Diagram and table are grounded in `src/agents/pass-*.md` and `src/core/types.ts`; the rollback section is grounded in `src/core/machines/pipeline.machine.ts` and `src/cli/session.ts`.
 
 ---
 

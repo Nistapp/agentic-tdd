@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects evaluating agentic-tdd.
 > **Key Goal:** Explain *why* the core engine is built the way it is — as a **state machine** — and why that is the right mental model for orchestrating AI agents.
-> **Status:** Draft — wiki page 4 of the User Overview. Concept-focused; implementation details are linked out to the Contributor Track.
+> **Status:** Published (v0.1.0-Beta) — Page 4 of the User Overview. Concept-focused; implementation details are linked out to the Contributor Track.
 
 ---
 

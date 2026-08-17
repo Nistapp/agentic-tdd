@@ -2,7 +2,7 @@
 
 * **Status:** Deprecated — low priority, may no longer be relevant
 * **Date:** 2026-07-01 (estimated)
-* **Deciders:** <!-- @github-handle -->
+* **Deciders:** @kcramakrishna
 
 > [!NOTE] Deprecation
 > Static Prefix caching has been **deprecated** pending further research. Each pass's agent file pins its own `model:` in YAML frontmatter — and per-pass model configuration at runtime is planned — so the value of engineering prefix-cache hits *across* passes is no longer clear. Tracked in [discussion #53 — "Static Prefix caching redundant?"](https://github.com/Nistapp/agentic-tdd/discussions/53). The feature is not lost to regression, but it is deferred until we establish whether it still helps in our context. Do not invest further in cache-hit ordering until that question is settled.
@@ -47,7 +47,7 @@ The full path that realises (and today, still reflects) the decision:
 | 4. Invocation | `OpenCodeAgentRunner.#buildArgs` ([`src/infrastructure/open-code-agent-runner.ts#L42-L69`](../../../src/infrastructure/open-code-agent-runner.ts#L42-L69)) | `opencode run --agent pass-N --file <artefacts> <prompt>` — the byte-prefix boundary. |
 | 5. (Surface) | `TerminalRenderer.banner` ([`src/cli/terminal-renderer.ts#L71`](../../../src/cli/terminal-renderer.ts#L71)) | Still prints `Cache strategy: Static Prefix  +  Context Compaction` — a leftover of the two-lever strategy. |
 
-**Deprecation rationale (current status).** Each pass agent pins its own `model:` in its YAML frontmatter (e.g. [`pass-3-core-implementation-agent.md#L8-L11`](../../../src/agents/pass-3-core-implementation-agent.md#L8-L11)), and `#logPreFlight` reads it back for observability ([`open-code-agent-runner.ts#L71-L91`](../../../src/infrastructure/open-code-agent-runner.ts#L71-L91)). Once passes run **different models/providers** — each with its own KV cache and tokenizer — a prefix built for pass N does not hit in pass N+1. Runtime per-pass model configuration is planned (see [9. ADRs & Roadmap § 3.2](../contributor-deep-dive/09-adrs-roadmap.md#32-context-indexing--token-efficiency)); the value of prefix engineering depends on model homogeneity, which is no longer guaranteed. The decision is therefore **deferred, not reverted** — `CONTEXT_RULES` ordering remains, but cache-hit engineering is not a design goal until [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53) is resolved.
+**Deprecation rationale (current status).** Each pass agent pins its own `model:` in its YAML frontmatter (e.g. [`pass-3-core-implementation-agent.md#L8-L11`](../../../src/agents/pass-3-core-implementation-agent.md#L8-L11)), and `#logPreFlight` reads it back for observability ([`open-code-agent-runner.ts#L71-L91`](../../../src/infrastructure/open-code-agent-runner.ts#L71-L91)). Once passes run **different models/providers** — each with its own KV cache and tokenizer — a prefix built for pass N does not hit in pass N+1. Runtime per-pass model configuration is planned (see [5. Agent Prompt System §3.2](../user-overview/05-agent-prompt-system.md#32-overriding-the-routing)); the value of prefix engineering depends on model homogeneity, which is no longer guaranteed. The decision is therefore **deferred, not reverted** — `CONTEXT_RULES` ordering remains, but cache-hit engineering is not a design goal until [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53) is resolved.
 
 ---
 

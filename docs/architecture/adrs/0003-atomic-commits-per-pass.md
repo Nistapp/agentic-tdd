@@ -2,7 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-06-01 (estimated)
-* **Deciders:** <!-- @github-handle -->
+* **Deciders:** @kcramakrishna
 
 ---
 

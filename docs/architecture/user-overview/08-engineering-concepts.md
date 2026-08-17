@@ -1,7 +1,7 @@
 # 8. Engineering Concepts — What agentic-tdd Implements
 
 > **Target Audience:** Users and contributors who want a shared vocabulary for *how* agentic-tdd works.
-> **Status:** DRAFT — every concept is grounded in implemented code (source of truth), not aspirational plans.
+> **Status:** Published — every concept is grounded in implemented code (source of truth), not aspirational plans.
 > **Prev:** [7. Security Model & Sandboxing](07-security-model.md) · **Next:** [Contributor Track](../contributor-deep-dive/01-core-engine-internals.md)
 
 ---

@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Security Leads, and Architects.
 > **Key Goal:** Give evaluators an honest picture of what agentic-tdd protects today (basic hygiene), what it plans to protect (enterprise controls), and the threat model it is designed around.
-> **Status:** Draft — wiki page 7 of the User Overview. Grounded in `src/infrastructure/git-service.ts`, `src/agents/pass-6-security-agent.md`, `src/core/log-sanitizer.ts`, and `src/infrastructure/open-code-agent-runner.ts`. This is the most aspirational page in the wiki; every planned item carries an explicit banner and nothing planned is described as shipped.
+> **Status:** Published (v0.1.0-Beta) — Page 7 of the User Overview. Grounded in `src/infrastructure/git-service.ts`, `src/agents/pass-6-security-agent.md`, `src/core/log-sanitizer.ts`, and `src/infrastructure/open-code-agent-runner.ts`. This is the most aspirational page in the documentation; every planned item carries an explicit banner and nothing planned is described as shipped.
 
 > [!IMPORTANT] Read this banner first
 > **Most of what a security-conscious evaluator will ask for — Semgrep hard-fail gates, DevContainer/Nix sandboxing, gateway-level PII/DLP masking, per-pass write-locks — is planned, not shipped.** We intend to close these gaps within this year, but today the shipped surface is deliberately minimal: *basic git hygiene, tool-level agent permissions, prompt-injection walling, log sanitization, and an OWASP-focused security-hardening agent pass.* See [§ 3](#3-planned-controls-the-honest-roadmap) for the roadmap.
@@ -144,14 +144,14 @@ These are tracked on the [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-ro
 | Topic | Where |
 |---|---|
 | Permission matrix, agent file anatomy, directive catalogue | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
-| Log sanitizer & logging architecture | [6. Observability, Logging, & Operations](../contributor-deep-dive/06-observability-operations.md) (placeholder) |
+| Log sanitizer & logging architecture | [6. Observability, Logging, & Operations](../contributor-deep-dive/06-observability-operations.md) |
 | Runner invocation & `--dangerously-skip-permissions` | [5. CLI & DI Wiring](../contributor-deep-dive/05-cli-di-wiring.md) |
 | Pass 6 prompt, checklist, directives | [`src/agents/pass-6-security-agent.md`](../../../src/agents/pass-6-security-agent.md) |
 | Why Security runs after Observability | [ADR-0008](../adrs/0008-observability-before-security.md) |
 | Git service guards & rollback | [`src/infrastructure/git-service.ts`](../../../src/infrastructure/git-service.ts) · [3. § 4](03-8-pass-pipeline.md#4-one-atomic-commit-per-pass--rollback-pause-resume-abort) |
 
 > [!NOTE] Contributor-track gap
-> There is no dedicated Contributor Deep Dive page for the security model yet; the observability/logging page ([13](../contributor-deep-dive/06-observability-operations.md)) is also still a placeholder. Once one is drafted, this section should link to it rather than to `src/` files directly.
+> There is no dedicated Contributor Deep Dive page for the security model yet. The closest is [6. Observability, Logging, & Operations](../contributor-deep-dive/06-observability-operations.md); until a security deep-dive is drafted, this section links to `src/` files directly.
 
 ---
 

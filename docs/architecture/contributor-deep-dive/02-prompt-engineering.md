@@ -1,7 +1,7 @@
 # 2. Prompt Engineering — Agent Files & Guardrails
 
 > **Target Audience:** Contributors designing or modifying pass prompts.
-> **Status:** DRAFT — grounded in `src/agents/pass-*.md`.
+> **Status:** Published — grounded in `src/agents/pass-*.md`.
 > **Prev:** [1. Core Engine Internals](01-core-engine-internals.md) · **Next:** [3. Context Engineering](03-context-engineering.md)
 
 ---
@@ -104,7 +104,7 @@ Passes 3–6 receive a `targetSymbols` map (which functions upstream passes chan
 
 > You MUST prioritize your edits to the functions listed in this map. You may edit outside this map ONLY if it is critical to completing the pass mandate. If you make out-of-scope changes, add an inline comment: `// OUT-OF-SCOPE: {pass}-agent — {reason}`.
 
-This reconciles tight scoping with the `indexer-first` exploration mandate — see `docs/Note-on-context-mgmt.md` for the analysis that led here.
+This reconciles tight scoping with the `indexer-first` exploration mandate — see [3. Context Engineering §7](03-context-engineering.md#7-how-agents-consume-it) for the analysis that led here.
 
 ### 3.4 `use-file-changes` — drift-resistant navigation
 
@@ -154,6 +154,5 @@ See [8. Developer Guide](08-developer-guide.md) for the end-to-end recipe.
 ## Related
 
 - [5. Agent Prompt System & Routing (User view)](../user-overview/05-agent-prompt-system.md)
-- [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md) — why context is advisory, not restrictive
-- [3. Context Engineering](03-context-engineering.md) — what the payload contains
+- [3. Context Engineering](03-context-engineering.md) — why context is advisory, not restrictive
 - [1. Core Engine Internals](01-core-engine-internals.md) — how SKIP / retries are orchestrated

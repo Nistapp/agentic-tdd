@@ -1,7 +1,7 @@
 # 9. ADRs & Roadmap
 
 > **Target Audience:** Contributors and evaluators interested in the project's trajectory.
-> **Status:** DRAFT — ADR index grounded in `docs/architecture/adrs/`; roadmap consolidated from the retired `docs/roadmap.md`.
+> **Status:** Published — ADR index grounded in `docs/architecture/adrs/`; roadmap consolidated from the retired `docs/roadmap.md`.
 > **Prev:** [8. Developer Guide](08-developer-guide.md)
 
 ---
@@ -29,9 +29,7 @@ This page is the single destination for two kinds of project memory:
 | [0008](../adrs/0008-observability-before-security.md) | Swap pass order — Observability (5) before Security (6) | Accepted | 2026-08-01 |
 
 > [!IMPORTANT]
-> Several ADR bodies (0001–0005, 0007, 0008) still carry `<!-- TODO -->` placeholders for their Context / Decision sections — only their **status and title** are finalised. Drafting the full bodies is open work; the decisions themselves are reflected in code and the deep-dive pages that cite them.
->
-> Deprecation notes: **0006** (Static Prefix) is tombstoned in place with its deprecation notice (per STYLE_GUIDE §7.1 — never delete, only supersede).
+> All ADR bodies are fully drafted (Context / Decision / Consequences). Deprecation note: **0006** (Static Prefix) is tombstoned in place with its deprecation notice (per STYLE_GUIDE §7.1 — never delete, only supersede).
 
 ---
 
@@ -54,11 +52,10 @@ This page is the single destination for two kinds of project memory:
 - Unit-test maker/checker with **different models** (the generated tests themselves may be wrong and need independent review)
 - Formal held-out benchmark / acceptance metric (no pass/fail threshold exists today)
 
-### 3.2 Context, indexing & token efficiency
+### 3.2 Detailed, world-class TSDoc documentation for agentic-tdd itself
 
-- **Bloop**-style cross-repo semantic indexing (precise context to cut hallucination, retries, and cost)
-- Reopen the **Static Prefix** question ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) — low priority
-- Config-file mechanism for runtime/model routing (SSO-adjacent; see [5. Agent Prompt System §discussion #52](../user-overview/05-agent-prompt-system.md#discussion-52))
+- **agentic-documentation**- We will use agentic-tdd to build a harness to generate indepth documentation for legacy/brownfiled code bases: https://github.com/Nistapp/agentic-tdd/discussions/37
+- agentic-tdd will be the first project where we will test it i.e., use agentic-documentation to document agentic-tdd. Dogfooding our harnesses !! We hope to get this done by September 2026.
 
 ### 3.3 Guardrails & tooling
 
@@ -91,7 +88,7 @@ This page is the single destination for two kinds of project memory:
 
 | # | Topic | What is missing |
 |---|---|---|
-| R-1 | ADR bodies | Context/Decision TODOs in 0001–0005, 0007, 0008 are undrafted; only status/title are finalised. |
+| R-1 | ADR bodies | **Resolved** — all ADR bodies (0001–0008) are fully drafted; only minor open items remain in their per-ADR Placeholders tables. |
 | R-2 | Manifesto salvage | The retired `architecture-manifesto.md` carried the enterprise vision (SSO, gateways, guardrails). Its shipped-vs-planned split now lives across the user-overview pages and this roadmap, but no single replacement "manifesto" page exists — decide whether to add one or keep it distributed. |
 | R-3 | Deprecation log | Onboarding a lightweight "deprecated / retired docs" index so removed files (e.g. `roadmap.md`, `architecture-manifesto.md`) keep navigable tombstones. |
 
@@ -102,5 +99,5 @@ This page is the single destination for two kinds of project memory:
 - [Architecture index & ADR list](../README.md) — canonical ADR status table
 - [8. Engineering Concepts — planned list](../user-overview/08-engineering-concepts.md#concepts-that-are-planned-not-shipped) — concept-level roadmap cross-check
 - [7. Security Model & Sandboxing](../user-overview/07-security-model.md) — shipped vs. planned security controls
-- [1. Why This Exists — FAQ](../user-overview/01-why-this-exists.md) — "why no TSDocs / larger goal" provenance placeholder (P-4)
+- [1. Why This Exists — FAQ](../user-overview/01-why-this-exists.md) — "why no TSDocs / larger goal" (P-4, resolved via §3.2)
 - [STYLE_GUIDE §7 — ADR lifecycle](../../STYLE_GUIDE.md#7-architectural-decision-record-adr-lifecycle)

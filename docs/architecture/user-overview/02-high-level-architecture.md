@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects evaluating agentic-tdd.
 > **Key Goal:** Explain *how the system is put together at a glance* — the actors, external systems, and the 8-pass flow — so evaluators can reason about security, cost, and integration without reading source code.
-> **Status:** Draft — wiki page 2 of the User Overview. Diagrams are grounded in the implemented `src/` code; enterprise "vision" components are explicitly flagged as planned.
+> **Status:** Published (v0.1.0-Beta) — Page 2 of the User Overview. Diagrams are grounded in the implemented `src/` code; enterprise "vision" components are explicitly flagged as planned.
 
 ---
 

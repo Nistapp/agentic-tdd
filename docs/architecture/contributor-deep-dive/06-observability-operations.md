@@ -1,7 +1,7 @@
 # 6. Observability, Logging, & Operations
 
 > **Target Audience:** Contributors debugging passes or extending logging.
-> **Status:** DRAFT — grounded in `src/core/log-sanitizer.ts`, `src/utils/logger.ts`, `src/infrastructure/`, and the CLI wiring.
+> **Status:** Published — grounded in `src/core/log-sanitizer.ts`, `src/utils/logger.ts`, `src/infrastructure/`, and the CLI wiring.
 > **Prev:** [5. CLI & Dependency Injection Wiring](05-cli-di-wiring.md) · **Next:** [7. Testing Strategy & Mock Patterns](07-testing-strategy.md)
 
 ---

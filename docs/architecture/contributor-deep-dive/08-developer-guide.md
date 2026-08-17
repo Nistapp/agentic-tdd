@@ -1,7 +1,7 @@
 # 8. Developer Guide
 
 > **Target Audience:** Contributors setting up locally and extending the pipeline.
-> **Status:** DRAFT — grounded in `src/cli/*`, `src/infrastructure/*`, `package.json`, and `opencode.json`.
+> **Status:** Published — grounded in `src/cli/*`, `src/infrastructure/*`, `package.json`, and `opencode.json`.
 > **Prev:** [7. Testing Strategy & Mock Patterns](07-testing-strategy.md) · **Next:** [9. ADRs & Roadmap](09-adrs-roadmap.md)
 
 ---

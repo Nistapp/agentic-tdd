@@ -21,23 +21,23 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | Document | Purpose |
 |---|---|
 | [glossary.md](glossary.md) | Canonical definitions of domain terms |
-| [overview.md](overview.md) | C4-style system map (TODO: create — C4 Level 1 & 2) |
+| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | C4-style system map (Level 1 for the shipped system) |
 
 ## User Overview (Adopter Track)
 
 > [!NOTE]
-> Progressive-disclosure entry points for evaluators. Drafted pages are grounded in implemented code; the rest are placeholders.
+> Progressive-disclosure entry points for evaluators. All pages are published and grounded in implemented code; minor open items are tracked per page.
 
 | Page | Status |
 |---|---|
-| [1. Why This Exists — Problem & Philosophy](user-overview/01-why-this-exists.md) | Drafted (1 open item: FAQ placeholder) |
-| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Drafted (C4 L1 + at-a-glance flow; open items H-1–H-2) |
-| [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Drafted (pass table, HITL, atomic commits & rollback) |
-| [4. The Core Engine](user-overview/04-core-engine.md) | Drafted (concept: state machines & fit; impl linked to deep-dive) |
-| [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Drafted (overview) |
-| [6. Context Engineering — Code Indexing & Token Savings](user-overview/06-context-and-token-savings.md) | Drafted (overview) |
-| [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Drafted (shipped hygiene vs. planned controls; open items S-4–S-8) |
-| [8. Engineering Concepts — Buzzword Map](user-overview/08-engineering-concepts.md) | Drafted |
+| [1. Why This Exists — Problem & Philosophy](user-overview/01-why-this-exists.md) | Published (all open items resolved) |
+| [2. High-Level Architecture](user-overview/02-high-level-architecture.md) | Published (open items H-1–H-2) |
+| [3. The 8-Pass Pipeline](user-overview/03-8-pass-pipeline.md) | Published (pass table, HITL, atomic commits & rollback) |
+| [4. The Core Engine](user-overview/04-core-engine.md) | Published (concept: state machines & fit; impl linked to deep-dive) |
+| [5. Agent Prompt System & Routing](user-overview/05-agent-prompt-system.md) | Published (overview) |
+| [6. Context Engineering — Code Indexing & Token Savings](user-overview/06-context-and-token-savings.md) | Published (overview) |
+| [7. Security Model & Sandboxing](user-overview/07-security-model.md) | Published (shipped hygiene vs. planned controls; open items S-4–S-8) |
+| [8. Engineering Concepts — Buzzword Map](user-overview/08-engineering-concepts.md) | Published |
 
 ## Contributor Deep Dive
 
@@ -46,15 +46,15 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 
 | Page | Status |
 |---|---|
-| [1. Core Engine Internals — Harness Engineering (XState)](contributor-deep-dive/01-core-engine-internals.md) | Drafted |
-| [2. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/02-prompt-engineering.md) | Drafted |
-| [3. Context Engineering — Context Builder & Payload](contributor-deep-dive/03-context-engineering.md) | Drafted |
-| [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Drafted (port→adapter map, lifecycle edge cases; open items O-4–O-6) |
-| [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Drafted (component map, DI contract, data flow) |
-| [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Drafted (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
-| [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Drafted (3-tier pyramid, DI mock inventory, machine & orchestrator patterns; open items T-3–T-5) |
-| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Drafted (prereqs: opencode + codebase-memory-mcp, local setup, opencode.json, verification, pass/DI extension; open items G-1–G-3) |
-| [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Drafted (ADR index/status, roadmap from retired `roadmap.md`, open debates; open items R-1–R-3) |
+| [1. Core Engine Internals — Harness Engineering (XState)](contributor-deep-dive/01-core-engine-internals.md) | Published |
+| [2. Prompt Engineering — Agent Files & Guardrails](contributor-deep-dive/02-prompt-engineering.md) | Published |
+| [3. Context Engineering — Context Builder & Payload](contributor-deep-dive/03-context-engineering.md) | Published |
+| [4. Infrastructure Adapters](contributor-deep-dive/04-infrastructure-adapters.md) | Published (port→adapter map, lifecycle edge cases; open items O-4–O-6) |
+| [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Published (component map, DI contract, data flow) |
+| [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Published (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
+| [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Published (3-tier pyramid, DI mock inventory, machine & orchestrator patterns; open items T-3–T-5) |
+| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Published (prereqs: opencode + codebase-memory-mcp, local setup, opencode.json, verification, pass/DI extension; open items G-1–G-3) |
+| [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Published (ADR index/status, roadmap from retired `roadmap.md`, open debates; open items R-2–R-3) |
 
 > [!TIP]
 > When adding a new ADR, assign the next sequence number and add a row to

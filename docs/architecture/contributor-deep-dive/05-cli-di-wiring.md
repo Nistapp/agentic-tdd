@@ -1,7 +1,7 @@
 # 5. CLI & Dependency Injection Wiring
 
 > **Target Audience:** Contributors touching entry points, DI, or the end-to-end wiring.
-> **Status:** DRAFT — component map + data flow grounded in `src/`; remaining outline items partially drafted.
+> **Status:** Published — component map + data flow grounded in `src/`; remaining outline items partially drafted.
 > **Prev:** [4. Infrastructure Adapters](04-infrastructure-adapters.md) · **Next:** [6. Observability, Logging, & Operations](06-observability-operations.md)
 
 ---

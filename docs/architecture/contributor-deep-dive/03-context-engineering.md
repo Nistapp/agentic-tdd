@@ -1,7 +1,7 @@
 # 3. Context Engineering — Context Builder & Payload
 
 > **Target Audience:** Contributors extending context selection or payload shape.
-> **Status:** DRAFT — grounded in `src/core/context-builder.ts`, `context-provider.ts`, `runners/shared.ts`.
+> **Status:** Published — grounded in `src/core/context-builder.ts`, `context-provider.ts`, `runners/shared.ts`.
 > **Prev:** [2. Prompt Engineering](02-prompt-engineering.md) · **Next:** [4. Infrastructure Adapters](04-infrastructure-adapters.md)
 
 ---
@@ -27,7 +27,7 @@ OpenCodeAgentRunner.#buildArgs()        → opencode run --agent pass-N --file �
 ```
 
 > [!IMPORTANT]
-> `contextFiles` are **filename hints**, not injected file contents. The agent reads them with its own tools (`read`/`glob`/`grep`/MCP). `--file` attachments (design artefact, spec, error log) are injected directly into the context window. See [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md).
+> `contextFiles` are **filename hints**, not injected file contents. The agent reads them with its own tools (`read`/`glob`/`grep`/MCP). `--file` attachments (design artefact, spec, error log) are injected directly into the context window. See [§ 7](#7-how-agents-consume-it) — the payload is a starting point, not a restriction.
 
 ---
 
@@ -135,4 +135,3 @@ See [2. Prompt Engineering §3](02-prompt-engineering.md#3-the-directive-catalog
 
 - [6. Context Engineering — Code Indexing & Token Savings (User view)](../user-overview/06-context-and-token-savings.md)
 - [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
-- [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md)

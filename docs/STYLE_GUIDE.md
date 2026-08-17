@@ -82,7 +82,7 @@ Use this master index to determine exact file paths and naming conventions for a
 | Content Type | File Location | Naming Convention | Primary Purpose |
 |---|---|---|---|
 | **Documentation Style Guide** | `docs/STYLE_GUIDE.md` | `STYLE_GUIDE.md` | Single source of truth for documentation rules |
-| **System Architecture Overview** | `docs/architecture/overview.md` | `overview.md` | Top-level system architecture, C4 diagrams |
+| **System Architecture Overview** | `docs/architecture/user-overview/02-high-level-architecture.md` | `02-high-level-architecture.md` | Top-level system architecture, C4 diagrams (Level 1) |
 | **Architectural Decision Records** | `docs/architecture/adrs/` | `NNNN-short-title.md` | Formal decision records (e.g. `0001-pure-core-engine.md`) |
 | **Architecture Index & ADR List** | `docs/architecture/README.md` | `README.md` | Table of all ADRs and key design documents |
 | **User Overview Track** | `docs/architecture/user-overview/` | `NN-short-title.md` | Overview of why/what/security/cost for evaluators |

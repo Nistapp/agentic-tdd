@@ -1,7 +1,7 @@
 # 4. Infrastructure Adapters
 
 > **Target Audience:** Contributors implementing or replacing DI adapters.
-> **Status:** DRAFT — grounded in `src/infrastructure/`.
+> **Status:** Published — grounded in `src/infrastructure/`.
 > **Prev:** [3. Context Engineering](03-context-engineering.md) · **Next:** [5. CLI & Dependency Injection Wiring](05-cli-di-wiring.md)
 
 ---

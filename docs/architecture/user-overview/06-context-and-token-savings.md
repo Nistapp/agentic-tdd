@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects (budget & quality stakeholders).
 > **Key Goal:** Explain how agentic-tdd builds *accurate* context for each pass — via code indexing and curated change descriptors, not by letting the LLM search files by itself — and why that accuracy is the primary goal, with significant token savings as a deliberate side-effect.
-> **Status:** Draft — wiki page 6 of the User Overview. Grounded in `src/core/context-builder.ts`, `src/core/runners/shared.ts`, `src/infrastructure/ast-grep-symbol-resolver.ts`, and the `indexer-first` directive in `src/agents/pass-*.md`; deep context-engineering detail is in the Contributor Track.
+> **Status:** Published (v0.1.0-Beta) — Page 6 of the User Overview. Grounded in `src/core/context-builder.ts`, `src/core/runners/shared.ts`, `src/infrastructure/ast-grep-symbol-resolver.ts`, and the `indexer-first` directive in `src/agents/pass-*.md`; deep context-engineering detail is in the Contributor Track.
 
 ---
 
@@ -169,7 +169,7 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 | **Why should I trust the output?** | Because the agent starts from a verified knowledge graph + precise change descriptors, not from guessing which files matter. Structure-first context reduces hallucination and duplicate utilities at the source. |
 | **Is the model "smarter"?** | No — the *context* is better. Same model, less searching, more accurate edits. |
 | **Is the token saving real?** | Mechanically yes: fewer reads, fewer iterations, fewer retries, token-free verification. We have no own benchmarks yet — see [Placeholders](#placeholders--open-questions). |
-| **Do I lose control?** | No — the payload is a *starting point*; the `indexer-first` rule actively encourages the agent to supplement it with its own structural exploration (see [docs/Note-on-context-mgmt.md](../../../docs/Note-on-context-mgmt.md)). |
+| **Do I lose control?** | No — the payload is a *starting point*; the `indexer-first` rule actively encourages the agent to supplement it with its own structural exploration (see [3. Context Engineering §7](../contributor-deep-dive/03-context-engineering.md#7-how-agents-consume-it)). |
 
 ---
 

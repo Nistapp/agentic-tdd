@@ -1,7 +1,7 @@
 # 1. Core Engine Internals — Harness Engineering (XState)
 
 > **Target Audience:** Contributors extending the pipeline.
-> **Status:** DRAFT — grounded in the implemented state machines.
+> **Status:** Published — grounded in the implemented state machines.
 > **Prev:** [7. Security Model & Sandboxing](../user-overview/07-security-model.md) · **Next:** [2. Prompt Engineering](02-prompt-engineering.md)
 
 ---
