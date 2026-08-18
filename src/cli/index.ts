@@ -88,8 +88,11 @@ program
       renderer.fatal('Cannot use --resume and --abort together.');
     }
 
-    if (!process.env.OPENROUTER_API_KEY) {
-      renderer.fatal('OPENROUTER_API_KEY is not set.\n  Add it to your .env file:  OPENROUTER_API_KEY=sk-or-...');
+    if (!process.env.OPENROUTER_API_KEY && !process.env.DEEPSEEK_API_KEY) {
+      renderer.fatal(
+        'No model provider API key is set.\n' +
+        '  Add OPENROUTER_API_KEY (default openrouter models) or DEEPSEEK_API_KEY (deepseek-direct models) to your .env file.',
+      );
     }
 
     const fs = new NodeFileSystem();

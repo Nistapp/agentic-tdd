@@ -214,7 +214,7 @@ editing them:
 
 ## 9. Environment & Secrets
 
-- `.env` holds `OPENROUTER_API_KEY`. Never commit secrets.
+- `.env` holds the model-provider API keys (`OPENROUTER_API_KEY` for the default openrouter-routed models; `DEEPSEEK_API_KEY` when overriding to the `deepseek/...` provider). Never commit secrets.
 - `.env.example` is the committed template.
 - **NEVER** log, echo, or output the contents of `.env` to the terminal to prevent secret leakage into agent transcripts.
 - The orchestrator must never read `process.env` directly — see § 5 (Architecture).

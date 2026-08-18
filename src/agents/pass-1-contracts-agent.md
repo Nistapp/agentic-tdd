@@ -8,7 +8,7 @@ description: >
   surface that all downstream passes are bound to honour. Use when the
   orchestrator invokes the contracts pass.
 mode: all
-model: deepseek/deepseek-v4-pro
+model: openrouter/deepseek/deepseek-v4-pro
 permission:
   read: allow
   edit: allow
