@@ -40,7 +40,7 @@ Strict XML tags create **semantic walls**: everything inside `<directives>` is p
 
 ```yaml
 mode: all
-model: deepseek/deepseek-v4-pro
+model: openrouter/deepseek/deepseek-v4-pro
 permission:
   read: allow
   edit: allow
@@ -55,14 +55,14 @@ permission:
 
 | Pass | Agent file | Shipped `model:` |
 |---|---|---|
-| 0 | `pass-0-design-agent.md` | `deepseek/deepseek-v4-pro` |
-| 1 | `pass-1-contracts-agent.md` | `deepseek/deepseek-v4-pro` |
-| 2 | `pass-2-test-generation-agent.md` | `deepseek/deepseek-v4-pro` |
-| 3 | `pass-3-core-implementation-agent.md` | `deepseek/deepseek-v4-flash` |
-| 4 | `pass-4-refactor-agent.md` | `deepseek/deepseek-v4-flash` |
-| 5 | `pass-5-observability-agent.md` | `deepseek/deepseek-v4-flash` |
-| 6 | `pass-6-security-agent.md` | `deepseek/deepseek-v4-flash` |
-| 7 | `pass-7-documentation-agent.md` | `deepseek/deepseek-v4-flash` |
+| 0 | `pass-0-design-agent.md` | `openrouter/deepseek/deepseek-v4-pro` |
+| 1 | `pass-1-contracts-agent.md` | `openrouter/deepseek/deepseek-v4-pro` |
+| 2 | `pass-2-test-generation-agent.md` | `openrouter/deepseek/deepseek-v4-pro` |
+| 3 | `pass-3-core-implementation-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
+| 4 | `pass-4-refactor-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
+| 5 | `pass-5-observability-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
+| 6 | `pass-6-security-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
+| 7 | `pass-7-documentation-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
 
 > [!NOTE] Config-driven routing
 > The table above is the agent-file fallback. The **effective** model is resolved at runtime from `config.default.json` (committed) merged with `.agentic-tdd/config.json` (git-ignored user override) and passed to opencode as `--model`; `--model`/`--config` CLI flags override per-run. See [`resolveModelConfig`](../../../src/cli/model-config.ts) and [ADR-0009](../adrs/0009-configurable-per-agent-models.md).
