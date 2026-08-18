@@ -26,14 +26,14 @@
 {
   "agents": {
     "models": {
-      "pass-0-design-agent": "deepseek/deepseek-v4-pro",
-      "pass-1-contracts-agent": "deepseek/deepseek-v4-pro",
-      "pass-2-test-generation-agent": "deepseek/deepseek-v4-pro",
-      "pass-3-core-implementation-agent": "deepseek/deepseek-v4-flash",
-      "pass-4-refactor-agent": "deepseek/deepseek-v4-flash",
-      "pass-5-observability-agent": "deepseek/deepseek-v4-flash",
-      "pass-6-security-agent": "deepseek/deepseek-v4-flash",
-      "pass-7-documentation-agent": "deepseek/deepseek-v4-flash"
+      "pass-0-design-agent": "openrouter/deepseek/deepseek-v4-pro",
+      "pass-1-contracts-agent": "openrouter/deepseek/deepseek-v4-pro",
+      "pass-2-test-generation-agent": "openrouter/deepseek/deepseek-v4-pro",
+      "pass-3-core-implementation-agent": "openrouter/deepseek/deepseek-v4-flash",
+      "pass-4-refactor-agent": "openrouter/deepseek/deepseek-v4-flash",
+      "pass-5-observability-agent": "openrouter/deepseek/deepseek-v4-flash",
+      "pass-6-security-agent": "openrouter/deepseek/deepseek-v4-flash",
+      "pass-7-documentation-agent": "openrouter/deepseek/deepseek-v4-flash"
     }
   }
 }

@@ -4,6 +4,8 @@
 
 > _"Stop asking AI to write code. Start orchestrating AI to build software."_
 
+[![npm version](https://img.shields.io/npm/v/agentic-tdd?color=cb3837&logo=npm&logoColor=fff)](https://www.npmjs.com/package/agentic-tdd)
+[![npm downloads](https://img.shields.io/npm/dm/agentic-tdd?color=cb3837&logo=npm&logoColor=fff)](https://www.npmjs.com/package/agentic-tdd)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue)](https://www.typescriptlang.org)
@@ -145,6 +147,7 @@ The full documentation lives in [`docs/`](docs/), split into two audience tracks
 - **[Contributor Deep Dive](docs/architecture/contributor-deep-dive/)** — for those extending the pipeline: core engine internals, prompt engineering, DI wiring, and testing strategy.
 - **[Architecture Decision Records](docs/architecture/adrs/)** — the immutable decision log.
 - **[Release Process](RELEASE_PROCESS.md)** — branching strategy, release lifecycle, and the back-merge.
+- **[npm package](https://www.npmjs.com/package/agentic-tdd)** — published releases, version history, and download stats.
 
 Start at the [architecture index](docs/architecture/README.md).
 
@@ -155,59 +158,81 @@ Start at the [architecture index](docs/architecture/README.md).
 
 ### Prerequisites
 
-- **Node.js >= 18**
-- [opencode CLI](https://opencode.ai) 
-- An API key - [OpenRouter](https://openrouter.ai) or Claude or openAi codex (or configure opencode to use free models on openrouter or opencode Zen.)
-- `git` initialized in your working directory
+- **Node.js >= 18** and **npm**
+- The [opencode CLI](https://opencode.ai) installed and available on your `PATH` — the pipeline drives opencode sub-agents under the hood
+- An API key for one of opencode's model providers — e.g. [OpenRouter](https://openrouter.ai), Claude, or OpenAI codex (or configure opencode to use free models)
+- A `git` repository in your working directory (each pass is committed as an atomic git commit)
+- codebase-memory-mcp installed locally and accessible to opencode
+- (optional) a suitable AGENTS.md file for your project.
 
-### 1. Install dependencies
+### 1. Install from npm (recommended)
+
+```bash
+npm install -g agentic-tdd
+```
+
+Verify the install:
+
+```bash
+agentic-tdd --version
+```
+
+Prefer not to install? The CLI runs on demand, no installation needed:
+
+```bash
+npx agentic-tdd --version
+```
+
+### 2. Configure your API key
+
+The CLI reads the model-provider key from your shell environment or from a `.env` file in the directory you run it from. The shipped default models route through **OpenRouter**, so start with `OPENROUTER_API_KEY`:
+
+```bash
+cp .env.example .env
+# Edit .env and add:
+#   OPENROUTER_API_KEY=sk-or-v1-.............................
+```
+
+Only if you override models to the `deepseek/...` provider directly (via `--model`, `--config`, or `.agentic-tdd/config.json`) do you also need `DEEPSEEK_API_KEY` — see [Agent Configuration](#agent-configuration).
+
+### 3. Run against your own feature
+
+Point `--feature-desc-file` at a markdown file describing the feature you want built, and give the pipeline a `--test-cmd` to gate each pass:
+
+```bash
+agentic-tdd --feature-desc-file specs/my_feature.md --test-cmd "pytest"
+```
+
+Without a global install, prefix with `npx`:
+
+```bash
+npx agentic-tdd --feature-desc-file specs/my_feature.md --test-cmd "npm test" --log-level DEBUG
+```
+
+Each pass runs your test suite and self-corrects (up to 3 retries) before advancing. Every pass is committed to a dedicated feature branch as an atomic git commit — inspect the branch, `git revert` any single pass, or `--abort` to rewind the whole session.
+
+### Optional: build from source
+
+Contributors and power users can clone and build from source instead:
 
 ```bash
 git clone https://github.com/Nistapp/agentic-tdd.git
 cd agentic-tdd
 npm install
-```
-
-### 2. Build the TypeScript source
-
-```bash
 npm run build
-```
 
-### 3. Link globally (optional — for `agentic-tdd` on your PATH)
-
-```bash
+# Optionally expose `agentic-tdd` on your PATH
 npm link
 ```
 
-### 4. Configure your API key
-
-```bash
-$ cp .env.example .env
-# Edit .env and add your OPENROUTER_API_KEY
-# something like "export OPENROUTER_API_KEY=sk-or-v1-............................."
-
-$ source .env
-```
-
-### 6. Run against your own file
-
-```bash
-npx agentic-tdd --feature-desc-file ./src/artefacts/Prompt-3.md --log-level DEBUG --test-cmd "pytest"
-```
-
-If you ran `npm link`, you can also use the bare command:
-
-```bash
-agentic-tdd --feature-desc-file specs/my_feature.md --skip-hitl --test-cmd "pytest"
-```
+> **Tip:** run the pipeline from the root of the repository you're developing in — session state, logs, and config overrides live in a git-ignored `.agentic-tdd/` directory there, and `.env` is read from the current working directory.
 
 ---
 
 ## CLI Usage
 
 ```
-agentic-tdd -feature-desc-file <spec_file> [options]
+agentic-tdd --feature-desc-file <spec_file> [options]
 ```
 
 ### Options
@@ -222,6 +247,7 @@ agentic-tdd -feature-desc-file <spec_file> [options]
 | --log-level <level> | Log level (DEBUG, INFO, WARNING, ERROR) (default: "INFO") |
 | --model <model> | Override the model for every agent (provider/model) |
 | --config <path> | Path to an alternate config.json (overrides .agentic-tdd/config.json) |
+| --no-context-enrich | Force files-only context mode (skip method-level enrichment) |
 | --resume | Resume an active Agentic TDD session |
 | --abort | Abort the active session and rewind Git history |
 | -h, --help | display help for command |
@@ -235,11 +261,14 @@ Agents are defined in `src/agents/`. Each agent file has YAML frontmatter that d
 
 ### Configuring agent models
 
-Copy the committed template to the git-ignored override location and edit it:
+Configuration is **optional** — the published package ships sensible defaults (passes 0–2 on `openrouter/deepseek/deepseek-v4-pro`, passes 3–7 on `openrouter/deepseek/deepseek-v4-flash`). To customise the per-agent models, create a git-ignored override file at `.agentic-tdd/config.json` in the directory you run the CLI from:
 
 ```bash
-cp config.default.json .agentic-tdd/config.json
+mkdir -p .agentic-tdd
+touch .agentic-tdd/config.json
 ```
+
+> **npm / npx users:** the bundled default template ships *inside* the installed package (not in your working directory), so there is no file to copy — create the file with your overrides as shown above. Source builds can start from the repo-root template with `cp config.default.json .agentic-tdd/config.json`.
 
 `config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to an opencode `provider/model` string:
 
@@ -247,14 +276,14 @@ cp config.default.json .agentic-tdd/config.json
 {
   "agents": {
     "models": {
-      "pass-0-design-agent": "deepseek/deepseek-v4-pro",
-      "pass-3-core-implementation-agent": "deepseek/deepseek-v4-flash"
+      "pass-0-design-agent": "openrouter/deepseek/deepseek-v4-pro",
+      "pass-3-core-implementation-agent": "openrouter/deepseek/deepseek-v4-flash"
     }
   }
 }
 ```
 
-Precedence (highest first): `--model <m>` → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter. Shipped defaults: passes 0–2 on `deepseek-v4-pro`, passes 3–7 on `deepseek-v4-flash`.
+Precedence (highest first): `--model <m>` → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter. Shipped defaults: passes 0–2 on `openrouter/deepseek/deepseek-v4-pro`, passes 3–7 on `openrouter/deepseek/deepseek-v4-flash`.
 
 The pipeline enforces that agents can only:
 
@@ -271,11 +300,11 @@ See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/archit
 To remove the CLI:
 
 ```bash
-# If installed via npm link
-npm unlink -g agentic-tdd
-
-# If installed via npm install -g
+# If installed via npm (recommended install path)
 npm uninstall -g agentic-tdd
+
+# If built from source and linked with npm link
+npm unlink -g agentic-tdd
 ```
 
 ---

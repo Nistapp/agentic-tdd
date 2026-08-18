@@ -118,7 +118,7 @@ Wiring happens in one place — [`createPipelineServices`](../../../src/cli/di-c
 
 1. A single `EventBus` is created and subscribed to by `attachTerminalListener` (progress rendering).
 2. `CommandRunner` (test runner + opencode spawner), the HITL handler, and `OpenCodeAgentRunner` are constructed.
-3. `PipelineConfig` is assembled via `buildPipelineConfig` from `getOpencodeLogPath()`, the presence of `OPENROUTER_API_KEY`, and the resolved per-agent model config ([`resolveModelConfig`](../../../src/cli/model-config.ts), [ADR-0009](../adrs/0009-configurable-per-agent-models.md)).
+3. `PipelineConfig` is assembled via `buildPipelineConfig` from `getOpencodeLogPath()`, the presence of a model-provider API key (`OPENROUTER_API_KEY` or `DEEPSEEK_API_KEY`), and the resolved per-agent model config ([`resolveModelConfig`](../../../src/cli/model-config.ts), [ADR-0009](../adrs/0009-configurable-per-agent-models.md)).
 4. All of it — plus `StateContextProvider`, the optional `AstGrepSymbolResolver`, and `JsonStateStore` — is passed to the `PipelineOrchestrator` constructor as interfaces.
 
 > [!NOTE] Where to add a new adapter
@@ -177,7 +177,7 @@ sequenceDiagram
 
 ### Walkthrough
 
-1. **CLI parsing & env** — [`src/cli/index.ts`](../../../src/cli/index.ts) parses flags, loads `.env`, validates `OPENROUTER_API_KEY`.
+1. **CLI parsing & env** — [`src/cli/index.ts`](../../../src/cli/index.ts) parses flags, loads `.env`, validates that a model-provider API key is set (`OPENROUTER_API_KEY` or `DEEPSEEK_API_KEY`).
 2. **Session bootstrap** — [`session.ts#startNewSession`](../../../src/cli/session.ts#L160-L250) creates a feature branch, records the baseline SHA (`originalBaseSha`), and persists a `PipelineContext` via the state store.
 3. **DI wiring** — [`di-container.ts#createPipelineServices`](../../../src/cli/di-container.ts#L39-L65) constructs all concrete adapters and hands them to the `PipelineOrchestrator` **as interfaces**.
 4. **Machine start** — [`PipelineOrchestrator.run`](../../../src/core/orchestrator.ts#L80-L188) builds `createPipelineMachine`, resumes from a persisted `xstateSnapshot` when `--resume`, and starts the actor.

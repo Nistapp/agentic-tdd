@@ -92,9 +92,9 @@ describe('createPipelineServices', () => {
 describe('buildPipelineConfig', () => {
   it('merges modelConfig.models into PipelineConfig.models', () => {
     const config = buildPipelineConfig({
-      modelConfig: { models: { 'pass-0-design-agent': 'deepseek/deepseek-v4-pro' } },
+      modelConfig: { models: { 'pass-0-design-agent': 'openrouter/deepseek/deepseek-v4-pro' } },
     });
-    expect(config.models).toEqual({ 'pass-0-design-agent': 'deepseek/deepseek-v4-pro' });
+    expect(config.models).toEqual({ 'pass-0-design-agent': 'openrouter/deepseek/deepseek-v4-pro' });
   });
 
   it('leaves models undefined when no modelConfig is provided', () => {
@@ -106,5 +106,15 @@ describe('buildPipelineConfig', () => {
     const config = buildPipelineConfig({});
     expect(config.opencodeLogPath).toBeTruthy();
     expect(['present', 'missing']).toContain(config.apiKeySet);
+  });
+
+  it('reports apiKeySet present when only DEEPSEEK_API_KEY is set', () => {
+    vi.stubEnv('OPENROUTER_API_KEY', '');
+    vi.stubEnv('DEEPSEEK_API_KEY', 'sk-ds-test');
+    try {
+      expect(buildPipelineConfig({}).apiKeySet).toBe('present');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

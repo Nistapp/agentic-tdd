@@ -5,7 +5,7 @@ description: >
   this stage — that failure confirms the tests encode real constraints (Red
   Phase). Use when the orchestrator invokes the test-generation pass.
 mode: all
-model: deepseek/deepseek-v4-pro
+model: openrouter/deepseek/deepseek-v4-pro
 permission:
   read: allow
   edit: allow

@@ -73,7 +73,7 @@ graph LR
 | System | Purpose | Status |
 |---|---|---|
 | **Coding Harness (opencode)** | The sub-agent that reads the scoped prompt and performs file edits. Spawned per pass via `OpenCodeAgentRunner` ([`src/infrastructure/open-code-agent-runner.ts#L11`](../../../src/infrastructure/open-code-agent-runner.ts#L11)). | Shipped |
-| **LLM Gateway (OpenRouter)** | Provider-agnostic API endpoint the harness calls. API key read from `.env` (`OPENROUTER_API_KEY`). | Shipped |
+| **LLM Gateway (OpenRouter)** | Provider-agnostic API endpoint the harness calls (the default provider). API key read from `.env` (`OPENROUTER_API_KEY`; `DEEPSEEK_API_KEY` when models are overridden to the `deepseek/...` provider). | Shipped |
 | **Version Control / CI** | Source of truth for context and the destination for atomic per-pass commits. | Shipped |
 | **Codebase Knowledge Graph (`codebase-memory-mcp`)** | Semantic/AST index queried to build accurate context (fewer hallucinations / duplicate utilities). | Shipped |
 | **Local Test Runner** | Deterministic verification gate (`--test-cmd`), language-agnostic (vitest, pytest, etc.). | Shipped |

@@ -6,7 +6,7 @@ description: >
   re-invokes this agent with the error log. Use when the orchestrator invokes
   the core-implementation pass.
 mode: all
-model: deepseek/deepseek-v4-flash
+model: openrouter/deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow

@@ -128,14 +128,14 @@ Routing is **declarative and configurable at runtime**. Each agent file still pi
 
 | Pass | Agent file | Shipped `model:` |
 |---|---|---|
-| 0 Design | `pass-0-design-agent.md#L7` | `deepseek/deepseek-v4-pro` |
-| 1 Contracts | `pass-1-contracts-agent.md#L11` | `deepseek/deepseek-v4-pro` |
-| 2 Test Generation | `pass-2-test-generation-agent.md#L8` | `deepseek/deepseek-v4-pro` |
-| 3 Core Implementation | `pass-3-core-implementation-agent.md#L9` | `deepseek/deepseek-v4-flash` |
-| 4 Refactor | `pass-4-refactor-agent.md#L9` | `deepseek/deepseek-v4-flash` |
-| 5 Observability | `pass-5-observability-agent.md#L9` | `deepseek/deepseek-v4-flash` |
-| 6 Security Hardening | `pass-6-security-agent.md#L9` | `deepseek/deepseek-v4-flash` |
-| 7 Documentation | `pass-7-documentation-agent.md#L9` | `deepseek/deepseek-v4-flash` |
+| 0 Design | `pass-0-design-agent.md#L7` | `openrouter/deepseek/deepseek-v4-pro` |
+| 1 Contracts | `pass-1-contracts-agent.md#L11` | `openrouter/deepseek/deepseek-v4-pro` |
+| 2 Test Generation | `pass-2-test-generation-agent.md#L8` | `openrouter/deepseek/deepseek-v4-pro` |
+| 3 Core Implementation | `pass-3-core-implementation-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
+| 4 Refactor | `pass-4-refactor-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
+| 5 Observability | `pass-5-observability-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
+| 6 Security Hardening | `pass-6-security-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
+| 7 Documentation | `pass-7-documentation-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
 
 The split follows the recommendation in [3. The 8-Pass Pipeline](03-8-pass-pipeline.md): the *heavy-reasoning* passes (0–2 — design, contracts, tests) run a strong reasoning model, while the *generation & polish* passes (3–7 — implementation, refactor, observability, security, documentation) run the lighter, cheaper `flash` tier. The same values are the committed default in [`config.default.json`](../../../config.default.json).
 

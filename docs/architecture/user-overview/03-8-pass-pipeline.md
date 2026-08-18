@@ -113,18 +113,18 @@ stateDiagram-v2
 
 ## 2. Pass Reference Table
 
-Compiled from the shipped agent files ([`src/agents/pass-0..7-*.md`](../../../src/agents/)), [`src/core/types.ts`](../../../src/core/types.ts), and the committed [`config.default.json`](../../../config.default.json). Each agent can be configured with its own model at runtime — copy the template to `.agentic-tdd/config.json` or pass `--model`/`--config` ([ADR-0009](../adrs/0009-configurable-per-agent-models.md)). We have tested with GLM, Deepseek and Gemini. We recommend GLM 5.2 (or Deepseek-v4-pro) for Passes 0,1,2 and Deepseek V4 Flash for the rest (Code Generation, Refactoring, Observability, Security, Documentation) — which is exactly what the shipped defaults pin.
+Compiled from the shipped agent files ([`src/agents/pass-0..7-*.md`](../../../src/agents/)), [`src/core/types.ts`](../../../src/core/types.ts), and the committed [`config.default.json`](../../../config.default.json). Each agent can be configured with its own model at runtime — copy the template to `.agentic-tdd/config.json` or pass `--model`/`--config` ([ADR-0009](../adrs/0009-configurable-per-agent-models.md)). We have tested with GLM, Deepseek and Gemini. We recommend GLM 5.2 (or Deepseek-v4-pro) for Passes 0,1,2 and Deepseek V4 Flash for the rest (Code Generation, Refactoring, Observability, Security, Documentation) — served via the OpenRouter gateway — which is exactly what the shipped defaults pin.
 
 | Pass | Agent (file) | Default model | Context in | Gate / verification |
 |---|---|---|---|---|
-| **0. Design & Architecture** | `pass-0-design-agent` | `deepseek/deepseek-v4-pro` | Feature description + codebase knowledge graph (`codebase-memory-mcp`) | **HITL** approve/rewind/reject; artefact length validation |
-| **1. Contracts & Types** | `pass-1-contracts-agent` | `deepseek/deepseek-v4-pro` | `design.mmd`, `spec.gherkin`, source files | None (adds stubs/types only) |
-| **2. Test Generation (Red Phase)** | `pass-2-test-generation-agent` | `deepseek/deepseek-v4-pro` | Gherkin spec + Pass 1 contracts | **HITL** + tests must **fail** (confirms constraints) |
-| **3. Core Implementation (Green Phase)** | `pass-3-core-implementation-agent` | `deepseek/deepseek-v4-flash` | `design.mmd` (binding contract) + tests + contracts | Test gate + **self-correction loop** |
-| **4. Refactor & Optimise** | `pass-4-refactor-agent` | `deepseek/deepseek-v4-flash` | Pass 3 output | Test gate + self-correction loop |
-| **5. Observability & Logging** | `pass-5-observability-agent` | `deepseek/deepseek-v4-flash` | Pass 4 output | Test gate + self-correction loop |
-| **6. Security Hardening** | `pass-6-security-agent` | `deepseek/deepseek-v4-flash` | Pass 5 output (incl. log statements) | Test gate + self-correction loop; OWASP Top-10 review |
-| **7. Documentation & Spec-Sync** | `pass-7-documentation-agent` | `deepseek/deepseek-v4-flash` | Finalised implementation | Test gate + spec-drift check; `@see` links to `.mmd` |
+| **0. Design & Architecture** | `pass-0-design-agent` | `openrouter/deepseek/deepseek-v4-pro` | Feature description + codebase knowledge graph (`codebase-memory-mcp`) | **HITL** approve/rewind/reject; artefact length validation |
+| **1. Contracts & Types** | `pass-1-contracts-agent` | `openrouter/deepseek/deepseek-v4-pro` | `design.mmd`, `spec.gherkin`, source files | None (adds stubs/types only) |
+| **2. Test Generation (Red Phase)** | `pass-2-test-generation-agent` | `openrouter/deepseek/deepseek-v4-pro` | Gherkin spec + Pass 1 contracts | **HITL** + tests must **fail** (confirms constraints) |
+| **3. Core Implementation (Green Phase)** | `pass-3-core-implementation-agent` | `openrouter/deepseek/deepseek-v4-flash` | `design.mmd` (binding contract) + tests + contracts | Test gate + **self-correction loop** |
+| **4. Refactor & Optimise** | `pass-4-refactor-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 3 output | Test gate + self-correction loop |
+| **5. Observability & Logging** | `pass-5-observability-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 4 output | Test gate + self-correction loop |
+| **6. Security Hardening** | `pass-6-security-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 5 output (incl. log statements) | Test gate + self-correction loop; OWASP Top-10 review |
+| **7. Documentation & Spec-Sync** | `pass-7-documentation-agent` | `openrouter/deepseek/deepseek-v4-flash` | Finalised implementation | Test gate + spec-drift check; `@see` links to `.mmd` |
 
 **Shared guardrails (all passes):** read/edit/glob/grep allowed; `bash`, `webfetch`, `task` denied (no arbitrary execution, no network, no sub-agents). See [5. Agent Prompt System & Routing](05-agent-prompt-system.md).
 

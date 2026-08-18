@@ -43,7 +43,7 @@ export interface PipelineServices {
 export function buildPipelineConfig(opts: Pick<ContainerOptions, 'modelConfig'>): PipelineConfig {
   return {
     opencodeLogPath: getOpencodeLogPath(),
-    apiKeySet: process.env.OPENROUTER_API_KEY ? 'present' : 'missing',
+    apiKeySet: process.env.OPENROUTER_API_KEY || process.env.DEEPSEEK_API_KEY ? 'present' : 'missing',
     models: opts.modelConfig?.models,
   };
 }

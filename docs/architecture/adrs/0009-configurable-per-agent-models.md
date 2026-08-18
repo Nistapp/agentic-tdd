@@ -44,7 +44,7 @@ Model choice per agent is resolved at **runtime** from a standard, sectioned `co
 {
   "agents": {
     "models": {
-      "pass-0-design-agent": "deepseek/deepseek-v4-pro",
+      "pass-0-design-agent": "openrouter/deepseek/deepseek-v4-pro",
       // ... all 8 agents, keyed by their AGENT_NAMES value
     }
   }
@@ -69,7 +69,7 @@ Keys are the **full agent/pass names with pass number** — the `AGENT_NAMES` va
 
 ### Shipped defaults (aligned with docs recommendation)
 
-Passes 0–2 (`pass-0-design-agent` … `pass-2-test-generation-agent`) → `deepseek/deepseek-v4-pro`; passes 3–7 (implementation … documentation) → `deepseek/deepseek-v4-flash`. The agent-file frontmatter fallbacks were aligned to the same values.
+Passes 0–2 (`pass-0-design-agent` … `pass-2-test-generation-agent`) → `openrouter/deepseek/deepseek-v4-pro`; passes 3–7 (implementation … documentation) → `openrouter/deepseek/deepseek-v4-flash`. The agent-file frontmatter fallbacks were aligned to the same values.
 
 ---
 
@@ -98,3 +98,7 @@ Passes 0–2 (`pass-0-design-agent` … `pass-2-test-generation-agent`) → `dee
 * [5. Agent Prompt System — Routing Strategy § 3](../user-overview/05-agent-prompt-system.md#3-routing-strategy) · [3. The 8-Pass Pipeline — Pass Reference Table](../user-overview/03-8-pass-pipeline.md)
 * [`src/cli/model-config.ts`](../../../src/cli/model-config.ts) · [`config.default.json`](../../../config.default.json) · [`src/core/types.ts`](../../../src/core/types.ts)
 * [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) (config stays in the CLI/DI layer) · [ADR-0006 Static Prefix](./0006-context-control-optimisation.md) (P-3 now shipped)
+
+---
+
+> **Update (2026-08-18):** the shipped default provider changed from `deepseek/…` to `openrouter/deepseek/…` (`config.default.json`, agent-file frontmatter fallbacks, and docs aligned). The decision record above — runtime, config-driven model routing via `config.json` with `--model`/`--config` precedence — is unchanged.
