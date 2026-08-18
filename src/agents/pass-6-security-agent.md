@@ -6,7 +6,7 @@ description: >
   self-correction loop if tests break. Use when the orchestrator invokes the
   security-hardening pass.
 mode: all
-model: deepseek/deepseek-v4-flash
+model: openrouter/deepseek/deepseek-v4-flash
 permission:
   read: allow
   edit: allow

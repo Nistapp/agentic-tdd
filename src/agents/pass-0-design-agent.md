@@ -4,7 +4,7 @@ description: >
   and produces two human-reviewable design artefacts: a Mermaid diagram
   and a Gherkin BDD specification.
 mode: all
-model: deepseek/deepseek-v4-pro
+model: openrouter/deepseek/deepseek-v4-pro
 permission:
   read: allow
   edit: allow

@@ -12,14 +12,14 @@ const USER_PATH = '/proj/.agentic-tdd/config.json';
 const DEFAULT_JSON = JSON.stringify({
   agents: {
     models: {
-      'pass-0-design-agent': 'deepseek/deepseek-v4-pro',
-      'pass-1-contracts-agent': 'deepseek/deepseek-v4-pro',
-      'pass-2-test-generation-agent': 'deepseek/deepseek-v4-pro',
-      'pass-3-core-implementation-agent': 'deepseek/deepseek-v4-flash',
-      'pass-4-refactor-agent': 'deepseek/deepseek-v4-flash',
-      'pass-5-observability-agent': 'deepseek/deepseek-v4-flash',
-      'pass-6-security-agent': 'deepseek/deepseek-v4-flash',
-      'pass-7-documentation-agent': 'deepseek/deepseek-v4-flash',
+      'pass-0-design-agent': 'openrouter/deepseek/deepseek-v4-pro',
+      'pass-1-contracts-agent': 'openrouter/deepseek/deepseek-v4-pro',
+      'pass-2-test-generation-agent': 'openrouter/deepseek/deepseek-v4-pro',
+      'pass-3-core-implementation-agent': 'openrouter/deepseek/deepseek-v4-flash',
+      'pass-4-refactor-agent': 'openrouter/deepseek/deepseek-v4-flash',
+      'pass-5-observability-agent': 'openrouter/deepseek/deepseek-v4-flash',
+      'pass-6-security-agent': 'openrouter/deepseek/deepseek-v4-flash',
+      'pass-7-documentation-agent': 'openrouter/deepseek/deepseek-v4-flash',
     },
   },
 });
@@ -72,13 +72,13 @@ describe('stripJsonComments', () => {
       '{',
       '  "agents": {',
       '    "models": {',
-      '      "pass-0-design-agent": "deepseek/deepseek-v4-pro"',
+      '      "pass-0-design-agent": "openrouter/deepseek/deepseek-v4-pro"',
       '    }',
       '  }',
       '}',
     ].join('\n');
     expect(JSON.parse(stripJsonComments(input))).toEqual({
-      agents: { models: { 'pass-0-design-agent': 'deepseek/deepseek-v4-pro' } },
+      agents: { models: { 'pass-0-design-agent': 'openrouter/deepseek/deepseek-v4-pro' } },
     });
   });
 });
@@ -96,8 +96,8 @@ describe('resolveModelConfig', () => {
     });
     const result = await resolveModelConfig({}, { userPath: USER_PATH, fs });
     expect(Object.keys(result.models ?? {})).toHaveLength(8);
-    expect(result.models?.['pass-0-design-agent']).toBe('deepseek/deepseek-v4-pro');
-    expect(result.models?.['pass-7-documentation-agent']).toBe('deepseek/deepseek-v4-flash');
+    expect(result.models?.['pass-0-design-agent']).toBe('openrouter/deepseek/deepseek-v4-pro');
+    expect(result.models?.['pass-7-documentation-agent']).toBe('openrouter/deepseek/deepseek-v4-flash');
   });
 
   it('M3: user file merges per-agent-key over the default', async () => {
@@ -114,7 +114,7 @@ describe('resolveModelConfig', () => {
     });
     const result = await resolveModelConfig({}, { userPath: USER_PATH, fs });
     expect(result.models?.['pass-7-documentation-agent']).toBe('openrouter/nvidia/nemotron-3-ultra-550b-a55b:free');
-    expect(result.models?.['pass-0-design-agent']).toBe('deepseek/deepseek-v4-pro');
+    expect(result.models?.['pass-0-design-agent']).toBe('openrouter/deepseek/deepseek-v4-pro');
   });
 
   it('M4: unknown agent key in a file throws (fail fast)', async () => {

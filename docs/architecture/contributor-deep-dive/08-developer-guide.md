@@ -26,7 +26,7 @@ This guide covers how to stand up a working local environment, run and verify th
 | **npm** | bundled with Node.js | Installation and scripts |
 | **opencode CLI** | latest from <https://opencode.ai> | Spawned by `CommandRunner.spawn` for every pass |
 | **codebase-memory-mcp** | `v0.8+` (binary referenced as `codebase-memory-mcp`) | The knowledge-graph indexer used by all pass agents |
-| **API key** | `OPENROUTER_API_KEY` (or other provider config noted in `README.md`) | `index.ts` **hard-fails** at startup if unset ([#L89-L91](../../../src/cli/index.ts#L89-L91)) |
+| **API key** | `OPENROUTER_API_KEY` (default) or `DEEPSEEK_API_KEY` (deepseek-direct) | `index.ts` **hard-fails** at startup if neither is set ([#L91-L96](../../../src/cli/index.ts#L91-L96)) |
 | **git** | initialized working directory | Feature branch creation + atomic commits per pass |
 
 > [!WARNING]
@@ -51,13 +51,13 @@ npm link
 
 # 4. Configure the API key — NEVER commit .env
 cp .env.example .env
-#   edit .env → OPENROUTER_API_KEY=sk-or-...
+#   edit .env → OPENROUTER_API_KEY=sk-or-...  (or DEEPSEEK_API_KEY=sk-...)
 ```
 
 Then create the machine-local `opencode.json` (see §3) before running.
 
 > [!CAUTION]
-> `.env` is gitignored and holds your `OPENROUTER_API_KEY`. Per AGENTS.md §9, the orchestrator never prints `.env` contents; never log, echo, or paste the key into a transcript.
+> `.env` is gitignored and holds your model-provider API keys (`OPENROUTER_API_KEY` and/or `DEEPSEEK_API_KEY`). Per AGENTS.md §9, the orchestrator never prints `.env` contents; never log, echo, or paste the key into a transcript.
 
 ---
 

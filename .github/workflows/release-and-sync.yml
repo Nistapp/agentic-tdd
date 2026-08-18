@@ -42,3 +42,28 @@ jobs:
             --head main \
             --title "chore: sync main back to dev after release" \
             --body "🤖 **Automated PR:** This syncs the updated \`package.json\` and \`CHANGELOG.md\` from \`main\` back to \`dev\` after a release. Please merge this immediately to prevent future merge conflicts."
+
+  publish:
+    name: Publish to npm
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
