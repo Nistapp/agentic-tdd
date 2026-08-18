@@ -7,8 +7,15 @@ releases.
 - `dev` is the active development branch.
 - CI (`ci.yml`) guards every push/PR to `main` and `dev` — broken code is never merged.
 - Release automation (`release-and-sync.yml`) handles version bumps, changelog generation,
-  GitHub releases, and the back-merge to `dev`.
+  GitHub releases, **npm publishing**, and the back-merge to `dev`.
 - Direct PRs to `main` may only originate from `dev` (enforced by `enforce-dev-base.yml`).
+
+> **One-time prerequisite:** the automated npm publish uses **npm Trusted Publishing** (GitHub
+> OIDC — no stored token). On <https://npmjs.com> open the `agentic-tdd` package →
+> **Settings → Trusted Publishing**, enable it for source **GitHub** / owner **Nistapp** /
+> repository **agentic-tdd**, and restrict it to the workflow **`release-and-sync.yml`**.
+> The publish job signs with `--provenance` and authenticates via `id-token: write`; no
+> `NPM_TOKEN` secret is required.
 
 ## The Step-by-Step Release Process
 
@@ -18,7 +25,8 @@ releases.
 4. **Release Please:** GitHub Actions will automatically open a new "Release PR" against `main`.
    This PR contains the version bump (in `package.json`) and the updated `CHANGELOG.md`.
 5. **Publish:** The maintainer reviews and merges the Release PR. The GitHub Release is
-   automatically published.
+   automatically published, and the new version is **automatically published to npm**
+   (`npm publish --provenance` in the same workflow, signed with GitHub OIDC).
 6. **⚠️ THE BACK-MERGE (DO NOT FORGET):** Because Release Please updated the version and
    changelog directly on `main`, `main` is now exactly one commit ahead of `dev`.
    **You MUST immediately back-merge `main` into `dev`** or open a PR from `main` to `dev`.
