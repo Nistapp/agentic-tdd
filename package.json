@@ -3,9 +3,20 @@
   "version": "0.1.0-Beta",
   "description": "An npx-executable, agentic TDD pipeline orchestration tool — 8-pass state machine for enterprise software development",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Digital-Assistant/agentic-tdd-node"
+    "url": "https://github.com/Nistapp/agentic-tdd.git"
+  },
+  "main": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    }
   },
   "bin": {
     "agentic-tdd": "./dist/cli/index.js"
@@ -13,24 +24,36 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "tsc && npm run copy:agents",
-    "copy:agents": "mkdir -p dist/agent && cp -r src/agents/* dist/agent/",
+    "copy:agents": "rm -rf dist/agents && mkdir -p dist/agents && cp -r src/agents/* dist/agents/ && cp config.default.json dist/config.default.json && echo '{\"type\":\"module\"}' > dist/package.json",
     "build:full": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build:full"
+    "prepublishOnly": "npm run lint && npm test && npm run build:full"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "agentic",
+    "ai",
+    "tdd",
+    "test-driven-development",
+    "open-code",
+    "xstate",
+    "pipeline",
+    "enterprise"
+  ],
+  "author": "Nistapp",
+  "license": "AGPL-3.0",
   "dependencies": {
+    "@ast-grep/napi": "^0.45.1",
     "@opencode-ai/plugin": "1.17.7",
+    "boxen": "^8.0.1",
     "commander": "^13.1.0",
     "dotenv": "^16.5.0",
     "execa": "^9.5.2",
     "pino": "^10.3.1",
-    "pino-pretty": "^13.1.3"
+    "pino-pretty": "^13.1.3",
+    "xstate": "^5.32.5"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

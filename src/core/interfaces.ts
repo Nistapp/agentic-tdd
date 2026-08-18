@@ -10,7 +10,7 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange } from './types.js';
+import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass, CreateFeatureBranchOutcome } from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -44,7 +44,8 @@ export interface IGitService {
    * Parse git log to find the highest completed Pass number.
    *
    * Looks for commit messages matching `chore(ai): completed Pass N -- ...`
-   * where N is a number 0-7. Returns the highest N found, or null if none.
+   * (optionally suffixed with `- <feature-name>`) where N is a number 0-7.
+   * Returns the highest N found, or null if none.
    */
   getLastCompletedPass(): Promise<number | null>;
 
@@ -53,6 +54,34 @@ export interface IGitService {
 
   /** Execute `git reset --hard <sha>` and `git clean -fd` to rewind to a specific commit. */
   abortToSha(sha: string): Promise<void>;
+
+  /**
+   * Create (or check out) a feature branch for the given issue reference.
+   *
+   * @param issueRef - Free-form issue reference (e.g. "PAY-404", "Add OAuth").
+   * @param baseBranchOverride - Explicit base branch, or `null` to use the current branch.
+   * @param skipHitl - If `true`, skip user prompt when the target branch already exists.
+   * @param promptUser - Optional async callback for HITL prompts (defaults to rejecting).
+   * @returns An {@link CreateFeatureBranchOutcome} describing what happened.
+   */
+  createFeatureBranch(
+    issueRef: string,
+    baseBranchOverride: string | null,
+    skipHitl: boolean,
+    promptUser?: (question: string) => Promise<boolean>,
+  ): Promise<CreateFeatureBranchOutcome>;
+
+  /** Create a lightweight git tag pointing at the current HEAD commit. */
+  tag(name: string): Promise<void>;
+
+  /**
+   * Compute changed line ranges between two refs via `git diff --unified=0`.
+   *
+   * Returns per-file changed line ranges in the **new** file (1-based, inclusive).
+   * Implementations should cache the result for the same (fromRef, toRef) pair
+   * since multiple passes may request the same diff.
+   */
+  getDiffLineRanges(fromRef: string, toRef: string): Promise<DiffLineChange[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +106,9 @@ export interface IFileSystem {
 
   /** Rename *oldPath* to *newPath*. */
   renameFile(oldPath: string, newPath: string): Promise<void>;
+
+  /** List entries in a directory (non-recursive). Throws if dir is missing. */
+  readdir(path: string): Promise<string[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,20 +123,43 @@ export interface ICommandRunner {
    * self-correction loop can write a meaningful error log.
    */
   runTests(testCmd: string[]): Promise<TestRunResult>;
+}
 
+// ---------------------------------------------------------------------------
+// IAgentRunner — invokes an AI agent for a pipeline pass
+// ---------------------------------------------------------------------------
+
+export interface IAgentRunner {
   /**
-   * Execute the opencode agent invocation.
+   * Execute an agent run for the given pass.
    *
-   * The caller has already built the full argument array via
-   * ``buildOpencodeCommand``.  This contract only cares about spawning.
+   * The caller (orchestrator) has already decided which artefacts to attach
+   * and built the prompt. The runner is responsible for translating these
+   * into tool-specific invocation arguments and spawning the agent process.
    *
-   * Must stream opencode's stdout/stderr to the terminal (``stdio: 'inherit'``)
-   * so the developer can see progress in real time.
-   *
-   * @returns The combined stdout+stderr output for post-processing.
-   * @throws {Error} If opencode exits with a non-zero status.
+   * @returns The agent's combined stdout+stderr output.
+   * @throws {Error} If the agent exits with a non-zero status.
    */
-  runOpenCode(args: string[]): Promise<string>;
+  execute(request: AgentRunRequest): Promise<AgentRunResult>;
+}
+
+// ---------------------------------------------------------------------------
+// IOpencodeSpawner — low-level opencode process spawning (with watchdog)
+// ---------------------------------------------------------------------------
+
+export interface IOpencodeSpawner {
+  /**
+   * Spawn the opencode CLI with the given pre-built argument array.
+   *
+   * Implementations own process lifecycle concerns: stdout/stderr streaming,
+   * heartbeat watchdog, and hard timeout. The caller (OpenCodeAgentRunner)
+   * is responsible for argv assembly — this contract is purely about
+   * spawning and monitoring.
+   *
+   * @returns Combined stdout+stderr output.
+   * @throws {Error} If opencode exits non-zero or hits the hard timeout.
+   */
+  spawn(args: string[]): Promise<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,3 +177,87 @@ export interface IEventBus {
    */
   on(kind: AgenticEventKind, handler: (event: AgenticEvent) => void): () => void;
 }
+
+// ---------------------------------------------------------------------------
+// IStateStore — persistence for pipeline session state
+// ---------------------------------------------------------------------------
+
+export interface IStateStore {
+  /** Absolute path to the state file managed by this store. */
+  readonly path: string;
+
+  save(ctx: PipelineContext): Promise<void>;
+  load(): Promise<PipelineContext>;
+  delete(): Promise<void>;
+  exists(): Promise<boolean>;
+}
+
+// ---------------------------------------------------------------------------
+// ILogger — structured logging (no dependency on pino or process.stdout)
+// ---------------------------------------------------------------------------
+
+export interface ILogger {
+  debug(msgOrObj: string | object, msg?: string): void;
+  info(msgOrObj: string | object, msg?: string): void;
+  warn(msgOrObj: string | object, msg?: string): void;
+  error(msgOrObj: string | object, msg?: string): void;
+  child(bindings: Record<string, unknown>): ILogger;
+  /** Read-only intent: gates CLI flags like --print-logs/--log-level. */
+  level: string;
+}
+
+// ---------------------------------------------------------------------------
+// PipelineConfig — configuration values injected at construction time
+// ---------------------------------------------------------------------------
+
+export interface PipelineConfig {
+  readonly opencodeLogPath: string;
+  readonly apiKeySet: 'present' | 'missing';
+  /**
+   * Optional per-agent model mapping: agent name (an `AGENT_NAMES` value) →
+   * opencode `provider/model` string. When an entry exists for a pass, the
+   * runner passes `--model <value>` to opencode, overriding the agent file's
+   * frontmatter. Absent entries fall back to the frontmatter `model:`.
+   */
+  readonly models?: Partial<Record<string, string>>;
+}
+
+// ---------------------------------------------------------------------------
+// ISymbolResolver — maps git-diff line ranges to enclosing function/method names
+// ---------------------------------------------------------------------------
+
+export interface ISymbolResolver {
+  /**
+   * For each {@link Range} in *ranges*, find the enclosing function, method,
+   * or class in *source* and return the qualified name (e.g. `Foo.methodA`).
+   *
+   * Parsing is done entirely in-memory — the implementation MUST NOT read the
+   * filesystem. *filePath* is provided for language detection and for error
+   * messages; it is not opened by the resolver.
+   *
+   * Ranges without an enclosing symbol are silently dropped.
+   * Malformed source returns an empty array (never throws).
+   *
+   * @returns Deduplicated, sorted array of qualified names.
+   */
+  mapRangesToSymbols(filePath: string, source: string, ranges: Range[]): string[];
+}
+
+// ---------------------------------------------------------------------------
+// IContextProvider — pure synchronous assembler over ctx.history (READER)
+// ---------------------------------------------------------------------------
+
+export interface IContextProvider {
+  /**
+   * Assemble per-pass context from the persisted {@link PipelineContext}.
+   *
+   * This method is **pure and synchronous** — it performs no git, no AST,
+   * and no async calls.  It reads ``ctx.history`` (hydrated from the state
+   * file on resume), merges the ``targetSymbols`` from upstream passes
+   * according to {@link CONTEXT_RULES}, and returns a {@link BuiltContext}.
+   *
+   * Missing history entries are silently treated as empty — no exceptions.
+   */
+  build(ctx: PipelineContext, pass: PipelinePass): BuiltContext;
+}
+

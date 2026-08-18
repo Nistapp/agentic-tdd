@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { PipelinePass, AGENT_NAMES, ExecutionMetadata } from '../core/types.js';
+import { PipelinePass, AGENT_NAMES } from '../core/types.js';
 
 // Determine log level and whether to use pino-pretty
 const args = process.argv;
@@ -34,16 +34,7 @@ if (isDebugActive) {
 
 const root = pino(pinoOptions);
 
-export interface ExecutionContext {
-  metadata: ExecutionMetadata;
-  logger: pino.Logger;
-}
-
-export const executionContextStorage = new AsyncLocalStorage<ExecutionContext>();
-
-export function getExecutionContext(): ExecutionContext | undefined {
-  return executionContextStorage.getStore();
-}
+export const executionContextStorage = new AsyncLocalStorage<{ logger: pino.Logger }>();
 
 export function reqLogger(): pino.Logger {
   return executionContextStorage.getStore()?.logger ?? root;
@@ -67,41 +58,4 @@ export const loggers = {
   }
 };
 
-export function createExecutionContextLogger(metadata: ExecutionMetadata): pino.Logger {
-  return root.child({
-    module: 'execution',
-    runId: metadata.runId,
-    targetFile: metadata.targetFile,
-    passId: metadata.passId,
-    attemptCount: metadata.attemptCount,
-  });
-}
 
-const MAX_INFO_STRING_LENGTH = 400;
-const C0_CONTROL_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
-
-function sanitizeString(value: string, level: string): string {
-  const clean = value.replace(C0_CONTROL_RE, '');
-  if (level === 'debug' || level === 'trace') return clean;
-  if (clean.length <= MAX_INFO_STRING_LENGTH) return clean;
-  return clean.slice(0, MAX_INFO_STRING_LENGTH) + '[Truncated: ' + clean.length + ' characters total]';
-}
-
-function sanitizeValue(value: unknown, level: string): unknown {
-  if (typeof value === 'string') return sanitizeString(value, level);
-  if (Array.isArray(value)) return value.map(v => sanitizeValue(v, level));
-  if (value instanceof Date) return new Date(value.getTime());
-  if (value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    const result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      result[k] = sanitizeValue(v, level);
-    }
-    return result;
-  }
-  return value;
-}
-
-export function sanitizeLogPayload(payload: any, currentLevel: string): any {
-  if (payload === null || payload === undefined) return payload;
-  return sanitizeValue(payload, currentLevel.toLowerCase());
-}

@@ -12,14 +12,14 @@
 // Pass definitions — matches AGENTS / PASS_LABELS dicts in Python cli.py
 // ---------------------------------------------------------------------------
 
-export const enum PipelinePass {
+export enum PipelinePass {
   Design             = 0,
   Contracts          = 1,
   TestGeneration     = 2,
   CoreImplementation = 3,
   Refactor           = 4,
-  Security           = 5,
-  Observability      = 6,
+  Observability      = 5,
+  Security           = 6,
   Documentation      = 7,
 }
 
@@ -29,8 +29,8 @@ export const AGENT_NAMES: Record<PipelinePass, string> = {
   [PipelinePass.TestGeneration]:     'pass-2-test-generation-agent',
   [PipelinePass.CoreImplementation]: 'pass-3-core-implementation-agent',
   [PipelinePass.Refactor]:           'pass-4-refactor-agent',
-  [PipelinePass.Security]:           'pass-5-security-agent',
-  [PipelinePass.Observability]:      'pass-6-observability-agent',
+  [PipelinePass.Observability]:      'pass-5-observability-agent',
+  [PipelinePass.Security]:           'pass-6-security-agent',
   [PipelinePass.Documentation]:      'pass-7-documentation-agent',
 };
 
@@ -40,8 +40,8 @@ export const PASS_LABELS: Record<PipelinePass, string> = {
   [PipelinePass.TestGeneration]:     'Test Generation (Red Phase)',
   [PipelinePass.CoreImplementation]: 'Core Implementation (Green Phase)',
   [PipelinePass.Refactor]:           'Refactor & Optimise',
-  [PipelinePass.Security]:           'Security Hardening',
   [PipelinePass.Observability]:      'Observability & Logging',
+  [PipelinePass.Security]:           'Security Hardening',
   [PipelinePass.Documentation]:      'Documentation',
 };
 
@@ -55,10 +55,12 @@ export const SELF_CORRECTION_PASSES = new Set<PipelinePass>([
   PipelinePass.Refactor,
   PipelinePass.Security,
   PipelinePass.Observability,
+  PipelinePass.Documentation,
 ]);
 
 /** Passes where a git commit is made after the agent completes. */
 export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
+  PipelinePass.Design,
   PipelinePass.Contracts,
   PipelinePass.TestGeneration,
   PipelinePass.CoreImplementation,
@@ -68,14 +70,57 @@ export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
   PipelinePass.Documentation,
 ]);
 
-/** Default max self-correction retries — matches Python MAX_CORRECTION_RETRIES. */
-export const DEFAULT_MAX_CORRECTION_RETRIES = 2;
+/** Default max self-correction retries (3 retries → 4 total attempts per pass). */
+export const DEFAULT_MAX_CORRECTION_RETRIES = 3;
+
+/** Passes that trigger a human-in-the-loop gate for manual review. */
+export const HITL_GATE_PASSES = new Set<PipelinePass>([
+  PipelinePass.Design,
+  PipelinePass.TestGeneration,
+]);
 
 // ---------------------------------------------------------------------------
 // Input source type — matches Python --source-type flag
 // ---------------------------------------------------------------------------
 
 export type SourceType = 'file' | 'string' | 'github';
+
+// ---------------------------------------------------------------------------
+// PassHistory — append-only record of per-pass progress, files, and errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Method-level target symbols keyed by file path.
+ * Persisted by the WRITER after each committed pass so the READER
+ * can assemble per-pass context without re-running git diff or AST.
+ */
+export type TargetSymbols = Record<string, string[]>;
+
+export interface PassHistory {
+  status: 'completed' | 'failed' | 'aborted' | 'skipped';
+  filesTouched: string[];
+  attempts: number;
+  lastError?: string;
+  skipReason?: string;
+  /**
+   * The commit hash is only known after the git commit. It is written to the
+   * state file immediately post-commit (dirty in working tree) and committed
+   * as part of the next pass's atomic commit.
+   */
+  commitHash?: string;
+  /** Persisted by WRITER for completed passes — filePath → qualified method names. */
+  targetSymbols?: TargetSymbols;
+  /**
+   * Persisted by WRITER for completed passes — filePath → precise change
+   * descriptor (line ranges, change kind, enclosing symbols, anchor snippet).
+   * Complements {@link targetSymbols} for edits to EXISTING files/symbols.
+   */
+  fileChanges?: FileChanges;
+  /** ISO 8601 timestamp when the pass was started. */
+  startedAt?: string;
+  /** ISO 8601 timestamp when the pass completed. */
+  completedAt?: string;
+}
 
 // ---------------------------------------------------------------------------
 // PipelineContext — the state object threaded through every pass
@@ -90,10 +135,10 @@ export interface PipelineContext {
   /** Fully-resolved test command as an argv array. */
   testCmd: string[];
 
-  /** If true, skip the human-in-the-loop gate after Pass 0. */
+  /** If true, skip the human-in-the-loop gate after Pass 0 (Design) and Pass 2 (TestGeneration). */
   skipHitl: boolean;
 
-  /** Maximum additional self-correction attempts (default 2 → 3 total). */
+  /** Maximum additional self-correction attempts (default 3 → 4 total). */
   maxCorrectionRetries: number;
 
   /** Pipeline semver string (e.g. "1.0.0"). */
@@ -129,6 +174,24 @@ export interface PipelineContext {
   runId?: string;
   currentPass?: PipelinePass;
   currentAttempt?: number;
+
+  /**
+   * Append-only history indexed by Pass number (0-7).
+   * Initialised as `{}` at the start of `PipelineOrchestrator.run()`.
+   * Populated after each pass completes or fails.
+   */
+  history: Partial<Record<PipelinePass, PassHistory>>;
+
+  /**
+   * Persisted XState v5 actor snapshot (`getPersistedSnapshot()` output).
+   * Written by the orchestrator after each pass so `--resume` can reboot the
+   * pipeline machine losslessly via `createActor(machine, { snapshot })`.
+   * Opaque to the core layer — never imported from `xstate` here.
+   */
+  xstateSnapshot?: Record<string, unknown>;
+
+  /** Flag set by a root-level PAUSE event; honoured at the next inter-pass boundary. */
+  pauseRequested?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,8 +216,11 @@ export interface ExecutionMetadata {
 export type AgenticEventKind =
   | 'PIPELINE_STARTED'
   | 'PIPELINE_COMPLETED'
+  | 'PIPELINE_PAUSED'
+  | 'PIPELINE_RESUMED'
   | 'PASS_STARTED'
   | 'PASS_COMPLETED'
+  | 'COMMIT_CAPTURED'
   | 'TEST_RUN_STARTED'
   | 'TEST_RUN_COMPLETED'
   | 'TEST_RUN_FAILED'
@@ -184,6 +250,32 @@ export interface AgenticEvent {
 }
 
 // ---------------------------------------------------------------------------
+// PipelineMachineEvent — in-bound events fed to the XState v5 actor (Phase 1+)
+//
+// Distinct from AgenticEvent (above), which is the *out-bound* UI event bus.
+// PipelineMachineEvent are the input events that drive state transitions
+// inside the pipeline actor; AgenticEvent are what the actor emits to
+// external listeners.  Do not conflate the two.
+// ---------------------------------------------------------------------------
+
+export type PipelineMachineEvent =
+  | { type: 'START_PIPELINE'; startPass: PipelinePass }
+  | { type: 'AGENT_SUCCESS'; pass: PipelinePass }
+  | { type: 'AGENT_FAILED'; pass: PipelinePass; error: string }
+  | { type: 'TEST_PASSED'; pass: PipelinePass }
+  | { type: 'TEST_FAILED'; pass: PipelinePass; output: string }
+  | { type: 'SELF_CORRECTION_RETRY'; pass: PipelinePass; attempt: number }
+  | { type: 'HITL_APPROVE'; pass: PipelinePass }
+  | { type: 'HITL_REJECT'; pass: PipelinePass }
+  | { type: 'HITL_REWIND'; pass: PipelinePass }
+  | { type: 'COMMIT_SUCCESS'; pass: PipelinePass; commitHash: string }
+  | { type: 'COMMIT_FAILED'; pass: PipelinePass; error: string }
+  | { type: 'PAUSE' }
+  | { type: 'RESUME' };
+
+export type HitlAction = 'APPROVE' | 'REJECT' | 'REWIND';
+
+// ---------------------------------------------------------------------------
 // Result types for the DI services (so callers don't work with raw primitives)
 // ---------------------------------------------------------------------------
 
@@ -197,7 +289,137 @@ export interface GitCommitResult {
   message: string;
 }
 
+export type CreateFeatureBranchOutcome =
+  | { kind: 'checked_out'; branch: string }
+  | { kind: 'created'; branch: string }
+  | { kind: 'abort_dirty'; message: string }
+  | { kind: 'abort_main'; message: string }
+  | { kind: 'abort_user_declined'; message: string };
+
 export interface FileChange {
   status: string;
   file: string;
+}
+
+export interface HitlPayload {
+  files?: FileChange[];
+  [k: string]: unknown;
+}
+
+export interface PassCompletedPayload {
+  files?: FileChange[];
+  attempts?: number;
+  /** Enclosing symbol names per file — captured by the WRITER post-commit. */
+  targetSymbols?: TargetSymbols;
+  /** Precise change descriptors (ranges/kind/symbols/anchors) per file. */
+  fileChanges?: FileChanges;
+  [k: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// ContextFiles — categorised source files for agent context injection
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Range — 1-based line range used by git diff and AST symbol resolution
+// ---------------------------------------------------------------------------
+
+export interface Range {
+  /** 1-based start line (inclusive). */
+  start: number;
+  /** 1-based end line (inclusive). */
+  end: number;
+}
+
+/** Classification of a single contiguous changed region in the NEW file. */
+export type ChangeKind = 'added' | 'modified' | 'deleted';
+
+/** A single contiguous changed region, as parsed from a unified-0 diff. */
+export interface DiffHunk {
+  /** 1-based line range in the new file (inclusive). */
+  range: Range;
+  /** Pure-add, mixed-edit, or pure-delete. */
+  kind: ChangeKind;
+  /** Number of added (+) lines in the hunk. */
+  addedLines: number;
+  /** Number of removed (-) lines in the hunk. */
+  removedLines: number;
+}
+
+/** Parsed result of `git diff --unified=0` — per-file changed hunks. */
+export interface DiffLineChange {
+  /** File path as reported by git diff (e.g. `src/foo.ts`). */
+  file: string;
+  /** Changed hunks in the *new* file (1-based, inclusive ranges). */
+  hunks: DiffHunk[];
+}
+
+/** Enriched change descriptor for a single hunk, persisted to the statefile. */
+export interface ChangeHunk extends DiffHunk {
+  /**
+   * Enclosing symbol names for the changed lines (e.g. `Foo.method`,
+   * `describe('Foo') › it('edge case')`). Includes test-style symbols.
+   */
+  symbols: string[];
+  /** First few added/changed lines from the new file — a drift-resistant locator. */
+  anchor?: string;
+}
+
+/** Per-file change descriptor written to the statefile by the WRITER. */
+export interface FileChangeRecord {
+  /** SHA of the commit that introduced this change. */
+  commitHash: string;
+  /** Whether the file was created by this pass or edited in place. */
+  kind: 'new-file' | 'edited-file';
+  hunks: ChangeHunk[];
+}
+
+/**
+ * `history[pass].fileChanges` — filePath → precise change descriptor.
+ * Tells the READER (and downstream agents) exactly which lines of which
+ * existing file/symbol changed, with anchors and symbol names.
+ */
+export type FileChanges = Record<string, FileChangeRecord>;
+
+export interface ContextFiles {
+  contracts: string[];
+  tests: string[];
+  implementation: string[];
+}
+
+/** The assembled context for a single pass — READER output. */
+export interface BuiltContext {
+  files: ContextFiles;
+  targetSymbols: TargetSymbols;
+  /** Precise change descriptors for edits to existing files/symbols. */
+  fileChanges: FileChanges;
+}
+
+/** Envelope wrapping the persisted state file. Provides forward-compat schema versioning. */
+export interface StateFileEnvelope {
+  schemaVersion: string;
+  context: PipelineContext;
+}
+
+// ---------------------------------------------------------------------------
+// Agent runner DTOs — the seam between orchestrator and agent invocations
+// ---------------------------------------------------------------------------
+
+export interface AgentArtefacts {
+  designMmd?: string;
+  specGherkin?: string;
+  specFile?: string;
+  errorLog?: string;
+  contextFiles?: ContextFiles;
+}
+
+export interface AgentRunRequest {
+  pass: PipelinePass;
+  prompt: string;
+  artefacts: AgentArtefacts;
+  runId?: string;
+}
+
+export interface AgentRunResult {
+  output: string;
 }

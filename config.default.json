@@ -1,0 +1,39 @@
+// =============================================================================
+// agentic-tdd — runtime configuration (committed default template).
+// -----------------------------------------------------------------------------
+// HOW TO OVERRIDE:
+//   Copy this file to .agentic-tdd/config.json and edit it there. The
+//   .agentic-tdd/ directory is git-ignored, so your overrides stay local and
+//   are never committed.
+//
+// STRUCTURE:
+//   The file is organised into sections; more will be added over time.
+//   For now the only supported section is "agents.models" — the per-agent
+//   (per-pass) model mapping.
+//
+// AGENT KEYS:
+//   The 8 agent identifiers below are the full agent/pass names (with pass
+//   number) defined in src/core/types.ts — the PipelinePass enum (lines 15-24)
+//   and the AGENT_NAMES map (lines 26-35). That file is the single source of
+//   truth for the 8 pipeline passes; keys here must match AGENT_NAMES exactly.
+//
+// MODEL VALUES:
+//   Each value is an opencode "provider/model" string. Recommended split
+//   (docs/architecture/user-overview/03-8-pass-pipeline.md): heavy-reasoning
+//   passes (0-2) on a strong model, the remaining passes (3-7) on the lighter,
+//   cheaper flash tier.
+// =============================================================================
+{
+  "agents": {
+    "models": {
+      "pass-0-design-agent": "deepseek/deepseek-v4-pro",
+      "pass-1-contracts-agent": "deepseek/deepseek-v4-pro",
+      "pass-2-test-generation-agent": "deepseek/deepseek-v4-pro",
+      "pass-3-core-implementation-agent": "deepseek/deepseek-v4-flash",
+      "pass-4-refactor-agent": "deepseek/deepseek-v4-flash",
+      "pass-5-observability-agent": "deepseek/deepseek-v4-flash",
+      "pass-6-security-agent": "deepseek/deepseek-v4-flash",
+      "pass-7-documentation-agent": "deepseek/deepseek-v4-flash"
+    }
+  }
+}

@@ -1,18 +1,25 @@
 import { PipelineOrchestrator } from '../src/core/orchestrator.js';
-import { PipelinePass, SELF_CORRECTION_PASSES } from '../src/core/types.js';
+import type { HitlHandler } from '../src/core/orchestrator.js';
+import { PipelinePass } from '../src/core/types.js';
 import type {
   PipelineContext,
   AgenticEvent,
+  FileChange,
+  HitlPayload,
 } from '../src/core/types.js';
 import type {
   IGitService,
   IFileSystem,
   ICommandRunner,
+  IAgentRunner,
   IEventBus,
+  ILogger,
+  IStateStore,
+  PipelineConfig,
+  IContextProvider,
 } from '../src/core/interfaces.js';
-import { vi } from 'vitest';
-import { join } from 'node:path';
-import { cwd } from 'node:process';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { parseSkipSignal } from '../src/core/skip-parser.js';
 
 // ---------------------------------------------------------------------------
 // Factory for a minimal PipelineContext (all artefact paths in specs/)
@@ -22,21 +29,54 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
   const specsDir = '/project/specs';
   const srcDir = '/project/src';
   return {
-    issueName: 'my_module',
+    featureName: 'my_module',
     testCmd: ['npm', 'test'],
     skipHitl: true,
-    maxCorrectionRetries: 2,
+    maxCorrectionRetries: 3,
     pipelineVersion: '1.0.0',
     sourceType: 'file',
     logLevel: 'INFO',
     specFileAbsPath: `${specsDir}/my_module.md`,
-    issueDescription: 'Create a simple utility module',
+    featureDescription: 'Create a simple utility module',
     artefactDir: specsDir,
     designMmdPath: `${specsDir}/my_module.mmd`,
     specGherkinPath: `${specsDir}/my_module.gherkin`,
-    errorLogPath: `${srcDir}/.opencode_error.log`,
+    errorLogPath: `${srcDir}/.agentic-tdd/error-my-feature.log`,
+    history: {},
     ...overrides,
   };
+}
+
+// ---------------------------------------------------------------------------
+// StubLogger — captures calls for verification
+// ---------------------------------------------------------------------------
+
+class StubLogger implements ILogger {
+  readonly calls: { method: string; args: unknown[] }[] = [];
+
+  debug(msgOrObj: string | object, msg?: string): void {
+    this.calls.push({ method: 'debug', args: [msgOrObj, msg].filter(a => a !== undefined) });
+  }
+
+  info(msgOrObj: string | object, msg?: string): void {
+    this.calls.push({ method: 'info', args: [msgOrObj, msg].filter(a => a !== undefined) });
+  }
+
+  warn(msgOrObj: string | object, msg?: string): void {
+    this.calls.push({ method: 'warn', args: [msgOrObj, msg].filter(a => a !== undefined) });
+  }
+
+  error(msgOrObj: string | object, msg?: string): void {
+    this.calls.push({ method: 'error', args: [msgOrObj, msg].filter(a => a !== undefined) });
+  }
+
+  child(_bindings: Record<string, unknown>): ILogger {
+    return this;
+  }
+
+  get level(): string {
+    return 'info';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -47,8 +87,13 @@ interface Mocks {
   git: IGitService;
   fs: IFileSystem;
   cmd: ICommandRunner;
+  agentRunner: IAgentRunner;
   events: IEventBus;
-  hitl: () => Promise<void>;
+  config: PipelineConfig;
+  logger: StubLogger;
+  stateStore: IStateStore;
+  contextProvider: IContextProvider;
+  hitl: HitlHandler;
   emittedEvents: AgenticEvent[];
 }
 
@@ -57,39 +102,87 @@ function makeMocks(): Mocks {
 
   const git: IGitService = {
     commit: vi.fn().mockResolvedValue({ kind: 'committed' as const, message: 'ok' }),
-    getPendingChanges: vi.fn().mockResolvedValue([]),
+    getPendingChanges: vi.fn().mockResolvedValue([{ status: 'M', file: 'some/file.ts' }]),
     getCurrentBranch: vi.fn().mockResolvedValue('feat/test'),
     isDirty: vi.fn().mockResolvedValue(false),
     getCurrentCommitSha: vi.fn().mockResolvedValue('abc123def456'),
     getLastCompletedPass: vi.fn().mockResolvedValue(null),
     resetWorkingTree: vi.fn().mockResolvedValue(undefined),
     abortToSha: vi.fn().mockResolvedValue(undefined),
+    tag: vi.fn().mockResolvedValue(undefined),
   };
 
   const fs: IFileSystem = {
     exists: vi.fn().mockResolvedValue(true),
-    readFile: vi.fn().mockResolvedValue('%% Module: my_module\n'),
+    readFile: vi.fn().mockResolvedValue('%% Module: my_module\n%% This is a long enough module design mock string \n'),
     writeFile: vi.fn().mockResolvedValue(undefined),
     mkdir: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
     renameFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
   };
 
   const cmd: ICommandRunner = {
     runTests: vi.fn().mockResolvedValue({ passed: true, output: '' }),
-    runOpenCode: vi.fn().mockResolvedValue(''),
+  };
+
+  const agentRunner: IAgentRunner = {
+    execute: vi.fn().mockResolvedValue({ output: '' }),
   };
 
   const events: IEventBus = {
     emit: vi.fn((event: AgenticEvent) => {
       emittedEvents.push(event);
+      // Sync listener map so `on('ERROR', fn)` subscribes and gets called
+      const listeners = (events as unknown as { _listeners: Map<string, Array<(e: AgenticEvent) => void>> })._listeners;
+      const fns = listeners?.get(event.kind);
+      if (fns) {
+        for (const fn of fns) {
+          fn(event);
+        }
+      }
     }),
-    on: vi.fn().mockReturnValue(() => {}),
+    on: vi.fn((kind: string, handler: (event: AgenticEvent) => void) => {
+      const self = events as unknown as { _listeners: Map<string, Array<(e: AgenticEvent) => void>> };
+      if (!self._listeners) self._listeners = new Map();
+      const existing = self._listeners.get(kind) ?? [];
+      existing.push(handler);
+      self._listeners.set(kind, existing);
+      return () => {
+        const list = self._listeners.get(kind);
+        if (list) {
+          const idx = list.indexOf(handler);
+          if (idx !== -1) list.splice(idx, 1);
+        }
+      };
+    }),
   };
 
-  const hitl = vi.fn().mockResolvedValue(undefined);
+  const config: PipelineConfig = {
+    opencodeLogPath: '/home/fake/.local/share/opencode/log/opencode.log',
+    apiKeySet: 'present',
+  };
 
-  return { git, fs, cmd, events, hitl, emittedEvents };
+  const stateStore: IStateStore = {
+    path: '/project/.opencode/state-my_module.json',
+    save: vi.fn().mockResolvedValue(undefined),
+    load: vi.fn(),
+    delete: vi.fn().mockResolvedValue(undefined),
+    exists: vi.fn().mockResolvedValue(true),
+  };
+
+  const hitl = vi.fn().mockResolvedValue('APPROVE' as const);
+
+  const logger = new StubLogger();
+
+  const contextProvider: IContextProvider = {
+    build: vi.fn().mockReturnValue({
+      files: { contracts: [], tests: [], implementation: [] },
+      targetSymbols: {},
+    }),
+  };
+
+  return { git, fs, cmd, agentRunner, events, config, logger, stateStore, contextProvider, hitl, emittedEvents };
 }
 
 // ---------------------------------------------------------------------------
@@ -106,20 +199,24 @@ function findEvents(events: AgenticEvent[], kind: string): AgenticEvent[] {
 
 describe('PipelineOrchestrator', () => {
   describe('Happy Path — all 8 passes succeed', () => {
-    it('calls runOpenCode exactly 8 times (once per pass)', async () => {
+    it('calls agentRunner.execute for all 8 passes and cmd.runTests for self-correction passes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx);
 
       expect(result).toBe(true);
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(8);
+      // Passes 0, 1, 2 use agentRunner directly (3 calls);
+      // Passes 3-7 use self-correction machine which calls agentRunner (5 calls) → 8 total
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+      // Passes 3-7 each run tests once → 5 calls
+      expect(m.cmd.runTests).toHaveBeenCalledTimes(5);
     });
 
     it('emits PIPELINE_STARTED and PIPELINE_COMPLETED', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -130,38 +227,27 @@ describe('PipelineOrchestrator', () => {
 
     it('emits PASS_STARTED and PASS_COMPLETED for all 8 passes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
-      console.log(m.emittedEvents.filter(e => e.kind === 'PASS_STARTED').map(e => e.pass));
 
       expect(findEvents(m.emittedEvents, 'PASS_STARTED')).toHaveLength(8);
       expect(findEvents(m.emittedEvents, 'PASS_COMPLETED')).toHaveLength(8);
     });
 
-    it('runs tests for each self-correction pass exactly once on success', async () => {
+    it('calls git.commit for passes 0–7 (8 commits)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
-      // Passes 3, 4, 5, 6 each run tests once → 4 calls
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
-    });
-
-    it('calls git.commit for passes 1–7 (7 commits)', async () => {
-      const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-
-      await orch.run(makeContext({ skipHitl: true }));
-
-      // 7 commits: Passes 1-7
-      expect(m.git.commit).toHaveBeenCalledTimes(7);
+      // 8 commits: Passes 0-7 (AD-11)
+      expect(m.git.commit).toHaveBeenCalledTimes(8);
     });
 
     it('does NOT emit HITL_REQUIRED when skipHitl is true', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -170,118 +256,171 @@ describe('PipelineOrchestrator', () => {
 
     it('emits HITL_REQUIRED and calls hitl handler when skipHitl is false', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: false }));
 
-      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED')).toHaveLength(1);
-      expect(m.hitl).toHaveBeenCalledTimes(1);
+      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED')).toHaveLength(2);
+      expect(m.hitl).toHaveBeenCalledTimes(2);
     });
 
-    it('includes design artefact, Gherkin spec, and spec file in Pass 0 opencode args', async () => {
+    it('calls hitl handler with correct pass and files for Pass 0 and Pass 2', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-      const ctx = makeContext({ skipHitl: true });
-      const designBefore = ctx.designMmdPath;
-      const specBefore = ctx.specGherkinPath;
-      const issueSpec = ctx.specFileAbsPath;
+      const testFiles: FileChange[] = [
+        { status: 'A', file: 'test/foo.test.ts' },
+        { status: 'A', file: 'test/bar.test.ts' },
+      ];
+      (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
-      await orch.run(ctx);
+      await orch.run(makeContext({ skipHitl: false }));
 
-      const firstCall = (m.cmd.runOpenCode as ReturnType<typeof vi.fn>).mock.calls[0];
-      const args = firstCall[0] as string[];
-      expect(args).toContain(designBefore);
-      expect(args).toContain(specBefore);
-      expect(args).toContain(issueSpec);
-      expect(args).toContain('--dangerously-skip-permissions');
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.Design, testFiles);
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.TestGeneration, testFiles);
+    });
+
+    it('characterization: event kind sequence for full 8-pass happy path', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: true }));
+
+      expect(m.emittedEvents.map(e => e.kind)).toMatchInlineSnapshot(`
+        [
+          "PIPELINE_STARTED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PASS_STARTED",
+          "TEST_RUN_STARTED",
+          "TEST_RUN_COMPLETED",
+          "PASS_COMPLETED",
+          "COMMIT_CAPTURED",
+          "PIPELINE_COMPLETED",
+        ]
+      `);
+    });
+  });
+
+  describe('HITL — existing synchronous path', () => {
+    it('rejects the pipeline when the HITL handler throws', async () => {
+      const m = makeMocks();
+      m.hitl = vi.fn().mockRejectedValue(new Error('HITL rejected by user'));
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+
+      await expect(
+        orch.run(makeContext({ skipHitl: false })),
+      ).rejects.toThrow('HITL rejected by user');
+
+      expect(findEvents(m.emittedEvents, 'HITL_REQUIRED').length).toBeGreaterThan(0);
+
+      // git.commit must never be called — pipeline fails at first HITL gate
+      expect(m.git.commit).not.toHaveBeenCalled();
+    });
+
+    it('emits HITL_REQUIRED events with correct payload (files + message)', async () => {
+      const m = makeMocks();
+      const testFiles: FileChange[] = [
+        { status: 'A', file: 'src/foo.ts' },
+      ];
+      (m.git.getPendingChanges as ReturnType<typeof vi.fn>).mockResolvedValue(testFiles);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: false }));
+
+      const hitlEvents = findEvents(m.emittedEvents, 'HITL_REQUIRED');
+      expect(hitlEvents).toHaveLength(2);
+
+      for (const evt of hitlEvents) {
+        expect(evt.message).toMatch(/Review generated artefacts for Pass/);
+        const payload = evt.payload as HitlPayload;
+        expect(payload.files).toEqual(testFiles);
+      }
+
+      expect(hitlEvents[0]!.pass).toBe(PipelinePass.Design);
+      expect(hitlEvents[1]!.pass).toBe(PipelinePass.TestGeneration);
+    });
+
+    it('invokes the HITL handler exactly twice (Pass 0 and Pass 2) and never for other passes', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+
+      await orch.run(makeContext({ skipHitl: false }));
+
+      expect(m.hitl).toHaveBeenCalledTimes(2);
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.Design, expect.any(Array));
+      expect(m.hitl).toHaveBeenCalledWith(PipelinePass.TestGeneration, expect.any(Array));
     });
   });
 
   describe('Pass 0 — design phase', () => {
     it('runs Pass 0 and handles design artefacts', async () => {
       const m = makeMocks();
-
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
 
-      // writeFile called for design artefacts and potentially state files
+      // writeFile called for design artefacts
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.designMmdPath, '');
       expect(m.fs.writeFile).toHaveBeenCalledWith(ctx.specGherkinPath, '');
 
-      // Total opencode calls: 8 (Pass 0 + Passes 1-7)
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(8);
+      // All 8 passes use agentRunner through the machine
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
     });
   });
 
-  describe('Self-Correction Path — Pass 3 fails once then recovers', () => {
-    it('writes error log, retries agent, deletes error log, and ultimately succeeds', async () => {
+  describe('Error handling', () => {
+    it('rejects when an agent run fails', async () => {
       const m = makeMocks();
-
-      // runTests: fail on 1st call (Pass 3 attempt 1), succeed on all later calls
-      let testCallCount = 0;
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-        testCallCount++;
-        if (testCallCount === 1) {
-          return { passed: false, output: 'AssertionError: expected 3 to equal 4' };
-        }
-        return { passed: true, output: '' };
+      let callCount = 0;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount > 1) throw new Error('Agent execution failed');
+        return { output: '' };
       });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-
-      await orch.run(makeContext({ skipHitl: true }));
-
-      // runOpenCode: 8 passes + 1 correction = 9 calls
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(9);
-
-      // runTests: Pass 3 fails once → 2 calls for Pass 3, +3 for Pass 4-6 = 5
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size + 1);
-
-      // Context Compaction: error log written once, then deleted on pass
-      expect(m.fs.writeFile).toHaveBeenCalled();
-      const writeCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls;
-      const errorLogCall = writeCalls.find((c: unknown[]) => (c[0] as string).endsWith('.opencode_error.log'));
-      expect(errorLogCall).toBeTruthy();
-      expect(errorLogCall[1]).toContain('AssertionError');
-
-      expect(m.fs.deleteFile).toHaveBeenCalledWith('/project/src/.opencode_error.log');
-
-      // Events
-      expect(findEvents(m.emittedEvents, 'SELF_CORRECTION_ATTEMPTED')).toHaveLength(1);
-      expect(findEvents(m.emittedEvents, 'TEST_RUN_FAILED')).toHaveLength(1);
-      expect(findEvents(m.emittedEvents, 'PIPELINE_COMPLETED')).toHaveLength(1);
-    });
-  });
-
-  describe('Self-Correction Path — max retries exhausted', () => {
-    it('throws an error when all retries are consumed and tests still fail', async () => {
-      const m = makeMocks();
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockResolvedValue({
-        passed: false,
-        output: 'FAIL',
-      });
-
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await expect(
-        orch.run(makeContext({ skipHitl: true, maxCorrectionRetries: 1 })),
-      ).rejects.toThrow(/FAILED after 2 attempt/);
+        orch.run(makeContext({ skipHitl: true })),
+      ).rejects.toThrow('Agent execution failed');
 
-      // Error on Pass 3 aborts pipeline — passes 4-7 never execute.
-      // Pass 0:1 + Pass 1:1 + Pass 2:1 + Pass 3:2 (initial + correction) = 5
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(5);
-
-      // Error log deleted after last failed attempt
-      expect(m.fs.deleteFile).toHaveBeenCalledWith('/project/src/.opencode_error.log');
+      expect(findEvents(m.emittedEvents, 'ERROR').length).toBeGreaterThan(0);
     });
   });
 
   describe('Event payload accuracy', () => {
-    it('passes currentPass and passLabel on every event', async () => {
+    it('passes currentPass and passLabel on every pass-level event', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
 
       await orch.run(makeContext({ skipHitl: true }));
 
@@ -296,7 +435,7 @@ describe('PipelineOrchestrator', () => {
   describe('Pass 2 commits all changes', () => {
     it('commits all changes after Pass 2 completes', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       await orch.run(ctx);
@@ -304,70 +443,305 @@ describe('PipelineOrchestrator', () => {
       const commitCalls = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls;
       const pass2Commit = commitCalls.find((call: unknown[]) => (call[1] as string).includes('completed Pass 2'));
       expect(pass2Commit).toBeTruthy();
-      expect(pass2Commit![0]).toEqual(['.']);
+      expect(pass2Commit![0]).toContain('.');
     });
   });
 
   describe('Rebase Pattern — resume with startPass', () => {
     it('runs only passes from startPass onwards (Pass 3 resume)', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
-      const result = await orch.run(ctx, PipelinePass.CoreImplementation); // start at Pass 3
+      const result = await orch.run(ctx, PipelinePass.CoreImplementation);
 
       expect(result).toBe(true);
-      // Passes 0, 1, 2 skipped; Passes 3-7 run = 5 opencode calls
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(5);
-      // Passes 3, 4, 5, 6 each run tests once
-      expect(m.cmd.runTests).toHaveBeenCalledTimes(SELF_CORRECTION_PASSES.size);
+      // Passes 3-7: 5 agent calls and 5 test runs through self-correction machine
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(5);
+      expect(m.cmd.runTests).toHaveBeenCalledTimes(5);
+      // Passes 3-7 each commit → 5 commits
+      expect(m.git.commit).toHaveBeenCalledTimes(5);
     });
 
     it('runs only Pass 7 when starting at Documentation', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
 
       const result = await orch.run(ctx, PipelinePass.Documentation);
 
       expect(result).toBe(true);
-      expect(m.cmd.runOpenCode).toHaveBeenCalledTimes(1);
-      expect(m.cmd.runTests).not.toHaveBeenCalled();
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(1);
+      expect(m.cmd.runTests).toHaveBeenCalledTimes(1);
+      expect(m.git.commit).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('deletes state file on successful completion', async () => {
+  describe('Snapshot serialization', () => {
+    it('populates ctx.xstateSnapshot after completion', async () => {
       const m = makeMocks();
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
       const ctx = makeContext({ skipHitl: true });
-
-      const stateFilePath = join(cwd(), '.opencode', 'active-run.json');
-      // exists returns true for the state file
-      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(async (p: string) => {
-        if (p === stateFilePath) return true;
-        return true;
-      });
 
       await orch.run(ctx);
 
-      expect(m.fs.deleteFile).toHaveBeenCalledWith(stateFilePath);
+      expect(ctx.xstateSnapshot).toBeDefined();
+      expect(typeof ctx.xstateSnapshot).toBe('object');
+      const json = JSON.stringify(ctx.xstateSnapshot);
+      expect(() => JSON.parse(json)).not.toThrow();
+      const parsed = JSON.parse(json) as Record<string, unknown>;
+      expect(parsed.status).toBe('done');
     });
 
-    it('does NOT delete state file when pipeline fails', async () => {
+    it('resumes from final snapshot without re-running agents', async () => {
       const m = makeMocks();
-      (m.cmd.runTests as ReturnType<typeof vi.fn>).mockResolvedValue({ passed: false, output: 'FAIL' });
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
 
-      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.events, m.hitl);
-      const ctx = makeContext({ skipHitl: true, maxCorrectionRetries: 0 });
+      await orch.run(ctx);
 
-      const stateFilePath = join(cwd(), '.opencode', 'active-run.json');
-      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(async (p: string) => {
-        if (p === stateFilePath) return true;
-        return true;
+      expect(ctx.xstateSnapshot).toBeDefined();
+      const prevAgentCalls = (m.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length;
+      const prevCommitCalls = (m.git.commit as ReturnType<typeof vi.fn>).mock.calls.length;
+
+      // Run again with the snapshot — should resolve immediately without re-invoking agents
+      const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: ctx.xstateSnapshot });
+      const m2 = makeMocks();
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
+
+      const result = await orch2.run(ctx2);
+
+      expect(result).toBe(true);
+      // Snapshot restores to 'done' state — no agents run again
+      expect((m2.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+      expect((m2.git.commit as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    });
+
+    it('saves final snapshot via stateStore on completion', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      await orch.run(ctx);
+
+      // stateStore.save called after pipeline completes — orchestrator owns persistence
+      expect(m.stateStore.save).toHaveBeenCalled();
+      // ctx passed to save includes xstateSnapshot
+      const saveCall = (m.stateStore.save as ReturnType<typeof vi.fn>).mock.calls.at(-1) as unknown[] | undefined;
+      const savedCtx = saveCall?.[0] as PipelineContext | undefined;
+      expect(savedCtx?.xstateSnapshot).toBeDefined();
+    });
+  });
+
+  describe('PAUSE / RESUME', () => {
+    it('pause() saves paused snapshot via stateStore', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
       });
 
-      await expect(orch.run(ctx)).rejects.toThrow();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
 
-      expect(m.fs.deleteFile).not.toHaveBeenCalledWith(stateFilePath);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      // Let the actor start — pass 0 will block on the deferred promise
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+
+      // Release pass 0 so the actor can proceed
+      resolveBlock?.();
+      resolveBlock = undefined;
+
+      await pausePromise;
+
+      // pause() should have called stateStore.save
+      expect(m.stateStore.save).toHaveBeenCalled();
+
+      const saveCall = (m.stateStore.save as ReturnType<typeof vi.fn>).mock.calls.at(-1) as unknown[] | undefined;
+      const savedCtx = saveCall?.[0] as PipelineContext | undefined;
+      expect(savedCtx?.xstateSnapshot).toBeDefined();
+      const snap = savedCtx?.xstateSnapshot as Record<string, unknown> | undefined;
+      expect(snap?.status).toBe('active');
+      expect(snap?.value).toBe('paused');
+    });
+
+    it('resumes from a paused snapshot without duplicating completed passes', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
+      });
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+      resolveBlock?.();
+      resolveBlock = undefined;
+      await pausePromise;
+
+      const pausedSnapshot = ctx.xstateSnapshot;
+
+      // Simulate --resume from the paused snapshot
+      const m2 = makeMocks();
+      const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
+
+      const result = await orch2.run(ctx2);
+
+      expect(result).toBe(true);
+      // AD-11: Pass 0 commits, so pause happens after pass 0 commit.
+      // Remaining passes: 1-7 (7 agent calls)
+      expect((m2.agentRunner.execute as ReturnType<typeof vi.fn>).mock.calls.length).toBe(7);
+      expect((m2.cmd.runTests as ReturnType<typeof vi.fn>).mock.calls.length).toBe(5);
+    });
+
+    it('emits PIPELINE_PAUSED and PIPELINE_RESUMED events', async () => {
+      const m = makeMocks();
+      let callCount = 0;
+      let resolveBlock: (() => void) | undefined;
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Promise<{ output: string }>((resolve) => {
+            resolveBlock = () => resolve({ output: '' });
+          });
+        }
+        return { output: '' };
+      });
+
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      orch.run(ctx);
+
+      await new Promise((r) => { setTimeout(r, 10); });
+
+      const pausePromise = orch.pause();
+      resolveBlock?.();
+      resolveBlock = undefined;
+      await pausePromise;
+
+      const pausedEvents = findEvents(m.emittedEvents, 'PIPELINE_PAUSED');
+      expect(pausedEvents).toHaveLength(1);
+
+      // Now resume from paused snapshot
+      const pausedSnapshot = ctx.xstateSnapshot;
+      const m2 = makeMocks();
+      const ctx2 = makeContext({ skipHitl: true, xstateSnapshot: pausedSnapshot });
+      const orch2 = new PipelineOrchestrator(m2.git, m2.fs, m2.cmd, m2.agentRunner, m2.events, m2.logger, m2.config, m2.contextProvider, undefined, m2.stateStore, m2.hitl);
+
+      await orch2.run(ctx2);
+
+      const resumedEvents = findEvents(m2.emittedEvents, 'PIPELINE_RESUMED');
+      expect(resumedEvents).toHaveLength(1);
+    });
+  });
+
+  describe('Corrupt snapshot handling', () => {
+    it('falls back to startPass path when xstateSnapshot is malformed object', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: { corrupt: true, status: 'active', value: 'paused' } });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      // Missing context/children — falls back to startPass
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+
+      // logger.warn should have been called about corrupt snapshot
+      const warnCalls = m.logger.calls.filter((c) => c.method === 'warn');
+      expect(warnCalls.some((c) => (c.args[0] as string).includes('Corrupt xstateSnapshot'))).toBe(true);
+    });
+
+    it('handles empty xstateSnapshot object gracefully', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: {} });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+    });
+
+    it('handles xstateSnapshot with unknown state value', async () => {
+      const m = makeMocks();
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true, xstateSnapshot: { status: 'active', value: 'nonexistent_state' } });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      // Falls back to startPass path
+      expect(m.agentRunner.execute).toHaveBeenCalledTimes(8);
+    });
+  });
+
+  describe('Assess-First Skip Logic (Passes 1-7)', () => {
+    it('parseSkipSignal correctly parses valid signals (T6, T7)', () => {
+      expect(parseSkipSignal('SKIP:5:No changes.')).toEqual({ pass: 5, reason: 'No changes.' });
+      expect(parseSkipSignal('SKIP:1:Feature already exists')).toEqual({ pass: 1, reason: 'Feature already exists' });
+      expect(parseSkipSignal('some random output\nSKIP:2:Ok')).toEqual({ pass: 2, reason: 'Ok' });
+      
+      expect(parseSkipSignal('some random output')).toBeUndefined();
+      expect(parseSkipSignal('SKIP::Invalid')).toBeUndefined();
+    });
+
+    it('Agent returning SKIP causes pass to be recorded as skipped with empty files (T1, T2, T8)', async () => {
+      const m = makeMocks();
+      
+      // Make agent return SKIP on pass 1
+      m.agentRunner.execute = vi.fn().mockImplementation(async (req) => {
+        if (req.pass === 1) return { output: 'SKIP:1:No contract changes.' };
+        return { output: 'Normal output' };
+      });
+      
+      const orch = new PipelineOrchestrator(m.git, m.fs, m.cmd, m.agentRunner, m.events, m.logger, m.config, m.contextProvider, undefined, m.stateStore, m.hitl);
+      const ctx = makeContext({ skipHitl: true });
+
+      const result = await orch.run(ctx);
+
+      expect(result).toBe(true);
+      
+      // Pass 1 should be recorded as skipped
+      expect(ctx.history[1]?.status).toBe('skipped');
+      expect(ctx.history[1]?.skipReason).toBe('No contract changes.');
+      
+      // Downstream context building should see it was skipped (T8 concept)
+      expect(ctx.history[2]?.status).toBe('completed');
+      
+      // Since Pass 1 is skipped, doAtomicCommit returns early without committing.
+      // Normally we have commits for 0, 1, 2, 3, 4, 5, 6, 7 (8 commits total).
+      // Since Pass 1 is skipped, we expect 7 commits.
+      const commitCalls = (m.git.commit as import('vitest').Mock).mock.calls;
+      expect(commitCalls.length).toBe(7);
+      expect(commitCalls.some((c: unknown[]) => typeof c[1] === 'string' && c[1].includes('Pass 1'))).toBe(false);
     });
   });
 });
