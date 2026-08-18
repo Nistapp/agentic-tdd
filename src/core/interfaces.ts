@@ -213,6 +213,13 @@ export interface ILogger {
 export interface PipelineConfig {
   readonly opencodeLogPath: string;
   readonly apiKeySet: 'present' | 'missing';
+  /**
+   * Optional per-agent model mapping: agent name (an `AGENT_NAMES` value) →
+   * opencode `provider/model` string. When an entry exists for a pass, the
+   * runner passes `--model <value>` to opencode, overriding the agent file's
+   * frontmatter. Absent entries fall back to the frontmatter `model:`.
+   */
+  readonly models?: Partial<Record<string, string>>;
 }
 
 // ---------------------------------------------------------------------------

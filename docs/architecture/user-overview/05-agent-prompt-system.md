@@ -122,29 +122,37 @@ Two directives recur in every file and are worth knowing about:
 
 ## 3. Routing Strategy
 
-Routing is **static and declarative**: each pass pins its model in the `model:` field of its agent file's frontmatter. There is no hidden runtime router — the `model:` line is read back out of the file at pre-flight time and logged ([`#logPreFlight`](../../../src/infrastructure/open-code-agent-runner.ts#L71-L91)).
+Routing is **declarative and configurable at runtime**. Each agent file still pins a fallback `model:` in its frontmatter, but the effective model is resolved from a config file — `config.default.json` (committed template) merged with `.agentic-tdd/config.json` (git-ignored user override) — and passed to opencode as `--model`. Precedence: `--model` flag → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter (see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)). The pre-flight log records the effective model and its source ([`#logPreFlight`](../../../src/infrastructure/open-code-agent-runner.ts#L76-L97)).
 
 ### 3.1 Shipped defaults (source of truth)
 
 | Pass | Agent file | Shipped `model:` |
 |---|---|---|
-| 0 Design | `pass-0-design-agent.md#L8` | `deepseek/deepseek-v4-pro` |
-| 1 Contracts | `pass-1-contracts-agent.md#L12` | `deepseek/deepseek-v4-pro` |
-| 2 Test Generation | `pass-2-test-generation-agent.md#L9` | `deepseek/deepseek-v4-pro` |
-| 3 Core Implementation | `pass-3-core-implementation-agent.md#L10` | `deepseek/deepseek-v4-pro` |
-| 4 Refactor | `pass-4-refactor-agent.md#L10` | `deepseek/deepseek-v4-pro` |
-| 5 Observability | `pass-5-observability-agent.md#L10` | `deepseek/deepseek-v4-pro` |
-| 6 Security Hardening | `pass-6-security-agent.md#L10` | `deepseek/deepseek-v4-pro` |
-| 7 Documentation | `pass-7-documentation-agent.md#L11` | `deepseek/deepseek-v4-flash` |
+| 0 Design | `pass-0-design-agent.md#L7` | `deepseek/deepseek-v4-pro` |
+| 1 Contracts | `pass-1-contracts-agent.md#L11` | `deepseek/deepseek-v4-pro` |
+| 2 Test Generation | `pass-2-test-generation-agent.md#L8` | `deepseek/deepseek-v4-pro` |
+| 3 Core Implementation | `pass-3-core-implementation-agent.md#L9` | `deepseek/deepseek-v4-flash` |
+| 4 Refactor | `pass-4-refactor-agent.md#L9` | `deepseek/deepseek-v4-flash` |
+| 5 Observability | `pass-5-observability-agent.md#L9` | `deepseek/deepseek-v4-flash` |
+| 6 Security Hardening | `pass-6-security-agent.md#L9` | `deepseek/deepseek-v4-flash` |
+| 7 Documentation | `pass-7-documentation-agent.md#L9` | `deepseek/deepseek-v4-flash` |
 
-The split is deliberate: the *heavy reasoning* passes (design, contracts, tests, implementation, refactor, observability, security) run a strong reasoning model, while Pass 7 — documentation — runs the lighter, cheaper `flash` tier, which is ample for docstrings and `@see` links.
+The split follows the recommendation in [3. The 8-Pass Pipeline](03-8-pass-pipeline.md): the *heavy-reasoning* passes (0–2 — design, contracts, tests) run a strong reasoning model, while the *generation & polish* passes (3–7 — implementation, refactor, observability, security, documentation) run the lighter, cheaper `flash` tier. The same values are the committed default in [`config.default.json`](../../../config.default.json).
 
 ### 3.2 Overriding the routing
 
-Routing lives in the agent files precisely so it is **user-editable without a rebuild of the engine's logic**. To change a pass's model, edit the `model:` line in the corresponding `src/agents/pass-*.md` and re-run `npm run build` (which copies the prompts to `dist/agents/`).
+**Runtime config file (recommended):** copy the committed template to the git-ignored override location and edit it:
 
-> [!NOTE] Config-file routing is planned
-> Editing agent files directly is a developer-desk workflow. A user-facing **config file** for runtime behaviour (e.g. per-agent models) is the planned next step — tracked in [discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52). This is the project's config-driven-evolution direction (see [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-roadmap.md)).
+```bash
+cp config.default.json .agentic-tdd/config.json   # then edit .agentic-tdd/config.json
+```
+
+The file is sectioned (`agents.models` maps each agent name — the `AGENT_NAMES` values from [`src/core/types.ts`](../../../src/core/types.ts#L26-L35) — to a `provider/model` string). Comments are allowed; keys must match `AGENT_NAMES` exactly.
+
+**CLI flags (per-run):** `--model <provider/model>` overrides every agent for the run; `--config <path>` points at an alternate config file. Frontmatter editing (rebuild via `npm run build`) remains the last-resort fallback.
+
+> [!NOTE] Config-file routing is shipped
+> A user-facing **config file** for per-agent models shipped with [ADR-0009](../adrs/0009-configurable-per-agent-models.md), superseding the "planned" item tracked in [discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52).
 
 > [!NOTE] Aspirational vs shipped
 > The widely-cited "Sonnet for design, DeepSeek for logic, Flash for docs, GPT-4.5 for security" routing is **aspirational**, not what ships. The `model:` fields in the table above are the source of truth (see P-2 on [page 1](01-why-this-exists.md)). We have tested with GLM, DeepSeek, and Gemini; the shipped files currently pin DeepSeek.
@@ -157,8 +165,8 @@ Routing lives in the agent files precisely so it is **user-editable without a re
 |---|---|
 | **Can an agent go rogue?** | No `bash`, no network, no sub-agents — its only power is scoped file edits (see [7. Security Model](07-security-model.md)). |
 | **Can a pass break another pass's work?** | Scope guardrails + separation-of-concerns rules make **Agent Trampling** structurally impossible, not just discouraged. |
-| **Can I use different models?** | Yes — routing is a YAML line per pass. No code changes; edit the file, rebuild. |
-| **Are the prompts locked to Nistapp?** | The shipped agent files encode Nistapp's internal workflow, but they are plain Markdown designed to be modified for your own conventions, prompts, and models — and the routing is config-driven in the making ([discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52)). |
+| **Can I use different models?** | Yes — per-agent models are configured at runtime. Copy `config.default.json` to `.agentic-tdd/config.json` and edit `agents.models`, or override per-run with `--model` / `--config` (§ 3.2). No code changes, no rebuild. |
+| **Are the prompts locked to Nistapp?** | The shipped agent files encode Nistapp's internal workflow, but they are plain Markdown designed to be modified for your own conventions, prompts, and models — and routing is config-driven since [ADR-0009](../adrs/0009-configurable-per-agent-models.md). |
 | **Is it locked to one vendor?** | No — harness-independent by design (§ 1); model-agnostic via frontmatter. |
 | **How much do the prompts cost to maintain?** | They are plain Markdown; `indexer-first` + `assess-first`/SKIP actively avoid wasted tokens (see [6. Context Engineering & Token Savings](06-context-and-token-savings.md)). |
 
@@ -181,7 +189,7 @@ The implementation of everything above lives in the Contributor Track:
 
 | # | Topic | What is missing |
 |---|---|---|
-| R-1 | Config-file routing | `model:` is hardcoded in agent files today; a user-facing config file is planned ([discussion #52](https://github.com/Nistapp/agentic-tdd/discussions/52)). Re-check when shipped. |
+| R-1 | Config-file routing | **Shipped** — per-agent models resolve from `config.default.json` + `.agentic-tdd/config.json` with `--model`/`--config` overrides ([ADR-0009](../adrs/0009-configurable-per-agent-models.md)). See § 3.2. |
 | R-2 | Model routing truth | Re-confirm exact current `model:` per pass when agent files change — the table in § 3.1 is a snapshot. |
 | R-3 | Security-pass orchestration | A dedicated security orchestrator / swarm of security sub-agents is an open idea ([discussion #28](https://github.com/Nistapp/agentic-tdd/discussions/28)) — planned, not shipped. |
 

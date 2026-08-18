@@ -27,6 +27,7 @@ This page is the single destination for two kinds of project memory:
 | [0006](../adrs/0006-context-control-optimisation.md) | Static Prefix ordering for prompt cache hits | **Deprecated** ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) | 2026-07-01 |
 | [0007](../adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for in-process symbol resolution | Accepted | 2026-08-08 |
 | [0008](../adrs/0008-observability-before-security.md) | Swap pass order — Observability (5) before Security (6) | Accepted | 2026-08-01 |
+| [0009](../adrs/0009-configurable-per-agent-models.md) | Configurable per-agent models via `config.json` | Accepted | 2026-08-17 |
 
 > [!IMPORTANT]
 > All ADR bodies are fully drafted (Context / Decision / Consequences). Deprecation note: **0006** (Static Prefix) is tombstoned in place with its deprecation notice (per STYLE_GUIDE §7.1 — never delete, only supersede).

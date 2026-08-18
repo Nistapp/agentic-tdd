@@ -85,7 +85,7 @@ Because it is gitignored, create it once per machine. At minimum it must registe
 }
 ```
 
-The `agent.plan` / `agent.build` model routing is a **stack-level override**; each pass agent's YAML frontmatter in `src/agents/pass-*.md` still pins its own model (e.g. `pass-0-design-agent.md` frontmatter). Align them or be deliberate about which wins.
+The `agent.plan` / `agent.build` model routing is a **stack-level override**; the effective per-pass model is resolved at runtime from `config.default.json` + `.agentic-tdd/config.json` and passed to opencode as `--model` (agent-file frontmatter is only the fallback — see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)). Align them or be deliberate about which wins.
 
 > [!TIP]
 > After registering the MCP server, confirm the indexer is up with `codebase-memory` tools (`list_projects` / `index_status`). Pass agents call `detect_changes`/`index_status` and only fall back to `read/glob/grep` when no indexer is available — so a healthy index is what actually unlocks the fast path.

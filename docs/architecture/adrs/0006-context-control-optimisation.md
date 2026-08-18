@@ -76,6 +76,6 @@ The full path that realises (and today, still reflects) the decision:
 |---|---|---|
 | P-1 | Savings quantification | No measured data on how many tokens/latency Static Prefix saved; the benefit is qualitative, and the cost of the "hidden contract" is unobserved. |
 | P-2 | Discussion #53 resolution | The deprecation is pending research on whether prefix-cache ordering still helps with per-pass LLM config. Until resolved, no further cache-hit investment. |
-| P-3 | Runtime per-pass model config | The feature that "each pass can be configured with its own LLM" is **planned, not shipped** — today all pass files pin DeepSeek in frontmatter. The deprecation premise is aspirational until the config file + `--model` flag land. |
+| P-3 | Runtime per-pass model config | **Shipped** — each pass's LLM is configurable via `config.default.json` + `.agentic-tdd/config.json` and `--model`/`--config` flags ([ADR-0009](./0009-configurable-per-agent-models.md)). The deprecation premise is now testable. |
 | P-4 | Banner drift | `TerminalRenderer.banner` still prints `Cache strategy: Static Prefix + Context Compaction`; decide whether to keep or update once the deprecation is finalised. |
 | P-5 | Decision date & deciders | Date is estimated (2026-07-01); no decider GitHub handles are recorded. |

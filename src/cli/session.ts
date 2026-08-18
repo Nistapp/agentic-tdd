@@ -9,6 +9,7 @@ import type { PipelineOrchestrator } from '../core/orchestrator.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
+import { resolveModelConfig } from './model-config.js';
 import { getErrorLogPath } from '../utils/paths.js';
 
 let activeOrchestrator: PipelineOrchestrator | undefined;
@@ -65,9 +66,16 @@ export async function resumeSession(
   renderer: TerminalRenderer,
   version: string,
   noContextEnrich?: boolean,
+  model?: string,
+  configPath?: string,
 ): Promise<void> {
   const ctx = await stateStore.load();
   ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
+
+  const modelConfig = await resolveModelConfig(
+    { model, configPath },
+    { userPath: resolve(cwd(), '.agentic-tdd/config.json'), fs },
+  );
 
   const snap = ctx.xstateSnapshot as Record<string, unknown> | undefined;
   const isPaused: boolean = snap?.status === 'active' && snap?.value === 'paused';
@@ -87,6 +95,7 @@ export async function resumeSession(
         version,
         stateStore,
         noContextEnrich,
+        modelConfig,
       });
 
       activeOrchestrator = orchestrator;
@@ -142,6 +151,7 @@ export async function resumeSession(
     version,
     stateStore,
     noContextEnrich,
+    modelConfig,
   });
 
   activeOrchestrator = orchestrator;
@@ -226,6 +236,11 @@ export async function startNewSession(
 
   renderer.banner(ctx);
 
+  const modelConfig = await resolveModelConfig(
+    { model: options.model, configPath: options.configPath },
+    { userPath: resolve(cwd(), '.agentic-tdd/config.json'), fs },
+  );
+
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -234,6 +249,7 @@ export async function startNewSession(
     version,
     stateStore,
     noContextEnrich,
+    modelConfig,
   });
 
   activeOrchestrator = orchestrator;

@@ -12,6 +12,10 @@ export interface ValidatedOptions {
   baseBranch?: string;
   featureName: string;
   featureDescription: string;
+  /** `--model <provider/model>` — global override for every agent. */
+  model?: string;
+  /** `--config <path>` — alternate config file path. */
+  configPath?: string;
 }
 
 export async function validateAndResolveOptions(
@@ -70,5 +74,7 @@ export async function validateAndResolveOptions(
     baseBranch: options.baseBranch ? String(options.baseBranch) : undefined,
     featureName,
     featureDescription,
+    model: options.model ? String(options.model) : undefined,
+    configPath: options.config ? String(options.config) : undefined,
   };
 }
