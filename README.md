@@ -144,6 +144,7 @@ The full documentation lives in [`docs/`](docs/), split into two audience tracks
 - **[User Overview](docs/architecture/user-overview/)** — for evaluators: why this exists, the high-level architecture, the 8-pass pipeline, security model, and cost/context engineering.
 - **[Contributor Deep Dive](docs/architecture/contributor-deep-dive/)** — for those extending the pipeline: core engine internals, prompt engineering, DI wiring, and testing strategy.
 - **[Architecture Decision Records](docs/architecture/adrs/)** — the immutable decision log.
+- **[Release Process](RELEASE_PROCESS.md)** — branching strategy, release lifecycle, and the back-merge.
 
 Start at the [architecture index](docs/architecture/README.md).
 

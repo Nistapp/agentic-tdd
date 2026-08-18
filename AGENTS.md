@@ -231,3 +231,24 @@ editing them:
 - Do not skip the `codebase-memory-mcp` indexing step at the start of a session.
 - Do not run `opencode` or make real API calls in tests.
 - Do not modify `dist/` manually — it is generated.
+
+---
+
+## 11. Git Commit Conventions & Release Lifecycle (STRICT)
+
+**Commit Format:** All git commits MUST strictly follow the Conventional Commits specification
+(`<type>(<scope>): <description>`). Our automated release system (Release Please) relies on
+these prefixes to bump versions and write the `CHANGELOG.md`.
+- `feat:` -> MINOR bump (New features)
+- `fix:` -> PATCH bump (Bug fixes)
+- `feat!:` or `fix!:` -> MAJOR bump (Breaking changes)
+- `chore:`, `docs:`, `test:`, `refactor:` -> No bump, but recorded.
+
+**Branching Strategy:**
+1. All work is done on feature branches and PR'd into `dev`. Never commit directly to `main`.
+2. `main` is the production branch and contains only released code.
+3. Direct PRs to `main` may only originate from `dev` (enforced by `.github/workflows/enforce-dev-base.yml`).
+
+**Release Lifecycle:** Releases, version bumps, changelog generation, and the `main` → `dev`
+back-merge are automated via `.github/workflows/release-and-sync.yml`.
+**See `RELEASE_PROCESS.md` for the full step-by-step release lifecycle.**
