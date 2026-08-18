@@ -1,6 +1,6 @@
 {
   "name": "agentic-tdd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An npx-executable, agentic TDD pipeline orchestration tool — 8-pass state machine for enterprise software development",
   "type": "module",
   "engines": {
