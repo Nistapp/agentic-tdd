@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/Nistapp/agentic-tdd/compare/v0.2.0...v0.2.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **ci:** use Node 24 for trusted npm publishing ([5eac92f](https://github.com/Nistapp/agentic-tdd/commit/5eac92f00ab485f13b4085615a510476bdd93d71))
+* **ci:** use Node 24 for trusted npm publishing ([f4eeb5f](https://github.com/Nistapp/agentic-tdd/commit/f4eeb5f0fb98826271a52f37db1c73bbd7527f97))
+* **ci:** use Node 24 for trusted npm publishing ([e8974c5](https://github.com/Nistapp/agentic-tdd/commit/e8974c5013f6e3c9ab80b9f891e099f267f307c3))
+
 ## [0.2.0](https://github.com/Nistapp/agentic-tdd/compare/v0.1.0...v0.2.0) (2026-08-18)
 
 
