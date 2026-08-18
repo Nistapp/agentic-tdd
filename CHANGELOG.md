@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/Nistapp/agentic-tdd/compare/v0.1.0...v0.2.0) (2026-08-18)
+
+
+### Features
+
+* **cli:** support deepseek API key and route default models via openrouter ([88e1f3c](https://github.com/Nistapp/agentic-tdd/commit/88e1f3c460f0efd5beec8a07212b2d83d481eefd))
+* deepseek key support, openrouter defaults, trusted npm publishing ([459266f](https://github.com/Nistapp/agentic-tdd/commit/459266fc3d977cd52a7ed6211fe01ae3d73a8558))
+
 ## 0.1.0 (2026-08-18)
 
 
