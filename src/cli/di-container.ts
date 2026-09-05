@@ -2,7 +2,7 @@
  * Dependency Injection (DI) container for the agentic-tdd CLI.
  *
  * Responsible for wiring up all pipeline services: EventBus, CommandRunner,
- * HitlHandler, OpenCodeAgentRunner, and PipelineOrchestrator.
+ * HitlHandler, OpenCodeCliRunner, and PipelineOrchestrator.
  */
 
 import { EventBus } from '../infrastructure/event-bus.js';

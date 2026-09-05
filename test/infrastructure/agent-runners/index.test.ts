@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { createAgentRunner, CreateAgentRunnerDeps } from '../../../src/infrastructure/agent-runners/index.js';
 import { PiSdkRunner } from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
-import { OpenCodeAgentRunner } from '../../../src/infrastructure/open-code-agent-runner.js';
+import { OpenCodeCliRunner } from '../../../src/infrastructure/agent-runners/opencode-cli-runner.js';
 import type { IFileSystem, ILogger, IOpencodeSpawner, PipelineConfig } from '../../../src/core/interfaces.js';
 
 // ---------------------------------------------------------------------------
@@ -56,10 +56,10 @@ describe('createAgentRunner', () => {
     expect(runner).toBeInstanceOf(PiSdkRunner);
   });
 
-  it('returns an OpenCodeAgentRunner instance for backend "opencode-cli"', () => {
+  it('returns an OpenCodeCliRunner instance for backend "opencode-cli"', () => {
     const deps = makeDeps();
     const runner = createAgentRunner('opencode-cli', deps);
-    expect(runner).toBeInstanceOf(OpenCodeAgentRunner);
+    expect(runner).toBeInstanceOf(OpenCodeCliRunner);
   });
 
   it('throws when opencode-cli backend is requested without cmdRunner', () => {

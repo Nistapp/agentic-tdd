@@ -1,4 +1,4 @@
-import { OpenCodeAgentRunner } from '../open-code-agent-runner.js';
+import { OpenCodeCliRunner } from './opencode-cli-runner.js';
 import { PiSdkRunner } from './pi-sdk-runner.js';
 
 import type { IAgentRunner, IFileSystem, ILogger, IOpencodeSpawner, PipelineConfig } from '../../core/interfaces.js';
@@ -20,7 +20,7 @@ export function createAgentRunner(backend: AgentBackend, deps: CreateAgentRunner
       if (!deps.cmdRunner) {
         throw new Error('cmdRunner is required for opencode-cli backend');
       }
-      return new OpenCodeAgentRunner(deps.fs, deps.logger, deps.config, deps.cmdRunner);
+      return new OpenCodeCliRunner(deps.fs, deps.logger, deps.config, deps.cmdRunner);
     default:
       throw new Error(`Unknown agent backend: ${backend}`);
   }

@@ -152,7 +152,7 @@ export interface IOpencodeSpawner {
    * Spawn the opencode CLI with the given pre-built argument array.
    *
    * Implementations own process lifecycle concerns: stdout/stderr streaming,
-   * heartbeat watchdog, and hard timeout. The caller (OpenCodeAgentRunner)
+   * heartbeat watchdog, and hard timeout. The caller (OpenCodeCliRunner)
    * is responsible for argv assembly — this contract is purely about
    * spawning and monitoring.
    *
