@@ -16,6 +16,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0007](adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for In-Process Symbol Resolution | Accepted | 2026-08-08 |
 | [0008](adrs/0008-observability-before-security.md) | Swap Pass Order — Observability Before Security | Accepted | 2026-08-01 |
 | [0009](adrs/0009-configurable-per-agent-models.md) | Configurable Per-Agent Models via `config.json` | Accepted | 2026-08-17 |
+| [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-05 |
 
 ## Key Documents
 

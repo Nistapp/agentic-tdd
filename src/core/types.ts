@@ -422,4 +422,73 @@ export interface AgentRunRequest {
 
 export interface AgentRunResult {
   output: string;
+
+  /**
+   * Optional structured trace of the agent run (tool calls, message deltas,
+   * usage). Populated by SDK-based runners (e.g. {@linkcode PiSdkRunner});
+   * absent for CLI runners that only capture raw stdout/stderr.
+   */
+  structured?: AgentStructuredOutput;
+
+  /** Opaque session identifier reported by the backend (for observability). */
+  sessionId?: string;
+
+  /** Wall-clock duration of the agent run, in milliseconds. */
+  durationMs?: number;
+}
+
+/** A single tool invocation recorded during an agent turn. */
+export interface AgentToolCallEvent {
+  toolCallId: string;
+  toolName: string;
+  args: unknown;
+  result?: unknown;
+  isError: boolean;
+}
+
+/** A streamed assistant text delta captured during an agent turn. */
+export interface AgentMessageEvent {
+  role: 'assistant';
+  /** Incremental text delta (concatenate all deltas to reconstruct the turn). */
+  delta: string;
+  /** Optional accumulated text at the point of emission. */
+  text?: string;
+}
+
+/** Token usage reported by the model provider (when available). */
+export interface AgentUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+/** Structured capture of an agent turn — tool calls, messages, and usage. */
+export interface AgentStructuredOutput {
+  toolCalls: AgentToolCallEvent[];
+  messages: AgentMessageEvent[];
+  usage?: AgentUsage;
+}
+
+/**
+ * Typed error raised by agent runners when an agent run fails.
+ *
+ * This is the repository's first custom `Error` subclass (all prior code
+ * throws bare `Error`). It is additive and backward-compatible — the core
+ * machines catch generic `Error`, so their behaviour is unchanged — but it
+ * provides a discriminant (`kind`) so callers can branch on failure mode.
+ */
+export class AgentRunError extends Error {
+  readonly kind: 'agent_failed' | 'timeout' | 'no_api_key' | 'no_model';
+  readonly pass: PipelinePass;
+
+  constructor(
+    kind: AgentRunError['kind'],
+    pass: PipelinePass,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = 'AgentRunError';
+    this.kind = kind;
+    this.pass = pass;
+  }
 }
