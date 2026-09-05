@@ -7,13 +7,14 @@
 
 import { EventBus } from '../infrastructure/event-bus.js';
 import { CommandRunner } from '../infrastructure/command-runner.js';
-import { OpenCodeAgentRunner } from '../infrastructure/open-code-agent-runner.js';
 import { PipelineOrchestrator } from '../core/orchestrator.js';
 import { StateContextProvider } from '../core/context-provider.js';
 import { AstGrepSymbolResolver } from '../infrastructure/ast-grep-symbol-resolver.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { getOpencodeLogPath } from '../utils/paths.js';
 import { loggers } from '../utils/logger.js';
+import { createAgentRunner } from '../infrastructure/agent-runners/index.js';
+import type { AgentBackend } from '../infrastructure/agent-runners/index.js';
 
 import type { PipelineConfig, IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import type { PipelineContext } from '../core/types.js';
@@ -33,6 +34,8 @@ export interface ContainerOptions {
   noContextEnrich?: boolean;
   /** Resolved per-agent model config (see `resolveModelConfig`). */
   modelConfig?: ModelConfig;
+  /** Agent backend: 'pi' (in-process SDK, default) or 'opencode-cli' (shell-out). */
+  backend?: AgentBackend;
 }
 
 export interface PipelineServices {
@@ -59,9 +62,12 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
 
   const pipelineConfig: PipelineConfig = buildPipelineConfig(opts);
 
-  const agentRunner = new OpenCodeAgentRunner(
-    fs, new PinoLoggerAdapter(loggers.core), pipelineConfig, cmdRunner,
-  );
+  const agentRunner = createAgentRunner(opts.backend ?? 'pi', {
+    fs,
+    logger: new PinoLoggerAdapter(loggers.core),
+    config: pipelineConfig,
+    cmdRunner,
+  });
 
   const contextProvider = new StateContextProvider();
   const symbolResolver = noContextEnrich ? undefined : new AstGrepSymbolResolver();

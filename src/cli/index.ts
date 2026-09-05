@@ -77,6 +77,7 @@ program
   .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
   .option('--model <model>', 'Override the model for every agent (provider/model)')
   .option('--config <path>', 'Path to an alternate config.json (overrides .agentic-tdd/config.json)')
+  .option('--backend <backend>', 'Agent backend: pi (in-process, default) or opencode-cli (shell-out)', 'pi')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -98,6 +99,7 @@ program
     const fs = new NodeFileSystem();
     const git = new GitService();
     const noContextEnrich = Boolean(options.noContextEnrich);
+    const backend = typeof options.backend === 'string' ? options.backend : undefined;
 
     if (resume || abort) {
       let stateStore: JsonStateStore;
@@ -130,6 +132,7 @@ program
         noContextEnrich,
         model,
         configPath,
+        backend,
       );
       return;
     }
@@ -142,7 +145,7 @@ program
       renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
     }
 
-    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
+    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich, backend);
   });
 
 program.parse(process.argv);

@@ -11,6 +11,7 @@ import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
 import { resolveModelConfig } from './model-config.js';
 import { getErrorLogPath } from '../utils/paths.js';
+import type { AgentBackend } from '../infrastructure/agent-runners/index.js';
 
 let activeOrchestrator: PipelineOrchestrator | undefined;
 
@@ -68,6 +69,7 @@ export async function resumeSession(
   noContextEnrich?: boolean,
   model?: string,
   configPath?: string,
+  backend?: string,
 ): Promise<void> {
   const ctx = await stateStore.load();
   ctx.originalBaseSha = ctx.originalBaseSha ?? undefined;
@@ -96,6 +98,7 @@ export async function resumeSession(
         stateStore,
         noContextEnrich,
         modelConfig,
+        backend: backend as AgentBackend,
       });
 
       activeOrchestrator = orchestrator;
@@ -152,6 +155,7 @@ export async function resumeSession(
     stateStore,
     noContextEnrich,
     modelConfig,
+    backend: backend as AgentBackend,
   });
 
   activeOrchestrator = orchestrator;
@@ -175,6 +179,7 @@ export async function startNewSession(
   renderer: TerminalRenderer,
   version: string,
   noContextEnrich?: boolean,
+  backend?: string,
 ): Promise<void> {
   const paths = computeArtefactPaths(options.featureName);
 
@@ -250,6 +255,7 @@ export async function startNewSession(
     stateStore,
     noContextEnrich,
     modelConfig,
+    backend: backend as AgentBackend,
   });
 
   activeOrchestrator = orchestrator;
