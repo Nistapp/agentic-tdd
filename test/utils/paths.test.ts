@@ -1,6 +1,7 @@
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { describe, it, expect } from 'vitest';
-import { getStateDir, getStateFilePath, getErrorLogPath, getLogDir, sanitizeFilename } from '../../src/utils/paths.js';
+import { getStateDir, getStateFilePath, getErrorLogPath, getLogDir, getOpencodeLogPath, sanitizeFilename } from '../../src/utils/paths.js';
 
 describe('getStateDir', () => {
   it('returns .agentic-tdd under the given workDir', () => {
@@ -69,5 +70,13 @@ describe('sanitizeFilename', () => {
 
   it('trims leading and trailing hyphens', () => {
     expect(sanitizeFilename('!!!bad!!!')).toBe('bad');
+  });
+});
+
+describe('getOpencodeLogPath', () => {
+  it('resolves under the OS home directory with platform separators', () => {
+    expect(getOpencodeLogPath()).toBe(
+      join(homedir(), '.local', 'share', 'opencode', 'log', 'opencode.log'),
+    );
   });
 });

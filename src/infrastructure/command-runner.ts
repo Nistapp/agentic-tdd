@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { execa } from 'execa';
 import type { ICommandRunner, IOpencodeSpawner } from '../core/interfaces.js';
 import type { TestRunResult } from '../core/types.js';
@@ -14,11 +15,16 @@ export const PACKAGE_AGENTS_DIR = resolve(OPENCODE_CONFIG_DIR, 'agents');
 const OPENCODE_WATCHDOG_INTERVAL_MS = 30_000;
 const OPENCODE_HEARTBEAT_THRESHOLD_MS = 120_000;
 const OPENCODE_HARD_TIMEOUT_MS = 10 * 60_000;
+const OPENCODE_FORCE_KILL_AFTER_MS = 5_000;
 
-const OPENCODE_LOG_PATH = (() => {
-  const home = process.env.HOME ?? process.env.USERPROFILE ?? '~';
-  return `${home}/.local/share/opencode/log/opencode.log`;
-})();
+const OPENCODE_LOG_PATH = join(
+  homedir(),
+  '.local',
+  'share',
+  'opencode',
+  'log',
+  'opencode.log',
+);
 
 function isReadableStream(stream: unknown): stream is { on(event: 'data', fn: (chunk: Buffer) => void): void } {
   return typeof (stream as any)?.on === 'function';
@@ -54,7 +60,12 @@ export class CommandRunner implements ICommandRunner, IOpencodeSpawner {
   }
 
   async spawn(args: string[]): Promise<string> {
-    const child = execa('opencode', args, { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, OPENCODE_CONFIG_DIR } });
+    const child = execa('opencode', args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, OPENCODE_CONFIG_DIR },
+      killSignal: 'SIGTERM',
+      forceKillAfterDelay: OPENCODE_FORCE_KILL_AFTER_MS,
+    });
 
     loggers.core.debug({ pid: child.pid, opencode_log: OPENCODE_LOG_PATH }, 'Opencode process spawned');
     reqLogger().debug({ pid: child.pid, command: ['opencode', ...args] }, 'Executing shell command');
@@ -92,7 +103,7 @@ export class CommandRunner implements ICommandRunner, IOpencodeSpawner {
         { pid: child.pid, timeoutMs: OPENCODE_HARD_TIMEOUT_MS },
         'Opencode hard timeout reached — killing process',
       );
-      child.kill('SIGKILL');
+      child.kill();
     }, OPENCODE_HARD_TIMEOUT_MS);
 
     try {
