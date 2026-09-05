@@ -21,6 +21,8 @@ Both humans and AI agents should use these terms consistently.
 | **DI (Dependency Injection)** | All infrastructure dependencies are injected into the core engine via interfaces. `src/core/` never imports from `src/infrastructure/`. |
 | **Spec Drift** | When code diverges from its architectural diagrams or Gherkin specs. The pipeline's Pass 7 and HITL gate are the primary defences against spec drift. |
 | **originalBaseSha** | The git SHA of the commit that existed before a pipeline run started. Stored in the session state file. Used by `--abort` to revert all AI-generated commits. |
-| **OpenCode** | The AI coding agent CLI (`opencode`) that each pass sub-agent runs inside. Managed by `OpenCodeAgentRunner`. |
+| **OpenCode** | The AI coding agent CLI (`opencode`) used by the legacy **opencode-cli** agent backend. Managed by `OpenCodeCliRunner` (see `Agent Runner`). |
+| **Pi** | The in-process coding-agent SDK (`@earendil-works/pi-coding-agent`) used by the default **Pi** agent backend. Managed by `PiSdkRunner` (see `Agent Runner`). |
+| **Agent Runner** | The `IAgentRunner` adapter that executes one pipeline pass's agent. Backend-agnostic via a factory (`createAgentRunner`); **Pi** (`PiSdkRunner`, in-process SDK) is the default, **opencode-cli** (`OpenCodeCliRunner`, shell-out) is the fallback — [ADR-0010](adrs/0010-agent-agnostic-sdk-architecture.md). |
 | **LiteLLM** | Self-hosted AI gateway proxy used for SSO auth, budget enforcement, DLP masking, and model routing. Runs in `infra/`. |
 | **Context Payload** | The JSON object passed to each agent containing `featureName`, `paths`, `contextFiles`, `targetSymbols`, `fileChanges`, and `meta`. Constructed by `getAgentContextPayload`. |

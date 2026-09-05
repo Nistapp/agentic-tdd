@@ -43,7 +43,7 @@ graph TD
         GitService["GitService"]:::infra
         FileSystem["NodeFileSystem"]:::infra
         CommandRunner["CommandRunner"]:::infra
-        AgentRunner["OpenCodeAgentRunner"]:::infra
+        AgentRunner["createAgentRunner → PiSdkRunner | OpenCodeCliRunner"]:::infra
         EventBus["EventBus"]:::infra
         StateStore["JsonStateStore"]:::infra
         Logger["PinoLoggerAdapter"]:::infra
@@ -89,7 +89,7 @@ graph TD
 | **Self-correction machine** | [`src/core/machines/self-correction.machine.ts`](../../../src/core/machines/self-correction.machine.ts) | Per-pass retry loop (up to 3 retries) feeding failing test logs back to the agent. |
 | **Context builder/provider** | [`src/core/context-builder.ts`](../../../src/core/context-builder.ts), [`src/core/context-provider.ts`](../../../src/core/context-provider.ts) | Decides which files/symbols each pass sees (`CONTEXT_RULES`). |
 | **Payload & artefacts** | [`src/core/runners/shared.ts`](../../../src/core/runners/shared.ts) | `getAgentContextPayload`, `buildArtefacts` — assembles the JSON context + anchored `fileChanges`/`targetSymbols`. |
-| **Agent runner** | [`src/infrastructure/open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) | Builds opencode argv from a pass + payload, spawns it, persists the pass log. |
+| **Agent runner** | [`src/infrastructure/agent-runners/`](../../../src/infrastructure/agent-runners/) ([`index.ts`](../../../src/infrastructure/agent-runners/index.ts)) | `createAgentRunner(backend, deps)` — `PiSdkRunner` (default, in-process Pi SDK) or `OpenCodeCliRunner` (legacy opencode CLI shell-out). Executes a pass's agent and persists the pass log. |
 | **Git service** | [`src/infrastructure/git-service.ts`](../../../src/infrastructure/git-service.ts) | Atomic commits, diff line ranges, branch creation, abort/rewind. |
 | **Symbol resolver** | [`src/infrastructure/ast-grep-symbol-resolver.ts`](../../../src/infrastructure/ast-grep-symbol-resolver.ts) | Maps git-diff hunks to enclosing AST symbols for context enrichment. |
 | **Event bus** | [`src/infrastructure/event-bus.ts`](../../../src/infrastructure/event-bus.ts) | Typed pub/sub decoupling the terminal UI from the engine. |
@@ -106,7 +106,7 @@ The engine depends **only** on interfaces declared in [`src/core/interfaces.ts`]
 | `IGitService` | `GitService` | git operations (commit, diff, branch, reset) |
 | `IFileSystem` | `NodeFileSystem` | file read/write/exists |
 | `ICommandRunner` | `CommandRunner` | run the test command; also `IOpencodeSpawner` |
-| `IAgentRunner` | `OpenCodeAgentRunner` | execute a pipeline pass's agent |
+| `IAgentRunner` | `createAgentRunner(backend)` → `PiSdkRunner` \| `OpenCodeCliRunner` | execute a pipeline pass's agent (backend = `--backend pi\|opencode-cli`) |
 | `IOpencodeSpawner` | `CommandRunner` | low-level process spawn + watchdog |
 | `IEventBus` | `EventBus` | emit/subscribe to typed events |
 | `IStateStore` | `JsonStateStore` | session persistence |
@@ -117,7 +117,7 @@ The engine depends **only** on interfaces declared in [`src/core/interfaces.ts`]
 Wiring happens in one place — [`createPipelineServices`](../../../src/cli/di-container.ts#L39-L65):
 
 1. A single `EventBus` is created and subscribed to by `attachTerminalListener` (progress rendering).
-2. `CommandRunner` (test runner + opencode spawner), the HITL handler, and `OpenCodeAgentRunner` are constructed.
+2. `CommandRunner` (test runner + opencode spawner), the HITL handler, and the **agent runner** are constructed — `createAgentRunner(opts.backend ?? 'pi', …)` resolves the backend from the `--backend` CLI flag ([`di-container.ts#L65-L70`](../../../src/cli/di-container.ts#L65-L70)).
 3. `PipelineConfig` is assembled via `buildPipelineConfig` from `getOpencodeLogPath()`, the presence of a model-provider API key (`OPENROUTER_API_KEY` or `DEEPSEEK_API_KEY`), and the resolved per-agent model config ([`resolveModelConfig`](../../../src/cli/model-config.ts), [ADR-0009](../adrs/0009-configurable-per-agent-models.md)).
 4. All of it — plus `StateContextProvider`, the optional `AstGrepSymbolResolver`, and `JsonStateStore` — is passed to the `PipelineOrchestrator` constructor as interfaces.
 
@@ -136,8 +136,8 @@ sequenceDiagram
     participant DI as di-container.ts
     participant ORC as PipelineOrchestrator
     participant MACH as XState Machine
-    participant RUN as Agent Runner
-    participant OPEN as opencode CLI
+    participant RUN as Agent Runner (PiSdkRunner / OpenCodeCliRunner)
+    participant OPEN as Pi SDK session / opencode CLI
     participant LLM as LLM (OpenRouter)
     participant GIT as Git / FS
     participant TEST as Test Runner
@@ -150,7 +150,7 @@ sequenceDiagram
     MACH->>MACH: enter pass_0_design
     MACH->>RUN: agentRunner.execute({ pass, ctx })
     RUN->>RUN: getAgentContextPayload + buildArtefacts
-    RUN->>OPEN: spawn opencode (scoped prompt + payload)
+    RUN->>OPEN: execute pass (Pi in-process session, or spawn opencode)
     OPEN->>LLM: prompt (curated context)
     LLM-->>OPEN: response (edits)
     OPEN-->>RUN: stdout output
@@ -159,7 +159,7 @@ sequenceDiagram
     Dev-->>MACH: approve (HITL_APPROVE)
     MACH->>MACH: enter guarded pass (3-7)
     MACH->>RUN: execute agent
-    RUN->>OPEN: spawn opencode
+    RUN->>OPEN: execute pass (Pi in-process session, or spawn opencode)
     OPEN->>LLM: prompt
     LLM-->>OPEN: response
     MACH->>TEST: runTests(testCmd)
@@ -181,7 +181,7 @@ sequenceDiagram
 2. **Session bootstrap** — [`session.ts#startNewSession`](../../../src/cli/session.ts#L160-L250) creates a feature branch, records the baseline SHA (`originalBaseSha`), and persists a `PipelineContext` via the state store.
 3. **DI wiring** — [`di-container.ts#createPipelineServices`](../../../src/cli/di-container.ts#L39-L65) constructs all concrete adapters and hands them to the `PipelineOrchestrator` **as interfaces**.
 4. **Machine start** — [`PipelineOrchestrator.run`](../../../src/core/orchestrator.ts#L80-L188) builds `createPipelineMachine`, resumes from a persisted `xstateSnapshot` when `--resume`, and starts the actor.
-5. **Per pass** — the machine dispatches the agent: payload is assembled (`getAgentContextPayload`), opencode is spawned, and its output is captured + logged.
+5. **Per pass** — the machine dispatches the agent: payload is assembled (`getAgentContextPayload`), and `agentRunner.execute(...)` runs it via the selected backend — **PiSdkRunner** (in-process SDK session, default) or **OpenCodeCliRunner** (opencode CLI shell-out) — capturing output and persisting the pass log.
 6. **Guarded passes (3–7)** — output is verified against `--test-cmd`; failures feed the error log back via the self-correction loop (up to 3 retries).
 7. **Atomic commit** — each pass commits independently (`chore(ai): completed Pass N …`), and the diff is mapped to symbols for the next pass's context.
 8. **Completion** — on `pipeline_complete` the session ends and the state file is deleted.

@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Security Leads, and Architects.
 > **Key Goal:** Give evaluators an honest picture of what agentic-tdd protects today (basic hygiene), what it plans to protect (enterprise controls), and the threat model it is designed around.
-> **Status:** Published (v0.1.0-Beta) — Page 7 of the User Overview. Grounded in `src/infrastructure/git-service.ts`, `src/agents/pass-6-security-agent.md`, `src/core/log-sanitizer.ts`, and `src/infrastructure/open-code-agent-runner.ts`. This is the most aspirational page in the documentation; every planned item carries an explicit banner and nothing planned is described as shipped.
+> **Status:** Published (v0.1.0-Beta) — Page 7 of the User Overview. Grounded in `src/infrastructure/git-service.ts`, `src/agents/pass-6-security-agent.md`, `src/core/log-sanitizer.ts`, and the agent runners in `src/infrastructure/agent-runners/`. This is the most aspirational page in the documentation; every planned item carries an explicit banner and nothing planned is described as shipped.
 
 > [!IMPORTANT] Read this banner first
 > **Most of what a security-conscious evaluator will ask for — Semgrep hard-fail gates, DevContainer/Nix sandboxing, gateway-level PII/DLP masking, per-pass write-locks — is planned, not shipped.** We intend to close these gaps within this year, but today the shipped surface is deliberately minimal: *basic git hygiene, tool-level agent permissions, prompt-injection walling, log sanitization, and an OWASP-focused security-hardening agent pass.* See [§ 3](#3-planned-controls-the-honest-roadmap) for the roadmap.
@@ -61,7 +61,7 @@ Every one of the 8 pass agents ships the **same tool-permission profile** in its
 Each file's `<scope>` block reinforces this in natural language — e.g. Pass 6 may read/edit implementation files but must not modify tests, design artefacts, or function signatures. Together these form the **anti-Trampling lock** (see the [glossary's *Agent Trampling* entry](../glossary.md) and [5. § 2](05-agent-prompt-system.md#2-scope-guardrails--the-anti-trampling-lock)).
 
 > [!WARNING] Enforcement relies on the declared scope
-> The runner invokes opencode in non-interactive mode and passes `--dangerously-skip-permissions` ([`open-code-agent-runner.ts#L67`](../../../src/infrastructure/open-code-agent-runner.ts#L67)), so there is **no per-call approval prompt** — enforcement rests on the agent file's declared `permission:` scope, not on a human clicking "approve". We must verify against the pinned opencode version that `deny` rules are still honoured when that flag is present (see [S-4](#placeholders--open-questions)).
+> Tool enforcement is **backend-dependent** ([ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)): the default **Pi** backend maps the `permission:` block onto a hard `tools` allowlist (no approval prompts, shell tools absent), while the legacy opencode-cli backend invokes opencode non-interactively with `--dangerously-skip-permissions` ([`opencode-cli-runner.ts`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts)). In both cases there is **no per-call approval prompt** — enforcement rests on the agent file's declared `permission:` scope (and, for opencode-cli, that `deny` rules are honoured when the flag is present — see [S-4](#placeholders--open-questions)).
 
 ### 2.3 Prompt-injection walling
 
@@ -77,7 +77,7 @@ Before any agent *prompt* is written to the event log, it passes through [`sanit
 | Length truncation | Strings longer than 400 chars are cut and annotated `[Truncated: N characters total]` at `info` level (full content kept only at `debug`/`trace`) |
 | Recursion | Applied through nested arrays and plain objects |
 
-It is wired into the pass launch and self-correction paths ([`pipeline.machine.ts#L771`](../../../src/core/machines/pipeline.machine.ts#L771), [`self-correction.machine.ts#L368`](../../../src/core/machines/self-correction.machine.ts#L368)). Separately, the runner logs only *whether* an API key is set (`apiKeySet: boolean`), never the key itself ([`open-code-agent-runner.ts#L86-L90`](../../../src/infrastructure/open-code-agent-runner.ts#L86-L90)).
+It is wired into the pass launch and self-correction paths ([`pipeline.machine.ts#L771`](../../../src/core/machines/pipeline.machine.ts#L771), [`self-correction.machine.ts#L368`](../../../src/core/machines/self-correction.machine.ts#L368)). Separately, the opencode-cli runner's pre-flight log records only *whether* an API key is set (`apiKeySet: boolean`), never the key itself ([`opencode-cli-runner.ts#L76-L99`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L76-L99)); the Pi runner delegates credential resolution to Pi's `ModelRuntime` and logs no key material.
 
 > [!CAUTION] What the sanitizer is **not**
 > It is a **log-blast-radius limiter**, not a DLP engine. It does not detect PII or secret *patterns* and does not redact by key name — a token-shaped string inside a 200-char log line would pass through intact. This is an accepted gap until gateway-level DLP ships ([S-8](#placeholders--open-questions)).
@@ -162,7 +162,7 @@ These are tracked on the [9. ADRs & Roadmap](../contributor-deep-dive/09-adrs-ro
 | S-1 | Current shipped surface | **Answered on this page** (§ 2): git branch isolation, tool-level permissions, prompt-injection walling, log sanitizer, Pass 6 agent. |
 | S-2 | DLP / PII masking via LiteLLM | **Verified aspirational.** `infra/` configs are routing-only; `LITELLM_DISABLE_AUTH` defaults to `True`; no SSO/budget/DLP middleware configured. |
 | S-3 | Log sanitizer coverage | **Answered** (§ 2.4): strips C0 control chars + truncates >400-char strings at `info`; no key- or pattern-based secret redaction. |
-| S-4 | `--dangerously-skip-permissions` semantics | Verify against the pinned opencode version whether frontmatter `deny` rules are still enforced when the runner passes this flag ([`open-code-agent-runner.ts#L67`](../../../src/infrastructure/open-code-agent-runner.ts#L67)). |
+| S-4 | Tool enforcement semantics | Default **Pi** backend: frontmatter `permission:` → hard `tools` allowlist, no approval prompts. Legacy opencode-cli backend: `--dangerously-skip-permissions` — verify against the pinned opencode version whether frontmatter `deny` rules are still enforced when the runner passes this flag. |
 | S-5 | `.env` default denial vs `read: allow` | Confirm opencode's built-in `*.env: deny` default still holds when an agent declares `read: allow` in its frontmatter. |
 | S-6 | Threat model for trusted-local context | Research what "security" means when the harness runs locally on a trusted codebase (skeleton TODO). |
 | S-7 | Per-pass file-glob write-locks | Planned design ([9. ADRs & Roadmap §3.3](../contributor-deep-dive/09-adrs-roadmap.md#33-guardrails--tooling)); not yet implemented — no agreed enforcement mechanism. |

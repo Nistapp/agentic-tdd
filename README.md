@@ -1,14 +1,16 @@
 # agentic-tdd
 
-**An artifact-driven, 8-pass agentic pipeline for enterprise software development using OpenCode.**
+**An artifact-driven, 8-pass agentic pipeline for enterprise software development.**
 
 > _"Stop asking AI to write code. Start orchestrating AI to build software."_
 
 [![npm version](https://img.shields.io/npm/v/agentic-tdd?color=cb3837&logo=npm&logoColor=fff)](https://www.npmjs.com/package/agentic-tdd)
 [![npm downloads](https://img.shields.io/npm/dm/agentic-tdd?color=cb3837&logo=npm&logoColor=fff)](https://www.npmjs.com/package/agentic-tdd)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.19-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue)](https://www.typescriptlang.org)
+
+> **Agent backend:** the pipeline runs pass agents **in-process** via the [Pi coding-agent SDK](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) by default; a legacy `opencode` CLI backend remains available via `--backend opencode-cli`. See [ADR-0010](docs/architecture/adrs/0010-agent-agnostic-sdk-architecture.md).
 
 ---
 
@@ -158,11 +160,16 @@ Start at the [architecture index](docs/architecture/README.md).
 
 ### Prerequisites
 
-- **Node.js >= 18** and **npm**
-- The [opencode CLI](https://opencode.ai) installed and available on your `PATH` — the pipeline drives opencode sub-agents under the hood
-- An API key for one of opencode's model providers — e.g. [OpenRouter](https://openrouter.ai), Claude, or OpenAI codex (or configure opencode to use free models)
+- **Node.js >= 22.19** and **npm** — required by `@earendil-works/pi-coding-agent` (ADR-0010)
+- The **Pi coding agent** with the `pi-mcp-adapter` extension — the default backend runs pass agents in-process via the Pi SDK, and needs the MCP adapter installed once per machine:
+  ```bash
+  pi install npm:pi-mcp-adapter
+  ```
+  (The harness shares your `~/.pi/agent` config home — credentials and extensions — and does **not** set `PI_CODING_AGENT_DIR`; see [ADR-0010 §10](docs/architecture/adrs/0010-agent-agnostic-sdk-architecture.md).)
+- An API key for one of the model providers — e.g. [OpenRouter](https://openrouter.ai), Claude, or OpenAI (the default shipped models route through OpenRouter)
 - A `git` repository in your working directory (each pass is committed as an atomic git commit)
-- codebase-memory-mcp installed locally and accessible to opencode
+- `codebase-memory-mcp` installed locally and on your `PATH` (the harness resolves it per-platform and writes `.mcp.json` at pipeline start)
+- *(opencode-cli fallback only)* the [opencode CLI](https://opencode.ai) installed and on your `PATH` when using `--backend opencode-cli`
 - (optional) a suitable AGENTS.md file for your project.
 
 ### 1. Install from npm (recommended)
@@ -250,6 +257,7 @@ agentic-tdd --feature-desc-file <spec_file> [options]
 | --no-context-enrich | Force files-only context mode (skip method-level enrichment) |
 | --resume | Resume an active Agentic TDD session |
 | --abort | Abort the active session and rewind Git history |
+| --backend <backend> | Agent backend: `pi` (in-process Pi SDK, default) or `opencode-cli` (legacy CLI shell-out) |
 | -h, --help | display help for command |
 
 
@@ -270,7 +278,7 @@ touch .agentic-tdd/config.json
 
 > **npm / npx users:** the bundled default template ships *inside* the installed package (not in your working directory), so there is no file to copy — create the file with your overrides as shown above. Source builds can start from the repo-root template with `cp config.default.json .agentic-tdd/config.json`.
 
-`config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to an opencode `provider/model` string:
+`config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to a canonical `provider/model` string (backend-agnostic — consumed by both the Pi and opencode-cli backends):
 
 ```jsonc
 {

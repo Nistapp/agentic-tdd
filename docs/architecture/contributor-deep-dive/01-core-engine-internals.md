@@ -54,11 +54,11 @@ Deep dives for the context/payload modules live on [3. Context Engineering](03-c
 graph LR
     CLI["src/cli/ — entry, DI container, session"] -->|"injects adapters"| Core["src/core/ — pure engine (state machines, context, types)"]
     Core -->|"depends only on"| DI["DI interfaces (src/core/interfaces.ts)"]
-    Infra["src/infrastructure/ — git, fs, opencode runner, logger"] -->|"implements"| DI
+    Infra["src/infrastructure/ — git, fs, agent runners (Pi SDK / opencode CLI), mcp-config, logger"] -->|"implements"| DI
 ```
 
 > [!IMPORTANT]
-> The dependency arrows are **one-way**. `src/cli/` and `src/infrastructure/` may import `src/core/`, but `src/core/` must never import back. The engine never touches `NodeFileSystem`, `GitService`, or `OpenCodeAgentRunner` directly — it sees only `IFileSystem`, `IGitService`, and `IAgentRunner` ([ADR-0001](../adrs/0001-pure-core-engine.md)). See [5. CLI & DI Wiring](05-cli-di-wiring.md) for the full adapter wiring.
+> The dependency arrows are **one-way**. `src/cli/` and `src/infrastructure/` may import `src/core/`, but `src/core/` must never import back. The engine never touches `NodeFileSystem`, `GitService`, `PiSdkRunner`, or `OpenCodeCliRunner` directly — it sees only `IFileSystem`, `IGitService`, and `IAgentRunner` ([ADR-0001](../adrs/0001-pure-core-engine.md)). Which runner backs `IAgentRunner` is decided by the factory in the CLI/DI layer (`--backend pi|opencode-cli`, [ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)). See [5. CLI & DI Wiring](05-cli-di-wiring.md) for the full adapter wiring.
 
 ---
 

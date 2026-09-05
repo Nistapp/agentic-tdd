@@ -51,7 +51,9 @@ Vitest is configured in [`vitest.config.ts`](../../../vitest.config.ts): `global
 | [`test/core/log-sanitizer.test.ts`](../../../test/core/log-sanitizer.test.ts) | 1 | sanitizer rules | pure |
 | [`test/core/runners/shared.test.ts`](../../../test/core/runners/shared.test.ts) | 1 | `getAgentContextPayload` | pure |
 | [`test/infrastructure/ast-grep-symbol-resolver.test.ts`](../../../test/infrastructure/ast-grep-symbol-resolver.test.ts) | 1 | `ISymbolResolver` impl (in-memory parse) | pure, no fs |
-| [`test/infrastructure/open-code-agent-runner.test.ts`](../../../test/infrastructure/open-code-agent-runner.test.ts) | 2 | argv assembly, pass-log write | `IOpencodeSpawner` mock |
+| [`test/infrastructure/agent-runners/opencode-cli-runner.test.ts`](../../../test/infrastructure/agent-runners/opencode-cli-runner.test.ts) | 2 | argv assembly, pass-log write | `IOpencodeSpawner` mock |
+| [`test/infrastructure/agent-runners/pi-sdk-runner.test.ts`](../../../test/infrastructure/agent-runners/pi-sdk-runner.test.ts) | 2 | Pi session lifecycle, thinking map, sanitized log, error classification | mocked Pi SDK session (`createAgentSession`, `SessionManager.inMemory`) |
+| [`test/infrastructure/agent-runners/index.test.ts`](../../../test/infrastructure/agent-runners/index.test.ts) | 2 | factory returns the right runner per backend | stubs per `CreateAgentRunnerDeps` |
 | [`test/infrastructure/infrastructure.test.ts`](../../../test/infrastructure/infrastructure.test.ts) | adapter | `NodeFileSystem`, `EventBus`, `GitService`, `CommandRunner` | temp dirs |
 | [`test/infrastructure/state-store.test.ts`](../../../test/infrastructure/state-store.test.ts) | adapter | `JsonStateStore` | temp dirs |
 | [`test/cli/*.test.ts`](../../../test/cli/) | UI/CLI | renderer, hitl-handler, session, sigint, validators, di-container, event-listener | `TerminalWriter` stub / mocks |
@@ -75,7 +77,8 @@ Because the engine depends only on these contracts — never `child_process`, `f
 | `IFileSystem` | `vi.fn()` per method incl. `readFile`, `writeFile`, `deleteFile`, `readdir` | [`orchestrator.test.ts#L115-L123`](../../../test/orchestrator.test.ts#L115-L123) |
 | `ICommandRunner` | `.runTests → { passed: true, output: '' }`; flip to `{ passed: false }` for retry/compaction tests | [`self-correction.machine.test.ts#L93-L95`](../../../test/machines/self-correction.machine.test.ts#L93-L95) |
 | `IAgentRunner` | `.execute → { output }`; re-mock per pass via `mockImplementation(req => …req.pass…)` for SKIP/ordering tests | [`orchestrator.test.ts#L716-L723`](../../../test/orchestrator.test.ts#L716-L723) |
-| `IOpencodeSpawner` | `.spawn → 'agent output'`; assert on captured argv, reject to test error propagation | [`open-code-agent-runner.test.ts#L86-L91`](../../../test/infrastructure/open-code-agent-runner.test.ts#L86-L91) |
+| `IOpencodeSpawner` | `.spawn → 'agent output'`; assert on captured argv, reject to test error propagation | [`opencode-cli-runner.test.ts#L86-L91`](../../../test/infrastructure/agent-runners/opencode-cli-runner.test.ts#L86-L91) |
+| `IAgentRunner` (Pi) | mock the Pi SDK module (`createAgentSession` returns a stubbed session); assert `resolveCliModel` input per pass | [`pi-sdk-runner.test.ts#L227-L305`](../../../test/infrastructure/agent-runners/pi-sdk-runner.test.ts#L227-L305) |
 | `IEventBus` | In-memory `_listeners` map whose `emit` synchronously invokes handlers — enables asserting on both emitted events and listener reactions | [`orchestrator.test.ts#L133-L159`](../../../test/orchestrator.test.ts#L133-L159) |
 | `ILogger` | `StubLogger` class (records `calls`, `child` returns self, `level` getter) | [`orchestrator.test.ts#L54-L80`](../../../test/orchestrator.test.ts#L54-L80) |
 | `IStateStore` | `.save/load/delete/exists` mocks; assert `save` was called with a ctx carrying `xstateSnapshot` | [`orchestrator.test.ts#L166-L172`](../../../test/orchestrator.test.ts#L166-L172) |
@@ -94,10 +97,10 @@ Because the engine depends only on these contracts — never `child_process`, `f
 
 - records every call as `{ method, args }` in `calls` — enabling assertions like `m.logger.calls.filter(c => c.method === 'warn')` ([`orchestrator.test.ts#L678-L679`](../../../test/orchestrator.test.ts#L678-L679));
 - returns `this` from `child()` so binding never breaks call capture;
-- exposes a `get level()` returning `'info'` by default — override via `Object.defineProperty(stub, 'level', { value: 'debug' })` to exercise debug-only code paths ([`open-code-agent-runner.test.ts#L171-L185`](../../../test/infrastructure/open-code-agent-runner.test.ts#L171-L185)).
+- exposes a `get level()` returning `'info'` by default — override via `Object.defineProperty(stub, 'level', { value: 'debug' })` to exercise debug-only code paths ([`opencode-cli-runner.test.ts#L38-L40`](../../../test/infrastructure/agent-runners/opencode-cli-runner.test.ts#L38-L40)).
 
 > [!TIP]
-> The `level` getter drives real behaviour: `OpenCodeAgentRunner` injects `--print-logs --log-level DEBUG` only when the logger's `level` is `debug` (see [6. Observability §1.2](06-observability-operations.md#12-level-selection)). Controlling it makes that branch testable.
+> The `level` getter drives real behaviour: `OpenCodeCliRunner` (opencode-cli backend) injects `--print-logs --log-level DEBUG` only when the logger's `level` is `debug` (see [6. Observability §1.2](06-observability-operations.md#12-level-selection)). Controlling it makes that branch testable.
 
 ---
 

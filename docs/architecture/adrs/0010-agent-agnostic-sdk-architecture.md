@@ -40,7 +40,7 @@ The Pi SDK (`@earendil-works/pi-coding-agent` v0.85.0) was verified in a headles
 | `createMcpAdapter({ config })` factory import | ✅ Function accessible; TS-in-node_modules restriction → use file-based `.mcp.json` config |
 | API key resolution: `OPENROUTER_API_KEY` env var honored by `ModelRuntime` | ✅ Transparent |
 
-Detailed spike script and full plan: [implementation_plan_v3.md](./implementation_plan_v3.md)
+Detailed spike script and full plan: [implementation_plan_v3.md](../../../artefacts/Coding%20agent-refactor/implementation_plan_v3.md)
 
 ---
 
@@ -157,7 +157,7 @@ Target: platform-agnostic (Windows, Linux, macOS). Pi itself supports Windows (s
 
 * [ADR-0009 Configurable Per-Agent Models](./0009-configurable-per-agent-models.md)
 * [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) (config stays in CLI/DI layer)
-* [implementation_plan_v3.md](./implementation_plan_v3.md) — detailed phased rollout (v3; supersedes v2 and records all review decisions)
+* [implementation_plan_v3.md](../../../artefacts/Coding%20agent-refactor/implementation_plan_v3.md) — detailed phased rollout (v3; supersedes v2 and records all review decisions)
 * `src/infrastructure/agent-runners/` (New directory)
 * `@earendil-works/pi-coding-agent` v0.85.0 (npm)
 * `pi-mcp-adapter` v2.32.1 (Pi extension, installed via `pi install npm:pi-mcp-adapter`)

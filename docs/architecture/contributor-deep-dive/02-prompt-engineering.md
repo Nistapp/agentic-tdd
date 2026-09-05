@@ -8,7 +8,7 @@
 
 ## Overview
 
-Each of the 8 passes is defined by a **Markdown agent file** in `src/agents/pass-{0..7}-*.md`. The file is both the opencode *system prompt* and a **declarative contract** for model routing and tool permissions. The file's YAML frontmatter is read by `OpenCodeAgentRunner` (model, permissions); its body is the instruction set the agent executes.
+Each of the 8 passes is defined by a **Markdown agent file** in `src/agents/pass-{0..7}-*.md`. The file is a **declarative contract** for model routing and tool permissions plus the instruction set the agent executes. The runner is **agent-agnostic** ([ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)): the **Pi backend** (`PiSdkRunner`, default) reads the file with Pi's `parseFrontmatter` — `model` feeds model resolution and `permission` is mapped onto a hard `tools` allowlist; the **opencode-cli backend** (`OpenCodeCliRunner`, legacy) reads the frontmatter for pre-flight logging and relies on opencode honouring the `permission:` block.
 
 > [!IMPORTANT]
 > Prompt files are copied verbatim to `dist/agents/` by `npm run build`. After editing any `src/agents/*.md`, rebuild so the shipped prompts match.
@@ -65,7 +65,7 @@ permission:
 | 7 | `pass-7-documentation-agent.md` | `openrouter/deepseek/deepseek-v4-flash` |
 
 > [!NOTE] Config-driven routing
-> The table above is the agent-file fallback. The **effective** model is resolved at runtime from `config.default.json` (committed) merged with `.agentic-tdd/config.json` (git-ignored user override) and passed to opencode as `--model`; `--model`/`--config` CLI flags override per-run. See [`resolveModelConfig`](../../../src/cli/model-config.ts) and [ADR-0009](../adrs/0009-configurable-per-agent-models.md).
+> The table above is the agent-file fallback. The **effective** model is resolved at runtime from `config.default.json` (committed) merged with `.agentic-tdd/config.json` (git-ignored user override). The Pi backend appends a per-pass thinking level and resolves via `resolveCliModel` ([ADR-0010 §5](../adrs/0010-agent-agnostic-sdk-architecture.md)); the opencode-cli backend passes the model as `--model`; `--model`/`--config` CLI flags override per-run. See [`resolveModelConfig`](../../../src/cli/model-config.ts) and [ADR-0009](../adrs/0009-configurable-per-agent-models.md).
 
 ### 2.2 Permission matrix
 
@@ -78,7 +78,7 @@ All shipped agents share the same tool scope:
 | `webfetch` | deny | No network |
 | `task` | deny | No delegation / sub-agents |
 
-This is the **scope guardrail** that prevents **Agent Trampling** — an agent physically cannot write to files outside its pass's declared write set because `bash` and `task` are unavailable and `edit` is bounded by opencode's own permission system.
+This is the **scope guardrail** that prevents **Agent Trampling** — an agent physically cannot write to files outside its pass's declared write set because `bash` and `task` are unavailable. Enforcement is **backend-dependent**: the Pi backend maps the block onto a hard `tools` allowlist (shell tools simply absent), while the opencode-cli backend bounds `edit` via opencode's own permission system.
 
 ---
 

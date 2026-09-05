@@ -13,14 +13,14 @@ Observability is delivered through **two parallel channels**, both decoupled fro
 1. **Structured JSON logs** (pino) — the machine-readable trail for debugging. Written by the engine through `ILogger` ([`interfaces.ts#L199-L207`](../../../src/core/interfaces.ts#L199-L207)), rooted at [`src/utils/logger.ts`](../../../src/utils/logger.ts), surfaced through the `PinoLoggerAdapter`.
 2. **Typed domain events** (`IEventBus` → `AgenticEvent`) — the UI channel. The XState machines `emit()` lifecycle events; `attachTerminalListener` maps them to the `TerminalRenderer`.
 
-Two on-disk artefacts round it out: per-pass **opencode output logs** and the transient **error log** that feeds self-correction retries.
+Two on-disk artefacts round it out: per-pass **agent output logs** and the transient **error log** that feeds self-correction retries.
 
 ```mermaid
 graph LR
     Core["src/core/ — machines & actors"] -->|"ILogger"| Pino["PinoLoggerAdapter → pino (JSON / pino-pretty)"]
     Core -->|"AgenticEvent"| Bus["EventBus (IEventBus)"]
     Bus -->|"events.on(kind)"| UI["attachTerminalListener → TerminalRenderer"]
-    Runner["OpenCodeAgentRunner"] -->|"writes"| PassLog[".agentic-tdd/log/pass-N-*.log"]
+    Runner["PiSdkRunner / OpenCodeCliRunner"] -->|"writes"| PassLog[".agentic-tdd/log/pass-N-*.log"]
     Machine["Self-Correction Machine"] -->|"writeErrorLog / delete"| ErrLog[".agentic-tdd/error-<feature>.log"]
 ```
 
@@ -49,7 +49,7 @@ The engine never touches pino directly — it sees the `ILogger` port. [`PinoLog
 selfCorrectionPass3: createSelfCorrectionMachine({ … logger: logger.child({ passId: 3 }) … })
 ```
 
-Wiring at [`pipeline.machine.ts#L1014-L1062`](../../../src/core/machines/pipeline.machine.ts#L1014-L1062). The agent runner similarly binds `module: 'agent-runner', pass, agent` ([`open-code-agent-runner.ts#L31`](../../../src/infrastructure/open-code-agent-runner.ts#L31)).
+Wiring at [`pipeline.machine.ts#L1014-L1062`](../../../src/core/machines/pipeline.machine.ts#L1014-L1062). The agent runner similarly binds pass + agent context: `OpenCodeCliRunner` uses `module: 'agent-runner'` ([`opencode-cli-runner.ts#L31`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L31)), while `PiSdkRunner` binds `module: 'pi-sdk-runner'` ([`pi-sdk-runner.ts#L53`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts#L53)).
 
 ### 1.2 Level selection
 
@@ -59,7 +59,7 @@ Active level resolution ([`logger.ts#L6-L33`](../../../src/utils/logger.ts#L6-L3
 2. `LOG_LEVEL` environment variable.
 3. `DEBUG` env variable presence.
 
-When debug is active, the transport switches to **pino-pretty** (colorized, human-readable terminal output) ([#L24-L33](../../../src/utils/logger.ts#L24-L33)); otherwise logs are plain JSON. The `ILogger.level` getter is the switch that makes `OpenCodeAgentRunner` inject `--print-logs --log-level DEBUG` into the opencode argv (see [4. Infrastructure Adapters §2.2](04-infrastructure-adapters.md#22-the-argv-contract)).
+When debug is active, the transport switches to **pino-pretty** (colorized, human-readable terminal output) ([#L24-L33](../../../src/utils/logger.ts#L24-L33)); otherwise logs are plain JSON. The `ILogger.level` getter is the switch that makes `OpenCodeCliRunner` (opencode-cli backend) inject `--print-logs --log-level DEBUG` into the opencode argv (see [4. Infrastructure Adapters §2.3](04-infrastructure-adapters.md#23-the-opencode-argv-contract-opencode-cli-backend)). The Pi backend needs no such flag — the SDK session runs in-process and the level is passed to `sanitizeLogPayload` instead.
 
 > [!NOTE]
 > `PipelineContext.logLevel` is also carried through validation ([`validators.ts#L69`](../../../src/cli/validators.ts#L69)) and persisted, but the **effective** pino level is computed once at module load from `process.argv`/env. These two can diverge if `LOG_LEVEL` is set without `--log-level` (see O-5).
@@ -68,32 +68,35 @@ When debug is active, the transport switches to **pino-pretty** (colorized, huma
 
 | Level | Used for | Examples |
 |---|---|---|
-| `error` | Fatal/failing conditions | Test exhaustion after retries (`emitTestsExhausted`); agent/test/error-log actor failures (`emitAgentError`); opencode invocation failed ([`command-runner.ts#L120-L130`](../../../src/infrastructure/command-runner.ts#L120-L130)); CLI `uncaughtException`/`unhandledRejection` ([`index.ts#L20-L28`](../../../src/cli/index.ts#L20-L28)) |
-| `warn` | Non-fatal degradations | Corrupt `xstateSnapshot` fallback ([`orchestrator.ts#L117-L122`](../../../src/core/orchestrator.ts#L117-L122)); implicit skip when a pass changed nothing ([`pipeline.machine.ts#L893`](../../../src/core/machines/pipeline.machine.ts#L893)); opencode watchdog idle ([`command-runner.ts#L83-L87`](../../../src/infrastructure/command-runner.ts#L83-L87)); failed pass-log persist / unreadable agent model ([`open-code-agent-runner.ts#L83`](../../../src/infrastructure/open-code-agent-runner.ts#L83)) |
+| `error` | Fatal/failing conditions | Test exhaustion after retries (`emitTestsExhausted`); agent/test/error-log actor failures (`emitAgentError`); opencode invocation failed ([`command-runner.ts#L131-L141`](../../../src/infrastructure/command-runner.ts#L131-L141)); CLI `uncaughtException`/`unhandledRejection` ([`index.ts#L20-L28`](../../../src/cli/index.ts#L20-L28)) |
+| `warn` | Non-fatal degradations | Corrupt `xstateSnapshot` fallback ([`orchestrator.ts#L117-L122`](../../../src/core/orchestrator.ts#L117-L122)); implicit skip when a pass changed nothing ([`pipeline.machine.ts#L893`](../../../src/core/machines/pipeline.machine.ts#L893)); opencode watchdog idle ([`command-runner.ts#L93-L98`](../../../src/infrastructure/command-runner.ts#L93-L98)); failed pass-log persist / unreadable agent model ([`pi-sdk-runner.ts#L195-L196`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts#L195-L196), [`opencode-cli-runner.ts#L111-L112`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L111-L112)) |
 | `info` | Pass lifecycle | `Entering Pass N [Attempt M]` ([`pipeline.machine.ts#L767`](../../../src/core/machines/pipeline.machine.ts#L767), [`self-correction.machine.ts#L366`](../../../src/core/machines/self-correction.machine.ts#L366)); skip signals ([`pipeline.machine.ts#L827`](../../../src/core/machines/pipeline.machine.ts#L827)); `PIPELINE_STARTED` |
-| `debug` | Diagnostics | Sanitized prompt payload ([`pipeline.machine.ts#L770-L773`](../../../src/core/machines/pipeline.machine.ts#L770-L773)); opencode spawn + streamed chunks ([`command-runner.ts#L59-L68`](../../../src/infrastructure/command-runner.ts#L59-L68)); git/fs/cmd infra events |
+| `debug` | Diagnostics | Sanitized prompt payload ([`pipeline.machine.ts#L770-L773`](../../../src/core/machines/pipeline.machine.ts#L770-L773)); opencode spawn + streamed chunks ([`command-runner.ts#L70-L86`](../../../src/infrastructure/command-runner.ts#L70-L86)); git/fs/cmd infra events |
 | `trace` | Finest detail | File reads ([`file-system.ts#L17`](../../../src/infrastructure/file-system.ts#L17)) |
 
 ---
 
 ## 2. Pass Log Persistence
 
-### 2.1 Per-pass opencode output
+### 2.1 Per-pass agent output
 
-After every agent run, `OpenCodeAgentRunner.#persistPassLog` ([`open-code-agent-runner.ts#L93-L106`](../../../src/infrastructure/open-code-agent-runner.ts#L93-L106)) writes the combined stdout+stderr to:
+After every agent run, the runner persists the pass transcript to `<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log` ([`getLogDir`](../../../src/utils/paths.ts#L25-L27)):
+
+- `PiSdkRunner.#persistPassLog` ([`pi-sdk-runner.ts#L184-L198`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts#L184-L198)) writes the **sanitized** structured run — `{ output, structured }` through `sanitizeLogPayload` (tool args/results included) — as JSON.
+- `OpenCodeCliRunner.#persistPassLog` ([`opencode-cli-runner.ts#L101-L114`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L101-L114)) writes the combined opencode stdout+stderr verbatim.
 
 ```text
-<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log      # getLogDir(), paths.ts#L24-L26
+<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log      # getLogDir(), paths.ts#L25
 ```
 
-The directory is created on demand; failures only `warn`, never throw. These files are the raw, unsanitized agent transcript for post-mortem review.
+The directory is created on demand; failures only `warn`, never throw. The CLI runner's files are the raw, unsanitized opencode transcript for post-mortem review; the Pi runner's files are sanitized JSON by design ([ADR-0010 §8](../adrs/0010-agent-agnostic-sdk-architecture.md)).
 
 ### 2.2 Error log & Context Compaction
 
-The **error log** lives at `<workdir>/.agentic-tdd/error-<feature>.log` ([`getErrorLogPath`](../../../src/utils/paths.ts#L28-L31)) and is managed by the Self-Correction Machine:
+The **error log** lives at `<workdir>/.agentic-tdd/error-<feature>.log` ([`getErrorLogPath`](../../../src/utils/paths.ts#L29-L32)) and is managed by the Self-Correction Machine:
 
 1. On a failed test run, the `writeErrorLog` actor persists the combined test output ([`self-correction.machine.ts#L420-L424`](../../../src/core/machines/self-correction.machine.ts#L420-L424)).
-2. On retries, `buildArtefacts(ctx, fs, built, ctx.errorLogPath)` attaches it as an opencode `--file`, so the agent can diagnose the failure (see [3. Context Engineering §3.2](03-context-engineering.md#32-buildartefacts)).
+2. On retries, `buildArtefacts(ctx, fs, built, ctx.errorLogPath)` attaches the error log — as an opencode `--file` on the CLI backend, or a path the Pi agent reads in-session — so the agent can diagnose the failure (see [3. Context Engineering §3.2](03-context-engineering.md#32-buildartefacts)).
 3. On pass success, `cleanupAfterSuccess` **deletes** it ([#L433-L435](../../../src/core/machines/self-correction.machine.ts#L433-L435)) — **Context Compaction** ([ADR-0005](../adrs/0005-context-compaction.md)): later passes start clean instead of inheriting stale failure noise.
 
 `PipelineOrchestrator.run` also deletes any stale error log at session start ([`orchestrator.ts#L84-L86`](../../../src/core/orchestrator.ts#L84-L86)).
@@ -164,12 +167,12 @@ Both machines share the same `makeEmit(events)` helper ([`pipeline.machine.ts#L4
 |---|---|---|
 | **SIGINT pause** | [`index.ts#L33-L60`](../../../src/cli/index.ts#L33-L60) | First `Ctrl+C` → `orchestrator.pause()` (parks after the current pass, persists snapshot, exits 0); second within 2 s → force exit 130 |
 | **Uncaught errors** | [`index.ts#L20-L28`](../../../src/cli/index.ts#L20-L28) | `uncaughtException` / `unhandledRejection` → `loggers.cli.fatal`, exit 1 |
-| **opencode watchdog** | [`command-runner.ts#L80-L96`](../../../src/infrastructure/command-runner.ts#L80-L96) | Warns on 120 s silence; `SIGKILL` after 10-min hard timeout (see [4. Infrastructure Adapters §5.2](04-infrastructure-adapters.md#52-spawn--process-lifecycle)) |
+| **opencode watchdog** (opencode-cli backend) | [`command-runner.ts#L88-L107`](../../../src/infrastructure/command-runner.ts#L88-L107) | Warns on 120 s silence; 10-min hard timeout terminated via execa force-kill — SIGTERM, escalating to SIGKILL after 5 s (see [4. Infrastructure Adapters §5.2](04-infrastructure-adapters.md#52-spawn--process-lifecycle)) |
 | **`--resume` / `--abort`** | `session.ts` | Replay `xstateSnapshot` (or fast-forward via `getLastCompletedPass`); `--abort` rewinds to `originalBaseSha` and deletes the state file |
-| **Log flags** | [`index.ts#L74`](../../../src/cli/index.ts#L74) | `--log-level DEBUG\|INFO\|WARNING\|ERROR`; debug also injects opencode `--print-logs` |
+| **Log flags** | [`index.ts#L74`](../../../src/cli/index.ts#L74) | `--log-level DEBUG\|INFO\|WARNING\|ERROR`; on the opencode-cli backend, debug also injects opencode `--print-logs` |
 | **`--skip-hitl`** | `PipelineContext.skipHitl` | Bypasses both human gates for unattended runs |
 
-Workspace artefacts under `.agentic-tdd/` ([`paths.ts#L13-L31`](../../../src/utils/paths.ts#L13-L31)): `state-<feature>.json` (session state), `error-<feature>.log` (transient), `log/pass-N-<runId>.log` (agent transcripts).
+Workspace artefacts under `.agentic-tdd/` ([`paths.ts#L16-L38`](../../../src/utils/paths.ts#L16-L38)): `state-<feature>.json` (session state), `error-<feature>.log` (transient), `log/pass-N-<runId>.log` (agent transcripts).
 
 ---
 
@@ -186,7 +189,7 @@ Workspace artefacts under `.agentic-tdd/` ([`paths.ts#L13-L31`](../../../src/uti
 ## Related
 
 - [ADR-0005 — Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0008 — Observability Before Security](../adrs/0008-observability-before-security.md)
-- [4. Infrastructure Adapters §2](04-infrastructure-adapters.md#2-opencodeagentrunner--the-agent-invocation-seam) — per-pass log writing and `--print-logs` injection
+- [4. Infrastructure Adapters §2](04-infrastructure-adapters.md#2-agent-runners--the-agent-invocation-seam) — per-pass log writing and (opencode-cli) `--print-logs` injection
 - [1. Core Engine Internals §1.3](01-core-engine-internals.md#13-events) — full event catalogue
 - [5. CLI & Dependency Injection Wiring §3](05-cli-di-wiring.md#3-the-di-contract) — where `ILogger`/`IEventBus` are wired
 - [7. Testing Strategy & Mock Patterns](07-testing-strategy.md) — how loggers/events are stubbed in tests

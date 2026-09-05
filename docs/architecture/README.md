@@ -16,7 +16,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0007](adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for In-Process Symbol Resolution | Accepted | 2026-08-08 |
 | [0008](adrs/0008-observability-before-security.md) | Swap Pass Order — Observability Before Security | Accepted | 2026-08-01 |
 | [0009](adrs/0009-configurable-per-agent-models.md) | Configurable Per-Agent Models via `config.json` | Accepted | 2026-08-17 |
-| [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-05 |
+| [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-04 |
 
 ## Key Documents
 
@@ -55,7 +55,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [5. CLI & Dependency Injection Wiring](contributor-deep-dive/05-cli-di-wiring.md) | Published (component map, DI contract, data flow) |
 | [6. Observability, Logging, & Operations](contributor-deep-dive/06-observability-operations.md) | Published (pino levels, log persistence, sanitizer, event UI; open items O-3–O-5) |
 | [7. Testing Strategy & Mock Patterns](contributor-deep-dive/07-testing-strategy.md) | Published (3-tier pyramid, DI mock inventory, machine & orchestrator patterns; open items T-3–T-5) |
-| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Published (prereqs: opencode + codebase-memory-mcp, local setup, opencode.json, verification, pass/DI extension; open items G-1–G-3) |
+| [8. Developer Guide](contributor-deep-dive/08-developer-guide.md) | Published (prereqs: Pi SDK + pi-mcp-adapter, codebase-memory-mcp, Node ≥ 22.19, `--backend`; opencode.json for the legacy opencode-cli backend only; open items G-1–G-3) |
 | [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Published (ADR index/status, roadmap from retired `roadmap.md`, open debates; open items R-2–R-3) |
 
 > [!TIP]
