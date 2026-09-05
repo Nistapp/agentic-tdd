@@ -12,6 +12,13 @@ vi.mock('../../src/cli/di-container.js', () => ({
   })),
 }));
 
+vi.mock('../../src/infrastructure/mcp-config.js', () => ({
+  writeMcpConfig: vi.fn().mockResolvedValue({ created: true, merged: false, kept: false, writtenContent: '{}' }),
+  teardownMcpConfig: vi.fn().mockResolvedValue(undefined),
+  getMcpTemplateDir: vi.fn(() => '/tmp'),
+  resolveMcpBinary: vi.fn().mockResolvedValue('/usr/bin/codebase-memory-mcp'),
+}));
+
 function stubGit(overrides: Partial<IGitService> = {}): IGitService {
   return {
     commit: vi.fn(),

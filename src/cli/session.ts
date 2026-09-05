@@ -12,11 +12,26 @@ import { createPipelineServices } from './di-container.js';
 import { resolveModelConfig } from './model-config.js';
 import { getErrorLogPath } from '../utils/paths.js';
 import type { AgentBackend } from '../infrastructure/agent-runners/index.js';
+import { writeMcpConfig, teardownMcpConfig, getMcpTemplateDir } from '../infrastructure/mcp-config.js';
+import type { McpConfigResult } from '../infrastructure/mcp-config.js';
+import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
+import { loggers } from '../utils/logger.js';
 
 let activeOrchestrator: PipelineOrchestrator | undefined;
 
 export function getActiveOrchestrator(): PipelineOrchestrator | undefined {
   return activeOrchestrator;
+}
+
+async function setupMcpConfig(fs: IFileSystem): Promise<McpConfigResult> {
+  const templatePath = resolve(getMcpTemplateDir(), 'mcp.template.json');
+  const mcpLogger = new PinoLoggerAdapter(loggers.core);
+  return writeMcpConfig(fs, mcpLogger, cwd(), templatePath);
+}
+
+async function teardownMcp(mcpResult: McpConfigResult, fs: IFileSystem): Promise<void> {
+  const mcpLogger = new PinoLoggerAdapter(loggers.core);
+  await teardownMcpConfig(fs, mcpLogger, cwd(), mcpResult);
 }
 
 export interface ArtefactPaths {
@@ -89,6 +104,7 @@ export async function resumeSession(
     await fs.mkdir(ctx.artefactDir);
     renderer.banner(ctx);
 
+      const mcpResult = await setupMcpConfig(fs);
       const { orchestrator } = createPipelineServices({
         ctx,
         fs,
@@ -105,6 +121,7 @@ export async function resumeSession(
 
       try {
         await orchestrator.run(ctx);
+        await teardownMcp(mcpResult, fs);
         await stateStore.delete();
         activeOrchestrator = undefined;
         process.exit(0);
@@ -146,6 +163,7 @@ export async function resumeSession(
 
   renderer.banner(ctx);
 
+  const mcpResult = await setupMcpConfig(fs);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -162,6 +180,7 @@ export async function resumeSession(
 
   try {
     await orchestrator.run(ctx, startPass);
+    await teardownMcp(mcpResult, fs);
     await stateStore.delete();
     activeOrchestrator = undefined;
     process.exit(0);
@@ -246,6 +265,7 @@ export async function startNewSession(
     { userPath: resolve(cwd(), '.agentic-tdd/config.json'), fs },
   );
 
+  const mcpResult = await setupMcpConfig(fs);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -262,6 +282,7 @@ export async function startNewSession(
 
   try {
     await orchestrator.run(ctx, PipelinePass.Design);
+    await teardownMcp(mcpResult, fs);
     await stateStore.delete();
     activeOrchestrator = undefined;
     process.exit(0);
