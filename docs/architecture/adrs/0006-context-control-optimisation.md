@@ -1,11 +1,8 @@
-# 0006. Static Prefix Ordering for Prompt Cache Hits
+# 0006. Context-control-optimisation (Context Engineering)
 
-* **Status:** Deprecated — low priority, may no longer be relevant
-* **Date:** 2026-07-01 (estimated)
+* **Status:** Accepted
+* **Date:** 2026-07-01
 * **Deciders:** @kcramakrishna
-
-> [!NOTE] Deprecation
-> Static Prefix caching has been **deprecated** pending further research. Each pass's agent file pins its own `model:` in YAML frontmatter — and per-pass model configuration at runtime is planned — so the value of engineering prefix-cache hits *across* passes is no longer clear. Tracked in [discussion #53 — "Static Prefix caching redundant?"](https://github.com/Nistapp/agentic-tdd/discussions/53). The feature is not lost to regression, but it is deferred until we establish whether it still helps in our context. Do not invest further in cache-hit ordering until that question is settled.
 
 ---
 
