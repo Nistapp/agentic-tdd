@@ -81,19 +81,17 @@ describe('resolveMcpBinary', () => {
     expect(bin).toBe('/opt/bin/codebase-memory-mcp');
   });
 
-  it('falls back to /usr/bin/... on non-Windows when lookup fails', async () => {
+  it('throws a descriptive error on non-Windows when lookup fails (no hardcoded fallback)', async () => {
     const fakeExec = vi.fn().mockRejectedValue(new Error('not found'));
-    const bin = await resolveMcpBinary(fakeExec);
-    expect(bin).toBe('/usr/bin/codebase-memory-mcp');
+    await expect(resolveMcpBinary(fakeExec)).rejects.toThrow(/not found on PATH/);
   });
 
-  it('falls back to bare command name on Windows when lookup fails', async () => {
+  it('throws a descriptive error on Windows when lookup fails (no bare-name fallback)', async () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
     const fakeExec = vi.fn().mockRejectedValue(new Error('not found'));
     try {
-      const bin = await resolveMcpBinary(fakeExec);
-      expect(bin).toBe('codebase-memory-mcp');
+      await expect(resolveMcpBinary(fakeExec)).rejects.toThrow(/not found on PATH/);
     } finally {
       Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
     }

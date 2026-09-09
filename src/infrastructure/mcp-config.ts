@@ -32,10 +32,15 @@ export interface McpConfigResult {
 
 /**
  * Resolve the absolute path of the `codebase-memory-mcp` binary for the
- * current platform. Uses `which` on POSIX / `where` on Windows; falls
- * back to the bare command name if resolution fails.
+ * current platform. Uses `which` on POSIX / `where` on Windows.
+ *
+ * There is **no** hardcoded fallback: a missing binary is a hard error that
+ * the mandatory indexer gate must surface as a fatal before any session is
+ * spawned (never a dead MCP registration).
  *
  * Accepts an optional shell-out function so tests can inject a fake.
+ *
+ * @throws {Error} when the binary cannot be located on PATH.
  */
 export async function resolveMcpBinary(
   exec?: (cmd: string, args: string[]) => Promise<string>,
@@ -48,18 +53,22 @@ export async function resolveMcpBinary(
     execFileAsync(cmd, args).then((r) => r.stdout)
   );
 
+  let resolved: string | undefined;
   try {
     const stdout = await runner(lookupCmd, lookupArgs);
     const firstLine = stdout.split('\n')[0]?.trim();
-    if (firstLine) return firstLine;
+    if (firstLine) resolved = firstLine;
   } catch {
-    // Lookup failed — fall through to platform fallback.
+    // Lookup failed — surface as a missing-binary error below.
   }
 
-  if (!isWindows) {
-    return '/usr/bin/codebase-memory-mcp';
+  if (!resolved) {
+    throw new Error(
+      'codebase-memory-mcp binary not found on PATH. ' +
+      'Install the codebase-memory-mcp indexer (see its README) before running the pipeline.',
+    );
   }
-  return 'codebase-memory-mcp';
+  return resolved;
 }
 
 /**

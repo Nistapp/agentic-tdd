@@ -8,9 +8,42 @@ import { AgentRunError, AGENT_NAMES, PipelinePass } from '../../core/types.js';
 import type { AgentRunRequest, AgentRunResult, AgentStructuredOutput, AgentToolCallEvent, AgentMessageEvent, AgentUsage } from '../../core/types.js';
 import { sanitizeLogPayload } from '../../core/log-sanitizer.js';
 import { PACKAGE_AGENTS_DIR, getLogDir } from '../../utils/paths.js';
+import { buildIndexerBridgeTools } from './indexer-bridge.js';
 
 type PiSdkModule = typeof import('@earendil-works/pi-coding-agent');
 type PiModelRuntime = Awaited<ReturnType<PiSdkModule['ModelRuntime']['create']>>;
+type CreateAgentSessionOpts = NonNullable<Parameters<PiSdkModule['createAgentSession']>[0]>;
+
+/**
+ * Canonical tool names the `codebase-memory` MCP server registers when its
+ * server entry carries `"directTools": true` (see `mcp.template.json` and
+ * artefacts/Plan-Mandatory-indexer-gate.md §1.4). The `pi-mcp-adapter`
+ * extension registers one individually-named tool per MCP tool under the
+ * `mcp__<server>__<tool>` scheme.
+ *
+ * The harness guarantees these tools are reachable (indexer gate), so they are
+ * always enabled — the frontmatter `permission:` block governs built-in tools
+ * only. The live probe asserts this exact set appears on a probe session.
+ */
+export const INDEXER_TOOLS: readonly string[] = [
+  'mcp__codebase-memory__index_repository',
+  'mcp__codebase-memory__search_graph',
+  'mcp__codebase-memory__query_graph',
+  'mcp__codebase-memory__trace_path',
+  'mcp__codebase-memory__get_code_snippet',
+  'mcp__codebase-memory__get_graph_schema',
+  'mcp__codebase-memory__get_architecture',
+  'mcp__codebase-memory__search_code',
+  'mcp__codebase-memory__list_projects',
+  'mcp__codebase-memory__delete_project',
+  'mcp__codebase-memory__index_status',
+  'mcp__codebase-memory__check_index_coverage',
+  'mcp__codebase-memory__detect_changes',
+  'mcp__codebase-memory__manage_adr',
+  'mcp__codebase-memory__ingest_traces',
+] as const;
+
+export const MCP_INDEXER_SERVER_PREFIX = 'mcp__codebase-memory__';
 
 /**
  * Pi SDK-backed agent runner.
@@ -86,6 +119,11 @@ export class PiSdkRunner implements IAgentRunner {
       }
 
       const tools = buildToolsAllowlist(frontmatter);
+      // In-process indexer bridge: pi-mcp-adapter does not register its MCP
+      // tools inside an embedded headless SDK session, so register the indexer
+      // tools as SDK customTools (each invoking the binary's one-shot CLI).
+      const customTools = buildIndexerBridgeTools(INDEXER_TOOLS) as unknown as
+        NonNullable<CreateAgentSessionOpts['customTools']>;
       const workDir = cwd();
       const resourceLoader = new sdk.DefaultResourceLoader({
         cwd: workDir,
@@ -99,6 +137,7 @@ export class PiSdkRunner implements IAgentRunner {
         model: resolved.model,
         thinkingLevel: resolved.thinkingLevel ?? thinkingLevel,
         tools,
+        customTools,
         cwd: workDir,
         agentDir: sdk.getAgentDir(),
         resourceLoader,
@@ -107,7 +146,7 @@ export class PiSdkRunner implements IAgentRunner {
       });
       session = created.session;
 
-      execLogger.debug({ agent: agentName, model: `${canonicalModel}:${thinkingLevel}`, tools }, 'Pi SDK session created');
+      execLogger.debug({ agent: agentName, model: `${canonicalModel}:${thinkingLevel}`, tools, indexerBridgeTools: customTools.length }, 'Pi SDK session created');
 
       const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
         captureEvent(event, textDeltas, messageEvents, toolCalls, (u) => { usage = u; });
@@ -253,19 +292,35 @@ export function captureEvent(
  * allowlist. Entries are Pi in-process tool names (never Unix binaries), so
  * the mapping is platform-safe. When no permission block is present the
  * default allowlist (all non-shell built-ins) is used.
+ *
+ * The canonical `INDEXER_TOOLS` set is always appended: the indexer is a
+ * mandatory harness prerequisite (verified once per session by the gate), so
+ * its MCP-namespaced tools are harness-guaranteed and never gated by the
+ * agent's frontmatter `permission:` block.
  */
 export function buildToolsAllowlist(frontmatter: Record<string, unknown>): string[] {
+  let builtins: string[];
   const permission = frontmatter.permission;
   if (permission === null || typeof permission !== 'object' || Array.isArray(permission)) {
-    return ['read', 'edit', 'write', 'grep', 'find', 'ls'];
+    builtins = ['read', 'edit', 'write', 'grep', 'find', 'ls'];
+  } else {
+    const p = permission as Record<string, unknown>;
+    const tools: string[] = [];
+    if (p.read === 'allow') tools.push('read');
+    if (p.edit === 'allow') tools.push('edit', 'write');
+    if (p.glob === 'allow') tools.push('find', 'ls');
+    if (p.grep === 'allow') tools.push('grep');
+    builtins = tools.length > 0 ? tools : ['read', 'edit', 'write', 'grep', 'find', 'ls'];
   }
-  const p = permission as Record<string, unknown>;
-  const tools: string[] = [];
-  if (p.read === 'allow') tools.push('read');
-  if (p.edit === 'allow') tools.push('edit', 'write');
-  if (p.glob === 'allow') tools.push('find', 'ls');
-  if (p.grep === 'allow') tools.push('grep');
-  return tools.length > 0 ? tools : ['read', 'edit', 'write', 'grep', 'find', 'ls'];
+  return [...builtins, ...INDEXER_TOOLS];
+}
+
+/**
+ * True when *name* is a `mcp__codebase-memory__*` tool. Used by the live probe
+ * to separate expected indexer tools from unexpected/extra registrations.
+ */
+export function isIndexerToolName(name: string): boolean {
+  return name.startsWith(MCP_INDEXER_SERVER_PREFIX);
 }
 
 function extractText(partial: unknown): string | undefined {

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { PiSdkRunner, captureEvent, buildToolsAllowlist } from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
+import { PiSdkRunner, captureEvent, buildToolsAllowlist, INDEXER_TOOLS } from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
 import { AgentRunError, AGENT_NAMES, PipelinePass } from '../../../src/core/types.js';
 import type { AgentRunRequest, AgentArtefacts } from '../../../src/core/types.js';
 import type { IFileSystem, ILogger, PipelineConfig } from '../../../src/core/interfaces.js';
@@ -268,7 +268,7 @@ describe('PiSdkRunner', () => {
       expect(sdk.reload).toHaveBeenCalledTimes(1);
     });
 
-    it('passes a tool allowlist that excludes bash/powershell', async () => {
+    it('passes a tool allowlist that includes built-ins and the mandatory INDEXER_TOOLS', async () => {
       configureSessionMock();
       const m = makeMocks();
       const runner = new PiSdkRunner(m.fs, m.logger, m.config);
@@ -276,9 +276,25 @@ describe('PiSdkRunner', () => {
       await runner.execute(makeRequest());
 
       const createArgs = sdk.createSession.mock.calls[0]![0] as { tools: string[] };
-      expect(createArgs.tools).toEqual(['read', 'edit', 'write', 'find', 'ls', 'grep']);
+      expect(createArgs.tools).toEqual(['read', 'edit', 'write', 'find', 'ls', 'grep', ...INDEXER_TOOLS]);
       expect(createArgs.tools).not.toContain('bash');
       expect(createArgs.tools).not.toContain('powershell');
+    });
+
+    it('registers the indexer bridge customTools on the session (in-session MCP bridge)', async () => {
+      configureSessionMock();
+      const m = makeMocks();
+      const runner = new PiSdkRunner(m.fs, m.logger, m.config);
+
+      await runner.execute(makeRequest());
+
+      const createArgs = sdk.createSession.mock.calls[0]![0] as { customTools: Array<{ name: string; execute: unknown }> };
+      expect(createArgs.customTools).toHaveLength(INDEXER_TOOLS.length);
+      const names = createArgs.customTools.map((t) => t.name);
+      expect(names).toEqual(INDEXER_TOOLS);
+      for (const tool of createArgs.customTools) {
+        expect(typeof tool.execute).toBe('function');
+      }
     });
 
     it('uses SessionManager.inMemory() so no session is persisted to disk', async () => {
@@ -480,19 +496,26 @@ describe('captureEvent', () => {
 });
 
 describe('buildToolsAllowlist', () => {
-  it('maps permission: allow intents onto Pi built-in tool names (bash excluded)', () => {
+  it('maps permission: allow intents onto Pi built-in tool names and appends INDEXER_TOOLS', () => {
     const tools = buildToolsAllowlist({
       permission: { read: 'allow', edit: 'allow', glob: 'allow', grep: 'allow', bash: 'deny', webfetch: 'deny', task: 'deny' },
     });
-    expect(tools).toEqual(['read', 'edit', 'write', 'find', 'ls', 'grep']);
+    expect(tools).toEqual(['read', 'edit', 'write', 'find', 'ls', 'grep', ...INDEXER_TOOLS]);
   });
 
-  it('falls back to the default allowlist when no permission block exists', () => {
-    expect(buildToolsAllowlist({})).toEqual(['read', 'edit', 'write', 'grep', 'find', 'ls']);
+  it('falls back to the default allowlist (plus INDEXER_TOOLS) when no permission block exists', () => {
+    expect(buildToolsAllowlist({})).toEqual(['read', 'edit', 'write', 'grep', 'find', 'ls', ...INDEXER_TOOLS]);
   });
 
-  it('omits a tool when its intent is denied', () => {
+  it('omits a built-in tool when its intent is denied but still appends INDEXER_TOOLS', () => {
     const tools = buildToolsAllowlist({ permission: { read: 'deny', edit: 'allow', glob: 'deny', grep: 'allow' } });
-    expect(tools).toEqual(['edit', 'write', 'grep']);
+    expect(tools).toEqual(['edit', 'write', 'grep', ...INDEXER_TOOLS]);
+  });
+
+  it('never allows an indexer MCP tool to be stripped by the permission block', () => {
+    const tools = buildToolsAllowlist({ permission: { read: 'deny', edit: 'deny', glob: 'deny', grep: 'deny' } });
+    for (const tool of INDEXER_TOOLS) {
+      expect(tools).toContain(tool);
+    }
   });
 });
