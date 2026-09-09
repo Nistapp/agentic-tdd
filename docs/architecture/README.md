@@ -17,6 +17,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0008](adrs/0008-observability-before-security.md) | Swap Pass Order — Observability Before Security | Accepted | 2026-08-01 |
 | [0009](adrs/0009-configurable-per-agent-models.md) | Configurable Per-Agent Models via `config.json` | Accepted | 2026-08-17 |
 | [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-04 |
+| [0011](adrs/0011-mandatory-indexer-gate.md) | codebase-memory Indexer Is a Mandatory Harness Prerequisite | Accepted | 2026-09-09 |
 
 ## Key Documents
 

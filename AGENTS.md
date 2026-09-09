@@ -54,7 +54,9 @@ While the exact file tree may evolve, agents MUST respect these structural rules
 
 ## 4. Codebase-Memory-MCP Integration
 
-The `codebase-memory-mcp` server (binary at `/usr/bin/codebase-memory-mcp`, v0.8.1)
+The `codebase-memory-mcp` server (installed as a mandatory pipeline prerequisite;
+resolve its path at runtime via `which codebase-memory-mcp` — never a hardcoded
+path. On the reference machine it is at `~/.local/bin/codebase-memory-mcp`, v0.10.8)
 is installed and registered as an MCP tool. **You must use it proactively** — not
 just reactively — at every significant stage of work.
 
