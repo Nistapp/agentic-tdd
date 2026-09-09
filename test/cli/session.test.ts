@@ -1,15 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { startNewSession } from '../../src/cli/session.js';
+import { startNewSession, resumeSession } from '../../src/cli/session.js';
 import type { IGitService, IFileSystem, IStateStore } from '../../src/core/interfaces.js';
+import type { PipelineContext } from '../../src/core/types.js';
 import { TerminalRenderer, consoleWriter } from '../../src/cli/terminal-renderer.js';
 import type { ValidatedOptions } from '../../src/cli/validators.js';
 
+const di = vi.hoisted(() => ({
+  createPipelineServices: vi.fn(),
+}));
+
+const gate = vi.hoisted(() => ({
+  ensureIndexerAccess: vi.fn(),
+}));
+
 vi.mock('../../src/cli/di-container.js', () => ({
-  createPipelineServices: vi.fn(() => ({
-    orchestrator: {
-      run: vi.fn().mockResolvedValue(undefined),
-    },
-  })),
+  createPipelineServices: di.createPipelineServices,
 }));
 
 vi.mock('../../src/infrastructure/mcp-config.js', () => ({
@@ -17,6 +22,10 @@ vi.mock('../../src/infrastructure/mcp-config.js', () => ({
   teardownMcpConfig: vi.fn().mockResolvedValue(undefined),
   getMcpTemplateDir: vi.fn(() => '/tmp'),
   resolveMcpBinary: vi.fn().mockResolvedValue('/usr/bin/codebase-memory-mcp'),
+}));
+
+vi.mock('../../src/infrastructure/indexer-gate.js', () => ({
+  ensureIndexerAccess: gate.ensureIndexerAccess,
 }));
 
 function stubGit(overrides: Partial<IGitService> = {}): IGitService {
@@ -70,10 +79,44 @@ const validOptions: ValidatedOptions = {
   featureDescription: 'Add payment gateway',
 };
 
+function stubContext(overrides: Partial<PipelineContext> = {}): PipelineContext {
+  return {
+    featureName: 'PAY-404',
+    testCmd: ['npm', 'test'],
+    skipHitl: false,
+    maxCorrectionRetries: 1,
+    pipelineVersion: '0.1.0',
+    sourceType: 'file',
+    logLevel: 'INFO',
+    specFileAbsPath: '/tmp/specs/foo.md',
+    featureDescription: 'Add payment gateway',
+    baseBranch: undefined,
+    originalBaseSha: undefined,
+    history: {},
+    artefactDir: '/tmp/art',
+    designMmdPath: '/tmp/art/PAY-404.mmd',
+    specGherkinPath: '/tmp/art/PAY-404.gherkin',
+    testFilePath: '/tmp/test/PAY-404.test.ts',
+    errorLogPath: '/tmp/art/error-PAY-404.log',
+    ...overrides,
+  };
+}
+
+const pausedContext: PipelineContext = stubContext({
+  currentPass: 0,
+  xstateSnapshot: { status: 'active', value: 'paused' } as unknown as Record<string, unknown>,
+});
+
 describe('startNewSession branch creation', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    di.createPipelineServices.mockClear();
+    di.createPipelineServices.mockReturnValue({
+      orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
+    });
+    gate.ensureIndexerAccess.mockClear();
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true });
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(
       (code?: number | string | null | undefined) => {
         if (code === 0) return undefined as never;
@@ -232,5 +275,121 @@ describe('startNewSession branch creation', () => {
     expect(gitInfoSpy).toHaveBeenCalledWith(
       'Switched to branch feat/pay-404 [created]',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mandatory indexer gate — each session entry point gates before any run
+// ---------------------------------------------------------------------------
+
+describe('mandatory indexer gate at session entry points', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    di.createPipelineServices.mockClear();
+    di.createPipelineServices.mockReturnValue({
+      orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
+    });
+    gate.ensureIndexerAccess.mockClear();
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true });
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
+      (code?: number | string | null | undefined) => {
+        if (code === 0) return undefined as never;
+        throw new Error('process.exit called');
+      },
+    );
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  function makeRenderer(): TerminalRenderer {
+    return new TerminalRenderer(consoleWriter);
+  }
+
+  it('startNewSession exits fatally (before createPipelineServices) when the gate fails', async () => {
+    gate.ensureIndexerAccess.mockResolvedValue({
+      ok: false,
+      message: '[binary_missing] codebase-memory-mcp is not on PATH. Install it.',
+    });
+    const fs = stubFs();
+    const git = stubGit({
+      createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
+      getCurrentCommitSha: vi.fn().mockResolvedValue('abc123'),
+    });
+    const stateStore = stubStateStore();
+    const renderer = makeRenderer();
+    const fatalSpy = vi.spyOn(renderer, 'fatal');
+
+    await expect(
+      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
+    ).rejects.toThrow('process.exit called');
+
+    expect(fatalSpy).toHaveBeenCalledWith(
+      '[binary_missing] codebase-memory-mcp is not on PATH. Install it.',
+    );
+    expect(di.createPipelineServices).not.toHaveBeenCalled();
+  });
+
+  it('startNewSession proceeds to create services when the gate passes', async () => {
+    const fs = stubFs();
+    const git = stubGit({
+      createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
+      getCurrentCommitSha: vi.fn().mockResolvedValue('abc123'),
+    });
+    const stateStore = stubStateStore();
+
+    await startNewSession(validOptions, stateStore, fs, git, makeRenderer(), '0.1.0');
+
+    expect(gate.ensureIndexerAccess).toHaveBeenCalledTimes(1);
+    expect(di.createPipelineServices).toHaveBeenCalledTimes(1);
+  });
+
+  it('resumeSession (paused) exits fatally before createPipelineServices when the gate fails', async () => {
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: false, message: '[probe_timeout] timed out' });
+    const fs = stubFs();
+    const git = stubGit();
+    const stateStore = stubStateStore({ load: vi.fn().mockResolvedValue(pausedContext) });
+    const renderer = makeRenderer();
+    const fatalSpy = vi.spyOn(renderer, 'fatal');
+
+    await expect(
+      resumeSession(stateStore, fs, git, renderer, '0.1.0', undefined, undefined, undefined, 'pi'),
+    ).rejects.toThrow('process.exit called');
+
+    expect(fatalSpy).toHaveBeenCalledWith('[probe_timeout] timed out');
+    expect(di.createPipelineServices).not.toHaveBeenCalled();
+  });
+
+  it('resumeSession (fast-forward) exits fatally before createPipelineServices when the gate fails', async () => {
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: false, message: '[tools_missing] allowlist bug' });
+    const fs = stubFs();
+    const git = stubGit({ resetWorkingTree: vi.fn().mockResolvedValue(undefined) });
+    const stateStore = stubStateStore({
+      load: vi.fn().mockResolvedValue(stubContext({ currentPass: 3, history: {} })),
+    });
+    const renderer = makeRenderer();
+    const fatalSpy = vi.spyOn(renderer, 'fatal');
+
+    await expect(
+      resumeSession(stateStore, fs, git, renderer, '0.1.0', undefined, undefined, undefined, 'pi'),
+    ).rejects.toThrow('process.exit called');
+
+    expect(fatalSpy).toHaveBeenCalledWith('[tools_missing] allowlist bug');
+    expect(di.createPipelineServices).not.toHaveBeenCalled();
+  });
+
+  it('resumeSession proceeds when the gate passes', async () => {
+    const fs = stubFs();
+    const git = stubGit();
+    const stateStore = stubStateStore({
+      load: vi.fn().mockResolvedValue(stubContext({ currentPass: 3, history: {} })),
+    });
+
+    await resumeSession(stateStore, fs, git, makeRenderer(), '0.1.0', undefined, undefined, undefined, 'pi');
+
+    expect(gate.ensureIndexerAccess).toHaveBeenCalledTimes(1);
+    expect(di.createPipelineServices).toHaveBeenCalledTimes(1);
   });
 });

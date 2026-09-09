@@ -14,6 +14,8 @@ import { getErrorLogPath } from '../utils/paths.js';
 import type { AgentBackend } from '../infrastructure/agent-runners/index.js';
 import { writeMcpConfig, teardownMcpConfig, getMcpTemplateDir } from '../infrastructure/mcp-config.js';
 import type { McpConfigResult } from '../infrastructure/mcp-config.js';
+import { ensureIndexerAccess } from '../infrastructure/indexer-gate.js';
+import type { ModelConfig } from './model-config.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { loggers } from '../utils/logger.js';
 
@@ -27,6 +29,31 @@ async function setupMcpConfig(fs: IFileSystem): Promise<McpConfigResult> {
   const templatePath = resolve(getMcpTemplateDir(), 'mcp.template.json');
   const mcpLogger = new PinoLoggerAdapter(loggers.core);
   return writeMcpConfig(fs, mcpLogger, cwd(), templatePath);
+}
+
+/**
+ * Run the mandatory indexer gate (G7): backend check, static checks, live
+ * probe, then index bootstrap. Any failure is fatal before a pass dispatches.
+ */
+async function runIndexerGate(
+  fs: IFileSystem,
+  git: IGitService,
+  renderer: TerminalRenderer,
+  backend: AgentBackend | undefined,
+  modelConfig: ModelConfig,
+): Promise<void> {
+  const logger = new PinoLoggerAdapter(loggers.core);
+  const result = await ensureIndexerAccess({
+    fs,
+    git,
+    logger,
+    backend,
+    workDir: cwd(),
+    modelConfig,
+  });
+  if (!result.ok) {
+    renderer.fatal(result.message);
+  }
 }
 
 async function teardownMcp(mcpResult: McpConfigResult, fs: IFileSystem): Promise<void> {
@@ -105,6 +132,7 @@ export async function resumeSession(
     renderer.banner(ctx);
 
       const mcpResult = await setupMcpConfig(fs);
+      await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
       const { orchestrator } = createPipelineServices({
         ctx,
         fs,
@@ -164,6 +192,7 @@ export async function resumeSession(
   renderer.banner(ctx);
 
   const mcpResult = await setupMcpConfig(fs);
+  await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -266,6 +295,7 @@ export async function startNewSession(
   );
 
   const mcpResult = await setupMcpConfig(fs);
+  await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
