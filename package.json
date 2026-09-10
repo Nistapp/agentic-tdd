@@ -30,6 +30,8 @@
     "test:watch": "vitest",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
+    "git:clean:dry": "node scripts/clean-branches.mjs",
+    "git:clean": "node scripts/clean-branches.mjs --apply",
     "prepublishOnly": "npm run lint && npm test && npm run build:full"
   },
   "keywords": [
