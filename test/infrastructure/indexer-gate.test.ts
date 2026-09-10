@@ -175,7 +175,10 @@ describe('ensureIndexerAccess', () => {
 
   it('runs the index bootstrap after static+live pass and reports ok', async () => {
     const result = await ensureIndexerAccess(baseDeps);
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({
+      ok: true,
+      indexerStatus: { available: true, indexed: true, project: 'repo-a' },
+    });
     expect(clientMocks.ensureIndexed).toHaveBeenCalledWith(
       expect.objectContaining({
         binary: '/bin/codebase-memory-mcp',
@@ -218,6 +221,11 @@ describe('ensureIndexerAccess — opencode backend', () => {
     if (result.ok) {
       expect(result.server).toBeDefined();
       expect(result.server?.baseUrl).toBe('http://127.0.0.1:4321');
+      expect(result.indexerStatus).toEqual({
+        available: true,
+        indexed: true,
+        project: 'repo-a',
+      });
     }
     expect(probeMocks.runOpencodeStaticChecks).toHaveBeenCalled();
     expect(probeMocks.runStaticIndexerChecks).not.toHaveBeenCalled();

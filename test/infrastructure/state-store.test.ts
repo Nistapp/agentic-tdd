@@ -312,6 +312,25 @@ describe('JsonStateStore', () => {
     expect(loaded.history[2]?.fileChanges).toEqual(fileChanges);
   });
 
+  it('round-trips indexerStatus and loads legacy contexts without it', async () => {
+    const fs = new NodeFileSystem();
+    const store = new JsonStateStore(fs, 'indexer-status', workDir);
+
+    await store.save(
+      makeContext({
+        featureName: 'indexer-status',
+        indexerStatus: { available: true, indexed: true, project: 'repo-a' },
+      }),
+    );
+    const loaded = await store.load();
+    expect(loaded.indexerStatus).toEqual({ available: true, indexed: true, project: 'repo-a' });
+
+    const legacyStore = new JsonStateStore(fs, 'legacy-indexer', workDir);
+    await legacyStore.save(makeContext({ featureName: 'legacy-indexer' }));
+    const legacyLoaded = await legacyStore.load();
+    expect(legacyLoaded.indexerStatus).toBeUndefined();
+  });
+
   it('independent stores do not collide', async () => {
     const fs = new NodeFileSystem();
     const storeA = new JsonStateStore(fs, 'feature-a', workDir);

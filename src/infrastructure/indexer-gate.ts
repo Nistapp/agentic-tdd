@@ -19,6 +19,7 @@ import { cwd } from 'node:process';
 
 import type { IAgentServerHandle, IFileSystem, IGitService, ILogger } from '../core/interfaces.js';
 import { AGENT_NAMES } from '../core/types.js';
+import type { IndexerStatus } from '../core/types.js';
 import { PACKAGE_AGENTS_DIR, getStateDir } from '../utils/paths.js';
 import {
   ensureIndexed,
@@ -53,7 +54,7 @@ import {
 } from './opencode-server.js';
 
 export type IndexerGateResult =
-  | { ok: true; server?: IAgentServerHandle }
+  | { ok: true; server?: IAgentServerHandle; indexerStatus: IndexerStatus }
   | { ok: false; message: string };
 
 export interface IndexerGateDeps {
@@ -240,7 +241,11 @@ async function ensureOpencodeAccess(deps: IndexerGateDeps, workDir: string): Pro
     { workDir, project: bootstrap.project, baseUrl: server.baseUrl },
     'Indexer gate passed (opencode)',
   );
-  return { ok: true, server };
+  return {
+    ok: true,
+    server,
+    indexerStatus: { available: true, indexed: true, project: bootstrap.project },
+  };
 }
 
 async function buildOpencodeConfigFromAgents(
@@ -317,7 +322,10 @@ async function ensurePiAccess(deps: IndexerGateDeps, workDir: string): Promise<I
   if (!bootstrap.ok) return bootstrap;
 
   deps.logger.info({ workDir, project: bootstrap.project }, 'Indexer gate passed (pi)');
-  return { ok: true };
+  return {
+    ok: true,
+    indexerStatus: { available: true, indexed: true, project: bootstrap.project },
+  };
 }
 
 // ---------------------------------------------------------------------------

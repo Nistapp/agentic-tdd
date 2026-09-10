@@ -13,6 +13,8 @@ const gate = vi.hoisted(() => ({
   ensureIndexerAccess: vi.fn(),
 }));
 
+const OK_INDEXER_STATUS = { available: true, indexed: true, project: 'repo-a' } as const;
+
 vi.mock('../../src/cli/di-container.js', () => ({
   createPipelineServices: di.createPipelineServices,
 }));
@@ -116,7 +118,7 @@ describe('startNewSession branch creation', () => {
       orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
     });
     gate.ensureIndexerAccess.mockClear();
-    gate.ensureIndexerAccess.mockResolvedValue({ ok: true });
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, indexerStatus: OK_INDEXER_STATUS });
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(
       (code?: number | string | null | undefined) => {
         if (code === 0) return undefined as never;
@@ -291,7 +293,7 @@ describe('mandatory indexer gate at session entry points', () => {
       orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
     });
     gate.ensureIndexerAccess.mockClear();
-    gate.ensureIndexerAccess.mockResolvedValue({ ok: true });
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, indexerStatus: OK_INDEXER_STATUS });
     exitSpy = vi.spyOn(process, 'exit').mockImplementation(
       (code?: number | string | null | undefined) => {
         if (code === 0) return undefined as never;
@@ -346,6 +348,23 @@ describe('mandatory indexer gate at session entry points', () => {
     expect(di.createPipelineServices).toHaveBeenCalledTimes(1);
   });
 
+  it('startNewSession records the gate indexer status on the context and persists it', async () => {
+    const fs = stubFs();
+    const git = stubGit({
+      createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
+      getCurrentCommitSha: vi.fn().mockResolvedValue('abc123'),
+    });
+    const stateStore = stubStateStore();
+
+    await startNewSession(validOptions, stateStore, fs, git, makeRenderer(), '0.1.0');
+
+    const saved = stateStore.save.mock.calls.at(-1)?.[0] as PipelineContext;
+    expect(saved.indexerStatus).toEqual(OK_INDEXER_STATUS);
+    expect(di.createPipelineServices).toHaveBeenCalledWith(
+      expect.objectContaining({ ctx: expect.objectContaining({ indexerStatus: OK_INDEXER_STATUS }) }),
+    );
+  });
+
   it('resumeSession (paused) exits fatally before createPipelineServices when the gate fails', async () => {
     gate.ensureIndexerAccess.mockResolvedValue({ ok: false, message: '[probe_timeout] timed out' });
     const fs = stubFs();
@@ -392,6 +411,19 @@ describe('mandatory indexer gate at session entry points', () => {
     expect(gate.ensureIndexerAccess).toHaveBeenCalledTimes(1);
     expect(di.createPipelineServices).toHaveBeenCalledTimes(1);
   });
+
+  it('resumeSession records the gate indexer status on the context and persists it', async () => {
+    const fs = stubFs();
+    const git = stubGit();
+    const stateStore = stubStateStore({
+      load: vi.fn().mockResolvedValue(stubContext({ currentPass: 3, history: {} })),
+    });
+
+    await resumeSession(stateStore, fs, git, makeRenderer(), '0.1.0', undefined, undefined, undefined, 'pi');
+
+    const saved = stateStore.save.mock.calls.at(-1)?.[0] as PipelineContext;
+    expect(saved.indexerStatus).toEqual(OK_INDEXER_STATUS);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -429,7 +461,7 @@ describe('server teardown at session entry points', () => {
 
   it('hands the gate server to the DI container and closes it after success', async () => {
     const handle = stubServer();
-    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle });
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle, indexerStatus: OK_INDEXER_STATUS });
     const fs = stubFs();
     const git = stubGit({
       createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
@@ -450,7 +482,7 @@ describe('server teardown at session entry points', () => {
 
   it('closes the server when the orchestrator throws', async () => {
     const handle = stubServer();
-    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle });
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle, indexerStatus: OK_INDEXER_STATUS });
     di.createPipelineServices.mockReturnValue({
       orchestrator: { run: vi.fn().mockRejectedValue(new Error('pass exploded')) },
     });

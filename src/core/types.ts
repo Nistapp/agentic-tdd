@@ -123,6 +123,27 @@ export interface PassHistory {
 }
 
 // ---------------------------------------------------------------------------
+// IndexerStatus — harness-owned environment truth carried in the payload
+// ---------------------------------------------------------------------------
+
+/**
+ * The harness, not the agent, owns environment truth. The indexer gate runs
+ * once per session entry and reports its result here so every pass receives a
+ * deterministic signal in its JSON payload (`meta.indexer`) instead of probing
+ * its environment. The gate is mandatory, so a successful run always reports
+ * `available: true` and `indexed: true`; the field remains optional on
+ * {@link PipelineContext} so persisted snapshots predating it load unchanged.
+ */
+export interface IndexerStatus {
+  /** codebase-memory binary present and MCP tools reachable for this run. */
+  available: boolean;
+  /** Target repo indexed and fresh at session start. */
+  indexed: boolean;
+  /** Indexed project name, when known. */
+  project?: string;
+}
+
+// ---------------------------------------------------------------------------
 // PipelineContext — the state object threaded through every pass
 // ---------------------------------------------------------------------------
 
@@ -192,6 +213,14 @@ export interface PipelineContext {
 
   /** Flag set by a root-level PAUSE event; honoured at the next inter-pass boundary. */
   pauseRequested?: boolean;
+
+  /**
+   * Harness-owned indexer status, set by the CLI after the mandatory indexer
+   * gate passes. Optional for backward compatibility with persisted snapshots;
+   * `getAgentContextPayload` defaults it to `{ available: false, indexed: false }`
+   * when unset.
+   */
+  indexerStatus?: IndexerStatus;
 }
 
 // ---------------------------------------------------------------------------

@@ -23,7 +23,10 @@ export function getAgentContextPayload(
     contextFiles,
     targetSymbols: built?.targetSymbols ?? {},
     fileChanges: built?.fileChanges ?? {},
-    meta,
+    meta: {
+      indexer: ctx.indexerStatus ?? { available: false, indexed: false },
+      ...meta,
+    },
   };
   return JSON.stringify(payload, null, 2);
 }

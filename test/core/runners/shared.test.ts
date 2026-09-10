@@ -65,4 +65,36 @@ describe('getAgentContextPayload', () => {
     expect(parsed.targetSymbols).toEqual({});
     expect(parsed.fileChanges).toEqual({});
   });
+
+  it('defaults meta.indexer to unavailable/unindexed when ctx.indexerStatus is unset', () => {
+    const ctx = makeContext();
+    const parsed = JSON.parse(getAgentContextPayload(ctx)) as {
+      meta: { indexer: unknown };
+    };
+
+    expect(parsed.meta.indexer).toEqual({ available: false, indexed: false });
+  });
+
+  it('injects ctx.indexerStatus into meta.indexer', () => {
+    const ctx = makeContext({
+      indexerStatus: { available: true, indexed: true, project: 'repo-a' },
+    });
+    const parsed = JSON.parse(getAgentContextPayload(ctx)) as {
+      meta: { indexer: unknown };
+    };
+
+    expect(parsed.meta.indexer).toEqual({ available: true, indexed: true, project: 'repo-a' });
+  });
+
+  it('merges caller-supplied meta without clobbering meta.indexer', () => {
+    const ctx = makeContext({
+      indexerStatus: { available: true, indexed: true, project: 'repo-a' },
+    });
+    const parsed = JSON.parse(getAgentContextPayload(ctx, undefined, { attemptNumber: 2 })) as {
+      meta: { indexer: unknown; attemptNumber: number };
+    };
+
+    expect(parsed.meta.attemptNumber).toBe(2);
+    expect(parsed.meta.indexer).toEqual({ available: true, indexed: true, project: 'repo-a' });
+  });
 });

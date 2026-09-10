@@ -83,11 +83,16 @@ Serialises the JSON prompt passed to the agent ([`src/core/runners/shared.ts#L5-
   "contextFiles": { "contracts": [], "tests": [], "implementation": [] },
   "targetSymbols": {},
   "fileChanges": {},
-  "meta": { "attemptNumber": 1 }
+  "meta": {
+    "indexer": { "available": true, "indexed": true, "project": "..." },
+    "attemptNumber": 1
+  }
 }
 ```
 
 On self-correction cycles (attempt ≥ 2), `meta.attemptNumber` is set and the error log path is attached so the agent can diagnose the failure.
+
+`meta.indexer` carries the **harness-owned** indexer status set by the CLI after the mandatory indexer gate passes (`ctx.indexerStatus`, see [ADR-0011](../adrs/0011-mandatory-indexer-gate.md)). Because the gate is mandatory, a successful run always reports `available: true` / `indexed: true`; prompts rely on this field instead of probing their environment. When `ctx.indexerStatus` is unset (e.g. a persisted snapshot predating the field), it defaults to `{ available: false, indexed: false }`.
 
 ### 3.2 `buildArtefacts`
 

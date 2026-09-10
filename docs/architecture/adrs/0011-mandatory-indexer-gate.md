@@ -85,6 +85,17 @@ always enabled (`src/infrastructure/agent-runners/pi-sdk-runner.ts`).
 **Boundaries preserved:** all OS work lives in `src/infrastructure/` behind
 injected seams (`IFileSystem`, process runners); `src/core/` is untouched.
 
+### Update (2026-09-10) — H3 payload signal landed
+
+The gate result now carries an `IndexerStatus` (`available`, `indexed`,
+`project`); the CLI records it on `PipelineContext.indexerStatus` after a
+successful gate and `getAgentContextPayload` injects it as `meta.indexer` into
+every pass payload. Agents no longer need to probe their environment, and the
+per-pass reuse directives rely on this harness-owned signal instead of the old
+`indexer-first` self-probe with a `read`/`glob`/`grep` fallback. The field is
+optional on `PipelineContext` so snapshots persisted before this change load
+unchanged (defaulting to `{ available: false, indexed: false }` in the payload).
+
 ## Consequences
 
 ### Positive

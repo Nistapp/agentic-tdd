@@ -64,6 +64,21 @@ async function runIndexerGate(
   return result;
 }
 
+/**
+ * Persist the harness-owned indexer status onto the pipeline context once the
+ * gate passes, so every pass payload carries `meta.indexer`. A failed gate has
+ * already exited via `renderer.fatal`, so this is a no-op then.
+ */
+async function recordIndexerStatus(
+  result: IndexerGateResult,
+  ctx: PipelineContext,
+  stateStore: IStateStore,
+): Promise<void> {
+  if (!result.ok) return;
+  ctx.indexerStatus = result.indexerStatus;
+  await stateStore.save(ctx);
+}
+
 async function teardownMcp(mcpResult: McpConfigResult, fs: IFileSystem): Promise<void> {
   const mcpLogger = new PinoLoggerAdapter(loggers.core);
   await teardownMcpConfig(fs, mcpLogger, cwd(), mcpResult);
@@ -168,6 +183,7 @@ export async function resumeSession(
 
     const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
     const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
+    await recordIndexerStatus(gateResult, ctx, stateStore);
     const { orchestrator } = createPipelineServices({
       ctx,
       fs,
@@ -229,6 +245,7 @@ export async function resumeSession(
 
   const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
   const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
+  await recordIndexerStatus(gateResult, ctx, stateStore);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -332,6 +349,7 @@ export async function startNewSession(
   const typedBackend = backend as AgentBackend | undefined;
   const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
   const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
+  await recordIndexerStatus(gateResult, ctx, stateStore);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
