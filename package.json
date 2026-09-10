@@ -4,7 +4,7 @@
   "description": "An npx-executable, agentic TDD pipeline orchestration tool — 8-pass state machine for enterprise software development",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.19.0"
   },
   "repository": {
     "type": "git",
@@ -22,9 +22,9 @@
     "agentic-tdd": "./dist/cli/index.js"
   },
   "scripts": {
-    "clean": "rm -rf dist",
+    "clean": "shx rm -rf dist",
     "build": "tsc && npm run copy:agents",
-    "copy:agents": "rm -rf dist/agents && mkdir -p dist/agents && cp -r src/agents/* dist/agents/ && cp config.default.json dist/config.default.json && echo '{\"type\":\"module\"}' > dist/package.json",
+    "copy:agents": "shx rm -rf dist/agents && shx mkdir -p dist/agents && shx cp -r src/agents/* dist/agents/ && shx cp config.default.json dist/config.default.json && shx cp mcp.template.json dist/mcp.template.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({ type: 'module' }) + '\\n')\"",
     "build:full": "npm run clean && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -46,7 +46,11 @@
   "license": "AGPL-3.0",
   "dependencies": {
     "@ast-grep/napi": "^0.45.1",
+    "@earendil-works/pi-coding-agent": "^0.85.0",
+    "@earendil-works/pi-server": "^0.85.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@opencode-ai/plugin": "1.17.7",
+    "@opencode-ai/sdk": "1.18.30",
     "boxen": "^8.0.1",
     "commander": "^13.1.0",
     "dotenv": "^16.5.0",
@@ -57,6 +61,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "shx": "^0.4.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   },

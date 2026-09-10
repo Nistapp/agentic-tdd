@@ -12,6 +12,10 @@ inside this repository. Read it in full before making any change.
 [opencode](https://opencode.ai) sub-agents through sequential, guarded passes
 (Design → Contracts → Tests → Implementation → Refactor → Observability → Security → Documentation), each producing an atomic git commit.
 
+The default agent backend is the **opencode SDK** (real MCP, one server per
+session entry). **Pi** (`@earendil-works/pi-coding-agent`) remains an opt-in
+backup backend (`--backend pi`); `opencode-cli` is legacy.
+
 Key design invariants:
 - The **Core Engine** (`src/core/`) is a pure state machine — zero knowledge of
   filesystems, Git, or shell commands.
@@ -47,6 +51,9 @@ While the exact file tree may evolve, agents MUST respect these structural rules
 | Test runner | Vitest — run with `npm test` |
 | Type-check | `npm run lint` (`tsc --noEmit`) |
 | Build | `npm run build` (tsc + copy agents) |
+| Agent backend (default) | `@opencode-ai/sdk` (pinned 1.18.30 ↔ `opencode` 1.18.29) |
+| Agent backend (backup) | `@earendil-works/pi-coding-agent` (`--backend pi`) |
+| MCP probe | `@modelcontextprotocol/sdk` |
 | Process runner | `execa` |
 | Logging | `pino` with child loggers |
 
@@ -54,49 +61,55 @@ While the exact file tree may evolve, agents MUST respect these structural rules
 
 ## 4. Codebase-Memory-MCP Integration
 
-The `codebase-memory-mcp` server (binary at `/usr/bin/codebase-memory-mcp`, v0.8.1)
+The `codebase-memory-mcp` server (installed as a mandatory pipeline prerequisite;
+resolve its path at runtime via `which codebase-memory-mcp` — never a hardcoded
+path. On the reference machine it is at `~/.local/bin/codebase-memory-mcp`, v0.10.8)
 is installed and registered as an MCP tool. **You must use it proactively** — not
 just reactively — at every significant stage of work.
 
 > [!IMPORTANT]
-> **Always prefer `codebase_memory` MCP tools over reading full source files.**
+> **Always prefer the `codebase-memory_*` MCP tools over reading full source files.**
 > This avoids unnecessary token consumption and gives richer semantic context.
+>
+> On the default **opencode** backend the canonical tool names are
+> `codebase-memory_<tool>` (single underscore). On the backup `--backend pi` the
+> same tools are namespaced `mcp__codebase-memory__<tool>`.
 
 ### Tool selection — priority order
 
 | Situation | Preferred Tool | Fall-back |
 |---|---|---|
-| Understand overall structure / dependencies | `get_architecture` | — |
-| Find a class, function, or method | `search_graph` | `search_code` |
-| Understand call chains / data flow | `trace_path` | — |
-| Read a specific function body | `get_code_snippet` | `view_file` (targeted line range only) |
-| Locate usages of a symbol | `query_graph` | `grep_search` |
-| Check if files changed since last index | `detect_changes` | — |
-| Understand test coverage for a module | `query_graph` with `TESTS` edge type | — |
-| Read an entire source file | ❌ avoid | only when `get_code_snippet` is insufficient |
+| Understand overall structure / dependencies | `codebase-memory_get_architecture` | — |
+| Find a class, function, or method | `codebase-memory_search_graph` | `codebase-memory_search_code` |
+| Understand call chains / data flow | `codebase-memory_trace_path` | — |
+| Read a specific function body | `codebase-memory_get_code_snippet` | `view_file` (targeted line range only) |
+| Locate usages of a symbol | `codebase-memory_query_graph` | `grep_search` |
+| Check if files changed since last index | `codebase-memory_detect_changes` | — |
+| Understand test coverage for a module | `codebase-memory_query_graph` with `TESTS` edge type | — |
+| Read an entire source file | ❌ avoid | only when `codebase-memory_get_code_snippet` is insufficient |
 
 ### Quick-start recipes
 
 ```
 # High-level architecture
-codebase_memory: get_architecture(project="Nistapp-agentic-tdd", aspects=["all"])
+codebase-memory_get_architecture(project="Nistapp-agentic-tdd", aspects=["all"])
 
 # Find a symbol
-codebase_memory: search_graph(project="Nistapp-agentic-tdd", query="PipelineOrchestrator")
+codebase-memory_search_graph(project="Nistapp-agentic-tdd", query="PipelineOrchestrator")
 
 # Read a function body
-codebase_memory: get_code_snippet(project="Nistapp-agentic-tdd", node_id="<qualified_name>")
+codebase-memory_get_code_snippet(project="Nistapp-agentic-tdd", node_id="<qualified_name>")
 
 # Trace call path between two symbols
-codebase_memory: trace_path(project="Nistapp-agentic-tdd", from_node="...", to_node="...")
+codebase-memory_trace_path(project="Nistapp-agentic-tdd", from_node="...", to_node="...")
 
 # Check index freshness before starting work
-codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
+codebase-memory_detect_changes(project="Nistapp-agentic-tdd")
 ```
 
 > [!TIP]
 > After any significant code change, call
-> `index_repository(repo_path=".")`
+> `codebase-memory_index_repository(repo_path=".")`
 > to keep the index fresh before querying.
 
 ### File Reading Policy
@@ -203,11 +216,14 @@ codebase_memory: detect_changes(project="Nistapp-agentic-tdd")
 
 ## 8. Agent Prompt Files (`src/agents/`)
 
-The `src/agents/pass-*.md` files are the prompts fed to opencode sub-agents. When
-editing them:
-- Preserve the YAML frontmatter (`model`, `tools`, `permissions`).
+The `src/agents/pass-*.md` files are the prompts fed to opencode sub-agents and
+are the **source for the generated opencode agents**: the indexer gate parses
+each file's frontmatter + body and emits one `primary` opencode agent per pass
+(see `src/infrastructure/opencode-config.ts`). When editing them:
+- Preserve the YAML frontmatter (`model`, `permission`, `mode`).
 - Keep scope narrow — each agent is responsible for exactly one pass.
 - Never grant an agent permission to read or write files outside its declared scope.
+- Never add `permission: ask` — it blocks headless runs (see §10).
 - After editing, rebuild with `npm run build` so the updated prompts are copied to `dist/agents/`.
 
 ---
@@ -231,6 +247,8 @@ editing them:
 - Do not skip the `codebase-memory-mcp` indexing step at the start of a session.
 - Do not run `opencode` or make real API calls in tests.
 - Do not modify `dist/` manually — it is generated.
+- Never configure `permission: ask` on any generated opencode agent — it raises `permission.asked` and blocks forever headless.
+- Never leave the opencode server (or its run-scoped config directory) behind after a run — close the gate-owned handle on every path.
 
 ---
 

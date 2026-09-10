@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "codebase-memory": {
+      "command": "__CODEBASE_MEMORY_MCP_BIN__",
+      "args": [],
+      "lifecycle": "lazy",
+      "directTools": true
+    }
+  }
+}

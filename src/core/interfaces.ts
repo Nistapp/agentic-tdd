@@ -109,6 +109,14 @@ export interface IFileSystem {
 
   /** List entries in a directory (non-recursive). Throws if dir is missing. */
   readdir(path: string): Promise<string[]>;
+
+  /**
+   * Recursively remove a directory (and its contents) if it exists.
+   *
+   * Optional so lightweight test stubs need not implement it; production
+   * filesystems (and any caller that needs teardown) must provide it.
+   */
+  deleteDirectory?(path: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +160,7 @@ export interface IOpencodeSpawner {
    * Spawn the opencode CLI with the given pre-built argument array.
    *
    * Implementations own process lifecycle concerns: stdout/stderr streaming,
-   * heartbeat watchdog, and hard timeout. The caller (OpenCodeAgentRunner)
+   * heartbeat watchdog, and hard timeout. The caller (OpenCodeCliRunner)
    * is responsible for argv assembly — this contract is purely about
    * spawning and monitoring.
    *
@@ -160,6 +168,36 @@ export interface IOpencodeSpawner {
    * @throws {Error} If opencode exits non-zero or hits the hard timeout.
    */
   spawn(args: string[]): Promise<string>;
+}
+
+// ---------------------------------------------------------------------------
+// IAgentServerHandle — lifecycle of a long-lived agent backend server
+// ---------------------------------------------------------------------------
+
+/**
+ * Opaque, SDK-typed-free handle to a running agent backend server.
+ *
+ * The indexer gate owns server startup and hands this handle to the pipeline.
+ * It exposes only primitives so `src/core/` never depends on a third-party SDK:
+ * the concrete handle (and its client) live in `src/infrastructure/`.
+ */
+export interface IAgentServerHandle {
+  /** Base URL of the running server (e.g. `http://127.0.0.1:4096`). */
+  readonly baseUrl: string;
+
+  /**
+   * Raw HTTP liveness probe.
+   *
+   * Implementations MUST use a direct HTTP health call — never a cached
+   * session read, which can report stale success after a crash.
+   */
+  isAlive(): Promise<boolean>;
+
+  /**
+   * Idempotent shutdown: stop the server and release any run-scoped resources
+   * (e.g. the isolated config directory). Safe to call more than once.
+   */
+  close(): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------

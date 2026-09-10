@@ -45,4 +45,9 @@ export class NodeFileSystem implements IFileSystem {
   async readdir(path: string): Promise<string[]> {
     return readdir(path);
   }
+
+  async deleteDirectory(path: string): Promise<void> {
+    const { rm } = await import('node:fs/promises');
+    await rm(path, { recursive: true, force: true });
+  }
 }

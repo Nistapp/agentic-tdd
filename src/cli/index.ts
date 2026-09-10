@@ -8,8 +8,9 @@ import { NodeFileSystem } from '../infrastructure/file-system.js';
 import { GitService } from '../infrastructure/git-service.js';
 import { JsonStateStore } from '../infrastructure/state-store.js';
 import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
-import { validateAndResolveOptions } from './validators.js';
+import { validateAndResolveOptions, validateBackend } from './validators.js';
 import { loggers } from '../utils/logger.js';
+import { closeActiveServer } from './run-with-server.js';
 import {
   abortSession,
   resumeSession,
@@ -19,12 +20,12 @@ import {
 
 process.on('uncaughtException', (err) => {
   loggers.cli.fatal({ err }, 'Uncaught exception');
-  process.exit(1);
+  void closeActiveServer().finally(() => process.exit(1));
 });
 
 process.on('unhandledRejection', (reason) => {
   loggers.cli.fatal({ reason }, 'Unhandled rejection');
-  process.exit(1);
+  void closeActiveServer().finally(() => process.exit(1));
 });
 
 let sigintCount = 0;
@@ -47,14 +48,17 @@ process.on('SIGINT', async () => {
       if (orchestrator) {
         await orchestrator.pause();
       }
+      await closeActiveServer();
       process.exit(0);
     } catch {
+      await closeActiveServer();
       process.exit(130);
     }
   } else {
     if (sigintTimer !== undefined) {
       clearTimeout(sigintTimer);
     }
+    await closeActiveServer();
     process.exit(130);
   }
 });
@@ -77,6 +81,7 @@ program
   .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
   .option('--model <model>', 'Override the model for every agent (provider/model)')
   .option('--config <path>', 'Path to an alternate config.json (overrides .agentic-tdd/config.json)')
+  .option('--backend <backend>', 'Agent backend: opencode (SDK server, default) | pi (in-process SDK, backup) | opencode-cli (legacy shell-out)', 'opencode')
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -98,6 +103,10 @@ program
     const fs = new NodeFileSystem();
     const git = new GitService();
     const noContextEnrich = Boolean(options.noContextEnrich);
+    const backend = validateBackend(
+      typeof options.backend === 'string' ? options.backend : undefined,
+      renderer,
+    );
 
     if (resume || abort) {
       let stateStore: JsonStateStore;
@@ -115,6 +124,7 @@ program
       }
 
       if (abort) {
+        await closeActiveServer();
         await abortSession(stateStore, git);
       }
 
@@ -130,6 +140,7 @@ program
         noContextEnrich,
         model,
         configPath,
+        backend,
       );
       return;
     }
@@ -142,7 +153,7 @@ program
       renderer.fatal('An active TDD session is in progress. Use --resume to continue or --abort to cancel.');
     }
 
-    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich);
+    await startNewSession(opts, stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich, backend);
   });
 
 program.parse(process.argv);

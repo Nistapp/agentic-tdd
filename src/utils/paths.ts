@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
 
@@ -33,5 +34,5 @@ export function getErrorLogPath(featureName: string, workDir?: string): string {
 export { PACKAGE_AGENTS_DIR } from '../infrastructure/command-runner.js';
 
 export function getOpencodeLogPath(): string {
-  return join(process.env.HOME ?? '~', '.local', 'share', 'opencode', 'log', 'opencode.log');
+  return join(homedir(), '.local', 'share', 'opencode', 'log', 'opencode.log');
 }

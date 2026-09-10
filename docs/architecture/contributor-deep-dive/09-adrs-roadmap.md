@@ -28,6 +28,7 @@ This page is the single destination for two kinds of project memory:
 | [0007](../adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for in-process symbol resolution | Accepted | 2026-08-08 |
 | [0008](../adrs/0008-observability-before-security.md) | Swap pass order — Observability (5) before Security (6) | Accepted | 2026-08-01 |
 | [0009](../adrs/0009-configurable-per-agent-models.md) | Configurable per-agent models via `config.json` | Accepted | 2026-08-17 |
+| [0010](../adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-agnostic SDK architecture (Pi default) | Accepted | 2026-09-04 |
 
 > [!IMPORTANT]
 > All ADR bodies are fully drafted (Context / Decision / Consequences). Deprecation note: **0006** (Static Prefix) is tombstoned in place with its deprecation notice (per STYLE_GUIDE §7.1 — never delete, only supersede).
@@ -89,7 +90,7 @@ This page is the single destination for two kinds of project memory:
 
 | # | Topic | What is missing |
 |---|---|---|
-| R-1 | ADR bodies | **Resolved** — all ADR bodies (0001–0008) are fully drafted; only minor open items remain in their per-ADR Placeholders tables. |
+| R-1 | ADR bodies | **Resolved** — all ADR bodies (0001–0010) are fully drafted; only minor open items remain in their per-ADR Placeholders tables. |
 | R-2 | Manifesto salvage | The retired `architecture-manifesto.md` carried the enterprise vision (SSO, gateways, guardrails). Its shipped-vs-planned split now lives across the user-overview pages and this roadmap, but no single replacement "manifesto" page exists — decide whether to add one or keep it distributed. |
 | R-3 | Deprecation log | Onboarding a lightweight "deprecated / retired docs" index so removed files (e.g. `roadmap.md`, `architecture-manifesto.md`) keep navigable tombstones. |
 

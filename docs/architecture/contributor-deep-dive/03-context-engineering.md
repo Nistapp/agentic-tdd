@@ -20,14 +20,14 @@ StateContextProvider.build(ctx, pass)   → BuiltContext { files, targetSymbols,
     │
     ▼
 getAgentContextPayload(ctx, built)      → JSON string (the prompt text)
-buildArtefacts(ctx, fs, built, errLog)  → --file attachments
+buildArtefacts(ctx, fs, built, errLog)  → artefact file paths (design .mmd, spec .gherkin, error log)
     │
     ▼
-OpenCodeAgentRunner.#buildArgs()        → opencode run --agent pass-N --file … <prompt>
+IAgentRunner.execute()                  → PiSdkRunner (in-process session) | OpenCodeCliRunner (opencode run --agent pass-N --file … <prompt>)
 ```
 
 > [!IMPORTANT]
-> `contextFiles` are **filename hints**, not injected file contents. The agent reads them with its own tools (`read`/`glob`/`grep`/MCP). `--file` attachments (design artefact, spec, error log) are injected directly into the context window. See [§ 7](#7-how-agents-consume-it) — the payload is a starting point, not a restriction.
+> `contextFiles` are **filename hints**, not injected file contents. The agent reads them with its own tools (`read`/`glob`/`grep`/MCP). Artefact handling differs by backend: the **opencode-cli** backend injects the artefact contents directly via `--file`; the **Pi** backend carries the artefact *paths* in the payload prompt (e.g. `paths.designMmd`), which the agent then reads with its in-session `read` tool. See [§ 7](#7-how-agents-consume-it) — the payload is a starting point, not a restriction.
 
 ---
 

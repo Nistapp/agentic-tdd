@@ -1,15 +1,15 @@
-import { OpenCodeAgentRunner } from '../../src/infrastructure/open-code-agent-runner.js';
-import { PipelinePass, AGENT_NAMES } from '../../src/core/types.js';
+import { OpenCodeCliRunner } from '../../../src/infrastructure/agent-runners/opencode-cli-runner.js';
+import { PipelinePass, AGENT_NAMES } from '../../../src/core/types.js';
 import type {
   AgentRunRequest,
   AgentArtefacts,
-} from '../../src/core/types.js';
+} from '../../../src/core/types.js';
 import type {
   IFileSystem,
   ILogger,
   PipelineConfig,
   IOpencodeSpawner,
-} from '../../src/core/interfaces.js';
+} from '../../../src/core/interfaces.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 class StubLogger implements ILogger {
@@ -91,11 +91,11 @@ function makeMocks(configOverrides: Partial<PipelineConfig> = {}): Mocks {
   return { fs, logger: new StubLogger(), config, spawner };
 }
 
-describe('OpenCodeAgentRunner', () => {
+describe('OpenCodeCliRunner', () => {
   describe('execute() — argv assembly', () => {
     it('does NOT include --pure so agents can access indexers and MCP tools', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest());
 
@@ -105,7 +105,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('calls spawner.spawn with --agent and --dangerously-skip-permissions', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest();
 
       await runner.execute(request);
@@ -119,7 +119,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('attaches --file for each artefact that is present', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({
         artefacts: {
           designMmd: '/proj/specs/design.mmd',
@@ -138,7 +138,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('attaches --file for errorLog when set', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({
         artefacts: { errorLog: '/proj/specs/.error.log' },
       });
@@ -151,7 +151,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('skips --file for absent artefacts', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({
         artefacts: {
           designMmd: undefined,
@@ -174,7 +174,7 @@ describe('OpenCodeAgentRunner', () => {
       const debugLogger = new StubLogger();
       Object.defineProperty(debugLogger, 'level', { value: 'debug' });
 
-      const runner = new OpenCodeAgentRunner(m.fs, debugLogger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, debugLogger, m.config, m.spawner);
       const request = makeRequest();
 
       await runner.execute(request);
@@ -187,7 +187,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('does NOT inject debug flags when logger level is info', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest();
 
       await runner.execute(request);
@@ -199,7 +199,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('places prompt as the last argument after --dangerously-skip-permissions', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({ prompt: 'MY_TEST_PROMPT' });
 
       await runner.execute(request);
@@ -212,7 +212,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('R1: appends --model <value> before --dangerously-skip-permissions when models[agent] is set', async () => {
       const m = makeMocks({ models: { [AGENT_NAMES[PipelinePass.Design]]: 'deepseek/custom-model' } });
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest({ pass: PipelinePass.Design }));
 
@@ -227,7 +227,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('R2: does NOT append --model when no model is configured (frontmatter fallback)', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest());
 
@@ -239,7 +239,7 @@ describe('OpenCodeAgentRunner', () => {
   describe('execute() — pre-flight logging', () => {
     it('logs pass, agent name, model, and apiKey status', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({ pass: PipelinePass.CoreImplementation });
 
       await runner.execute(request);
@@ -257,7 +257,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('reads agent .md file to extract model', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest());
 
@@ -269,7 +269,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('R3: logs the effective model from config when configured', async () => {
       const m = makeMocks({ models: { [AGENT_NAMES[PipelinePass.Design]]: 'deepseek/from-config' } });
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest({ pass: PipelinePass.Design }));
 
@@ -284,7 +284,7 @@ describe('OpenCodeAgentRunner', () => {
 
     it('falls back to the frontmatter model in pre-flight when not configured', async () => {
       const m = makeMocks();
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await runner.execute(makeRequest());
 
@@ -305,7 +305,7 @@ describe('OpenCodeAgentRunner', () => {
         return path.includes('.opencode/log') ? false : true;
       });
 
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
       const request = makeRequest({ pass: PipelinePass.Design, runId: 'my-run-123' });
 
       await runner.execute(request);
@@ -321,7 +321,7 @@ describe('OpenCodeAgentRunner', () => {
     it('returns AgentRunResult with spawner output', async () => {
       const m = makeMocks();
       (m.spawner.spawn as ReturnType<typeof vi.fn>).mockResolvedValue('custom output');
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       const result = await runner.execute(makeRequest());
 
@@ -331,7 +331,7 @@ describe('OpenCodeAgentRunner', () => {
     it('throws when spawner rejects', async () => {
       const m = makeMocks();
       (m.spawner.spawn as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('opencode crashed'));
-      const runner = new OpenCodeAgentRunner(m.fs, m.logger, m.config, m.spawner);
+      const runner = new OpenCodeCliRunner(m.fs, m.logger, m.config, m.spawner);
 
       await expect(runner.execute(makeRequest())).rejects.toThrow('opencode crashed');
     });

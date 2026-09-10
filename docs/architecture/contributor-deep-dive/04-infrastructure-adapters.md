@@ -10,11 +10,11 @@
 
 `src/infrastructure/` is the **only layer allowed to touch the OS**. Every process spawn, git call, file read, and log line flows through a concrete adapter here. The core engine never imports any of these classes — it depends exclusively on the abstract ports in [`src/core/interfaces.ts`](../../../src/core/interfaces.ts) (see [ADR-0001](../adrs/0001-pure-core-engine.md)).
 
-There are **eight adapters**, each implementing one or more DI ports:
+There are **nine concrete adapters** (across eight rows below), each implementing one or more DI ports. The agent-invocation seam is **agent-agnostic**: a factory (`createAgentRunner`) selects between two `IAgentRunner` adapters by the `--backend` CLI flag — **`PiSdkRunner`** (Pi SDK, in-process, default) and **`OpenCodeCliRunner`** (opencode CLI, legacy shell-out fallback) — see [ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md).
 
 | Port (`interfaces.ts`) | Adapter | File |
 |---|---|---|
-| `IAgentRunner` | `OpenCodeAgentRunner` | [`open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) |
+| `IAgentRunner` | `PiSdkRunner` (default) / `OpenCodeCliRunner` (fallback) — chosen by `createAgentRunner` | [`agent-runners/pi-sdk-runner.ts`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts) · [`agent-runners/opencode-cli-runner.ts`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts) · [`agent-runners/index.ts`](../../../src/infrastructure/agent-runners/index.ts) |
 | `IGitService` | `GitService` | [`git-service.ts`](../../../src/infrastructure/git-service.ts) |
 | `ISymbolResolver` | `AstGrepSymbolResolver` | [`ast-grep-symbol-resolver.ts`](../../../src/infrastructure/ast-grep-symbol-resolver.ts) |
 | `ICommandRunner` + `IOpencodeSpawner` | `CommandRunner` | [`command-runner.ts`](../../../src/infrastructure/command-runner.ts) |
@@ -43,7 +43,7 @@ graph LR
 | `IFileSystem` | [`#L91-L112`](../../../src/core/interfaces.ts#L91-L112) | `NodeFileSystem` | `exists`, `readFile`, `writeFile`, `mkdir`, `deleteFile`, `renameFile`, `readdir` | Injected from `session.ts` (page 5) |
 | `ICommandRunner` | [`#L118-L126`](../../../src/core/interfaces.ts#L118-L126) | `CommandRunner` | `runTests` | `new CommandRunner()` in `di-container.ts` |
 | `IOpencodeSpawner` | [`#L150-L163`](../../../src/core/interfaces.ts#L150-L163) | `CommandRunner` | `spawn` | Same instance as `ICommandRunner` |
-| `IAgentRunner` | [`#L132-L144`](../../../src/core/interfaces.ts#L132-L144) | `OpenCodeAgentRunner` | `execute` | [`di-container.ts#L53-L55`](../../../src/cli/di-container.ts#L53-L55) |
+| `IAgentRunner` | [`#L132-L144`](../../../src/core/interfaces.ts#L132-L144) | `createAgentRunner('pi' \| 'opencode-cli', …)` → `PiSdkRunner` \| `OpenCodeCliRunner` | `execute` | [`agent-runners/index.ts#L15-L30`](../../../src/infrastructure/agent-runners/index.ts#L15-L30), wired in [`di-container.ts#L65-L70`](../../../src/cli/di-container.ts#L65-L70) |
 | `IStateStore` | [`#L185-L193`](../../../src/core/interfaces.ts#L185-L193) | `JsonStateStore` | `save`, `load`, `delete`, `exists`, `findActive` (static) | Injected from `session.ts` (page 5) |
 | `IEventBus` | [`#L169-L179`](../../../src/core/interfaces.ts#L169-L179) | `EventBus` | `emit`, `on` | [`di-container.ts#L42`](../../../src/cli/di-container.ts#L42) |
 | `ILogger` | [`#L199-L207`](../../../src/core/interfaces.ts#L199-L207) | `PinoLoggerAdapter` | `debug/info/warn/error`, `child`, `level` | [`di-container.ts#L54`](../../../src/cli/di-container.ts#L54) |
@@ -53,20 +53,40 @@ Supporting constants live in `src/utils/`: state/log path helpers in [`paths.ts`
 
 ---
 
-## 2. `OpenCodeAgentRunner` — the agent invocation seam
+## 2. Agent runners — the agent invocation seam
 
-`OpenCodeAgentRunner` ([`open-code-agent-runner.ts#L11-L119`](../../../src/infrastructure/open-code-agent-runner.ts#L11-L119)) translates a high-level `AgentRunRequest` into a concrete `opencode run` argv and owns the per-pass output log.
+The seam is **agent-agnostic** (ADR-0010): the engine calls `IAgentRunner.execute`, never a concrete class. A factory in [`agent-runners/index.ts`](../../../src/infrastructure/agent-runners/index.ts) selects the adapter from the `--backend` CLI flag:
 
-### 2.1 Execution flow
+| Backend | Adapter | Execution model |
+|---|---|---|
+| `pi` (**default**) | [`PiSdkRunner`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts) | **In-process** `@earendil-works/pi-coding-agent` SDK session — no OS process fork, typed event stream (`message_update`, `tool_execution_start/end`), tools allowlist |
+| `opencode-cli` | [`OpenCodeCliRunner`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts) | Shells out to the `opencode` CLI via `IOpencodeSpawner` (legacy path retained for fallback) |
 
-[`execute()`](../../../src/infrastructure/open-code-agent-runner.ts#L29-L38) runs four steps:
+Both read the agent `.md` from `PACKAGE_AGENTS_DIR`, resolve the **effective model** (config value, else the agent file's frontmatter `model:`), and persist a per-pass log. The Pi runner additionally applies `sanitizeLogPayload` to the structured log; see [6. Observability Operations §2](06-observability-operations.md#2-pass-log-persistence).
 
-1. **`#logPreFlight`** ([#L76-L99](../../../src/infrastructure/open-code-agent-runner.ts#L76-L99)) — logs the pass, agent name, the **effective** model (config value, else the agent file's frontmatter `model:`), its source (`config` | `frontmatter` | `none`), and API-key presence (`PipelineConfig.apiKeySet`) at `debug` level.
-2. **`#buildArgs`** ([#L42-L74](../../../src/infrastructure/open-code-agent-runner.ts#L42-L74)) — assembles the argv (below), appending `--model <m>` when a model is configured for the pass.
+### 2.1 `PiSdkRunner` — in-process session (default)
+
+[`execute()`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts#L52-L140) runs the pass inside the current Node process:
+
+1. Reads `src/agents/pass-N-*.md`, strips frontmatter via Pi's `parseFrontmatter`, and feeds the body as a `systemPromptOverride` on a `DefaultResourceLoader`.
+2. Resolves the canonical model (`config.default.json` → frontmatter), appends the **per-pass thinking level** from the private `PASS_THINKING` map ([#L32-L50](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts#L32-L50)) — `high` for passes 0/2, `off` elsewhere — and calls Pi's `resolveCliModel`, which clamps unsupported levels.
+3. Maps the frontmatter `permission:` block onto Pi's built-in `tools` allowlist via `buildToolsAllowlist` (never the Unix binaries `find`/`ls`/`grep` — these are Pi's in-process tools). Bash/powershell are **omitted**, so shell execution is denied.
+4. Creates a fresh `SessionManager.inMemory()` session per pass, subscribes to the event stream, and runs one `session.prompt(...)`.
+5. Synthesizes `AgentRunResult.output` from the joined `message_update.text_delta` strings — preserving the `SKIP:n:reason` string contract parsed by `parseSkipSignal()` (see [ADR-0010 §7](../adrs/0010-agent-agnostic-sdk-architecture.md)).
+6. Persists a **sanitized** structured pass log (`sanitizeLogPayload` applied — tool args/results), then disposes the session.
+
+### 2.2 `OpenCodeCliRunner` — the legacy opencode argv contract
+
+`OpenCodeCliRunner` ([`opencode-cli-runner.ts#L11-L115`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L11-L115)) translates a high-level `AgentRunRequest` into a concrete `opencode run` argv and owns the per-pass output log. Selected only with `--backend opencode-cli`.
+
+[`execute()`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L29-L40) runs four steps:
+
+1. **`#logPreFlight`** ([#L76-L99](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L76-L99)) — logs the pass, agent name, the **effective** model (config value, else the agent file's frontmatter `model:`), its source (`config` | `frontmatter` | `none`), and API-key presence (`PipelineConfig.apiKeySet`) at `debug` level.
+2. **`#buildArgs`** ([#L42-L74](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L42-L74)) — assembles the argv (below), appending `--model <m>` when a model is configured for the pass.
 3. **`#spawner.spawn(args)`** — delegates process lifecycle to the `IOpencodeSpawner` (the shared `CommandRunner`).
-4. **`#persistPassLog`** ([#L101-L114](../../../src/infrastructure/open-code-agent-runner.ts#L101-L114)) — writes the combined output to `<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log` ([`getLogDir`](../../../src/utils/paths.ts#L24-L26)); failures only warn, never throw.
+4. **`#persistPassLog`** ([#L101-L114](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts#L101-L114)) — writes the combined output to `<workdir>/.agentic-tdd/log/pass-<pass>-<runId>.log` ([`getLogDir`](../../../src/utils/paths.ts#L25-L27)); failures only warn, never throw.
 
-### 2.2 The argv contract
+### 2.3 The opencode argv contract (opencode-cli backend)
 
 ```text
 opencode run
@@ -82,8 +102,8 @@ opencode run
 - `--print-logs` / `--log-level DEBUG` are injected only when the engine's log level is `debug`/`trace`, so noisy agent output doesn't leak by default.
 - `--model` is appended when `PipelineConfig.models[AGENT_NAMES[pass]]` resolves (from `config.default.json` + `.agentic-tdd/config.json`; see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)); otherwise opencode falls back to the agent file's frontmatter `model:`.
 
-> [!NOTE] Guardrail interaction — verify
-> The runner passes `--dangerously-skip-permissions`, which suppresses opencode's interactive permission prompts. The tool-level deny profile in each agent file (see [2. Prompt Engineering §2.2](02-prompt-engineering.md#22-permission-matrix)) is the shipped guardrail against **Agent Trampling**; whether `--dangerously-skip-permissions` weakens opencode's own permission system beyond the agent's `permission:` block is an open question (O-4 below) and should be verified against the opencode version in use.
+> [!NOTE] Guardrail interaction — verify (opencode-cli only)
+> The opencode backend passes `--dangerously-skip-permissions`, which suppresses opencode's interactive permission prompts. The tool-level deny profile in each agent file (see [2. Prompt Engineering §2.2](02-prompt-engineering.md#22-permission-matrix)) is the shipped guardrail against **Agent Trampling**. The Pi backend replaces this flag with a hard `tools` allowlist, so the question below applies only to the opencode-cli fallback.
 
 ---
 
@@ -149,7 +169,7 @@ Ranges without an enclosing symbol are dropped; unsupported languages and parse 
 
 ## 5. `CommandRunner` — test runner + opencode spawner (with watchdog)
 
-`CommandRunner` ([`command-runner.ts#L27-L133`](../../../src/infrastructure/command-runner.ts#L27-L133)) is the **dual-purpose** adapter implementing both `ICommandRunner` and `IOpencodeSpawner`.
+`CommandRunner` ([`command-runner.ts#L27-L133`](../../../src/infrastructure/command-runner.ts#L27-L133)) is the **dual-purpose** adapter implementing both `ICommandRunner` and `IOpencodeSpawner`. In the Pi-default architecture the spawner half is exercised **only** by the legacy `opencode-cli` backend; `PiSdkRunner` runs in-process and never spawns a subprocess.
 
 ### 5.1 `runTests`
 
@@ -163,9 +183,10 @@ Ranges without an enclosing symbol are dropped; unsupported languages and parse 
 |---|---|---|
 | Watchdog check interval | `OPENCODE_WATCHDOG_INTERVAL_MS` | 30 s |
 | Idle heartbeat threshold | `OPENCODE_HEARTBEAT_THRESHOLD_MS` | 120 s |
-| Hard timeout (kills `SIGKILL`) | `OPENCODE_HARD_TIMEOUT_MS` | 10 min |
+| Force-kill grace (SIGTERM → SIGKILL) | `OPENCODE_FORCE_KILL_AFTER_MS` | 5 s |
+| Hard timeout | `OPENCODE_HARD_TIMEOUT_MS` | 10 min |
 
-Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns on silence, while the hard timeout forcibly kills a hung process. Diagnostics point at opencode's own log at `OPENCODE_LOG_PATH` (`~/.local/share/opencode/log/opencode.log`). Non-zero exits throw, propagating to the caller (the machine's `AGENT_FAILED` path).
+Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns on silence. On the 10-min hard timeout the process is terminated via execa's **portable force-kill**: `child.kill()` with `killSignal: 'SIGTERM'` and `forceKillAfterDelay: 5000`, so execa escalates to `SIGKILL` only if SIGTERM does not exit the process — no direct `child.kill('SIGKILL')` (Windows-safe). Diagnostics point at opencode's own log at `OPENCODE_LOG_PATH`, resolved via `os.homedir()` ([#L20-L27](../../../src/infrastructure/command-runner.ts#L20-L27)). Non-zero exits throw, propagating to the caller (the machine's `AGENT_FAILED` path).
 
 > [!NOTE] Dev vs build agent dir
 > `OPENCODE_CONFIG_DIR` is derived from the **compiled module path**: `dist/infrastructure` → `dist/agents` when built, `src/infrastructure` → `src/agents` under a source runner. If a contributor re-routes `npm link`/watch mode, verify `PACKAGE_AGENTS_DIR` resolves to the directory containing the freshly built agent files (see O-5).
@@ -174,7 +195,7 @@ Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns
 
 ## 6. `JsonStateStore` — session persistence
 
-`JsonStateStore` ([`state-store.ts#L15-L113`](../../../src/infrastructure/state-store.ts#L15-L113)) persists `PipelineContext` + the XState snapshot to `<workdir>/.agentic-tdd/state-<feature>.json` ([`getStateFilePath`](../../../src/utils/paths.ts#L19-L22)).
+`JsonStateStore` ([`state-store.ts#L15-L113`](../../../src/infrastructure/state-store.ts#L15-L113)) persists `PipelineContext` + the XState snapshot to `<workdir>/.agentic-tdd/state-<feature>.json` ([`getStateFilePath`](../../../src/utils/paths.ts#L20-L23)).
 
 ### 6.1 Writes are atomic
 
@@ -198,7 +219,7 @@ Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns
 
 - **`NodeFileSystem`** ([`file-system.ts#L6-L48`](../../../src/infrastructure/file-system.ts#L6-L48)) — thin promisified wrapper over `node:fs/promises`. `writeFile` auto-creates parent directories; `deleteFile` ignores missing files; `renameFile` supports the atomic state-store write.
 - **`EventBus`** ([`event-bus.ts#L5-L17`](../../../src/infrastructure/event-bus.ts#L5-L17)) — a typed `node:events` wrapper. `emit(event)` dispatches on `event.kind`; `on(kind, handler)` returns an **unsubscribe** function. Decouples the engine from the terminal UI (event catalogue in [1. Core Engine Internals §1.3](01-core-engine-internals.md#13-events)).
-- **`PinoLoggerAdapter`** ([`pino-logger.ts#L4-L34`](../../../src/infrastructure/pino-logger.ts#L4-L34)) — adapts a pino `Logger` to `ILogger`. `child(bindings)` creates a bound child (`logger.child({ module: 'agent-runner', pass })`). The `level` getter is the read-only switch that gates `--print-logs` injection in `OpenCodeAgentRunner`. Request-scoped logging (`reqLogger()`) is provided separately by [`utils/logger.ts`](../../../src/utils/logger.ts).
+- **`PinoLoggerAdapter`** ([`pino-logger.ts#L4-L34`](../../../src/infrastructure/pino-logger.ts#L4-L34)) — adapts a pino `Logger` to `ILogger`. `child(bindings)` creates a bound child (`logger.child({ module: 'agent-runner', pass })`). The `level` getter is the read-only switch that gates `--print-logs` injection in `OpenCodeCliRunner` (opencode-cli backend only — the Pi backend needs no such flag). Request-scoped logging (`reqLogger()`) is provided separately by [`utils/logger.ts`](../../../src/utils/logger.ts).
 
 ---
 
@@ -212,7 +233,7 @@ Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns
 | **Corrupt / future schema state file** | `load` throws descriptive errors; pipeline refuses to resume blindly | [`state-store.ts#L69-L104`](../../../src/infrastructure/state-store.ts#L69-L104) |
 | **Partial commit** | `commit` returns `nothing_to_commit` / `add_warning`; machine proceeds without a false failure | [`git-service.ts#L144-L174`](../../../src/infrastructure/git-service.ts#L144-L174) |
 | **Dirty tree at branch time** | `createFeatureBranch` aborts (`abort_dirty`) before touching branches | [`git-service.ts#L226-L229`](../../../src/infrastructure/git-service.ts#L226-L229) |
-| **Hung opencode process** | Watchdog warns on 120 s silence; 10-min hard timeout kills with `SIGKILL` | [`command-runner.ts#L80-L96`](../../../src/infrastructure/command-runner.ts#L80-L96) |
+| **Hung opencode process** (opencode-cli backend) | Watchdog warns on 120 s silence; 10-min hard timeout terminates via execa force-kill (SIGTERM, escalating to SIGKILL after 5 s) | [`command-runner.ts#L88-L107`](../../../src/infrastructure/command-runner.ts#L88-L107) |
 | **Context enrichment failure** | Diff parse / symbol resolution errors are swallowed; pass still commits with empty metadata | [1. Core Engine Internals §4](01-core-engine-internals.md#4-atomic-commit--symbol-capture-doatomiccommit) |
 
 ---
@@ -221,7 +242,7 @@ Streamed `stdout`/`stderr` chunks update `lastActivity`; the watchdog only warns
 
 | # | Topic | What is missing |
 |---|---|---|
-| O-4 | `--dangerously-skip-permissions` semantics | Whether it weakens the per-agent `permission:` block in opencode `run` — verify against the pinned opencode version; affects the guardrail claims in [2. Prompt Engineering §2.2](02-prompt-engineering.md#22-permission-matrix). |
+| O-4 | `--dangerously-skip-permissions` semantics | Whether it weakens the per-agent `permission:` block in opencode `run` — verify against the pinned opencode version; affects the guardrail claims in [2. Prompt Engineering §2.2](02-prompt-engineering.md#22-permission-matrix). **Applies only to the `opencode-cli` backend** — the Pi backend replaces the flag with a hard `tools` allowlist. |
 | O-5 | `PACKAGE_AGENTS_DIR` resolution | Confirmed for `dist/` (built) and `src/` (source) layouts, but the dev-loop via `npm link`/watch mode is unverified — see §5.2. |
 | O-6 | Session-lock recovery | `findActive` detects a stale state file left by a killed run but there is **no lock TTL or automatic expiry** — the operator must `--abort` manually. |
 

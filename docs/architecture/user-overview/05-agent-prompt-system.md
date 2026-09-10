@@ -2,7 +2,7 @@
 
 > **Target Audience:** Users — CTOs, Team Leads, and Architects evaluating agentic-tdd.
 > **Key Goal:** Explain how the 8 passes are *driven* — the Markdown agent files that define each sub-agent, the scope guardrails that keep them from trampling each other, and the model-routing strategy — so evaluators can judge safety, customisation, and cost.
-> **Status:** Published (v0.1.0-Beta) — Page 5 of the User Overview. Grounded in `src/agents/pass-*.md` and `src/infrastructure/open-code-agent-runner.ts`; deep prompt-engineering detail is in the Contributor Track.
+> **Status:** Published (v0.1.0-Beta) — Page 5 of the User Overview. Grounded in `src/agents/pass-*.md` and the agent-runners seam in `src/infrastructure/agent-runners/` (Pi SDK default; opencode CLI legacy fallback — [ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)); deep prompt-engineering detail is in the Contributor Track.
 
 ---
 
@@ -38,18 +38,18 @@ Each pass maps to one file in [`src/agents/`](../../../src/agents/): `pass-0-des
 | 6 Security Hardening | `pass-6-security-agent.md` |
 | 7 Documentation | `pass-7-documentation-agent.md` |
 
-At runtime, [`OpenCodeAgentRunner`](../../../src/infrastructure/open-code-agent-runner.ts#L11-L38) reads that table, spawns the [opencode](https://opencode.ai) CLI with `--agent <name>`, attaches the pass's artefacts via `--file` (the Mermaid design, Gherkin spec, and — on self-correction cycles — the failing test log), and hands over the payload prompt ([`#buildArgs`](../../../src/infrastructure/open-code-agent-runner.ts#L42-L69)).
+At runtime, the **agent runner** — [`PiSdkRunner`](../../../src/infrastructure/agent-runners/pi-sdk-runner.ts) (default, in-process Pi SDK) or [`OpenCodeCliRunner`](../../../src/infrastructure/agent-runners/opencode-cli-runner.ts) (legacy opencode CLI, via `--backend opencode-cli`), chosen by the `createAgentRunner` factory ([ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)) — reads that table and executes the pass. The CLI runner spawns [opencode](https://opencode.ai) with `--agent <name>` and attaches the pass's artefacts via `--file` (the Mermaid design, Gherkin spec, and — on self-correction cycles — the failing test log); the Pi runner runs the session in-process against the same agent `.md` body. Both hand over the payload prompt ([`getAgentContextPayload`](../../../src/core/runners/shared.ts#L5-L29)).
 
 ```mermaid
 flowchart LR
     subgraph Engine["Core Engine (src/core/)"]
         SM["XState machine<br/>pass N"]
     end
-    subgraph Infra["Infrastructure (src/infrastructure/)"]
-        R["OpenCodeAgentRunner<br/>--agent pass-N<br/>--file <artefacts>"]
+    subgraph Infra["Infrastructure (src/infrastructure/agent-runners/)"]
+        R["createAgentRunner<br/>→ PiSdkRunner | OpenCodeCliRunner"]
     end
     subgraph Harness["Coding Harness"]
-        OC["opencode sub-agent"]
+        OC["Pi SDK session / opencode sub-agent"]
     end
     subgraph Provider["LLM Provider"]
         LLM["Model from frontmatter"]
@@ -57,13 +57,13 @@ flowchart LR
 
     SM -->|"invoke pass N"| R
     AF["src/agents/pass-N-*.md"] -->|"agent def + model + permissions"| OC
-    R -->|"spawn + prompt payload"| OC
+    R -->|"execute (in-process session / spawn)"| OC
     OC -->|"scoped context"| LLM
     OC -->|"file edits"| FS["Workspace"]
 ```
 
 > [!NOTE] Harness independence
-> The engine reaches the agent only through the `IAgentRunner` / `IOpencodeSpawner` ports ([2. High-Level Architecture §3 — B.5](02-high-level-architecture.md#3-key-architectural-decisions)). Swapping opencode for another CLI agent is an adapter change, not a prompt change — the agent files stay the same. See [1. Why This Exists § 2.6](01-why-this-exists.md#26-harness-independence).
+> The engine reaches the agent only through the `IAgentRunner` port ([2. High-Level Architecture §3 — B.5](02-high-level-architecture.md#3-key-architectural-decisions)). Swapping the backend (Pi SDK today; opencode CLI via `--backend opencode-cli`) is a factory change in the CLI/DI layer, not a prompt change — the agent files stay the same. See [1. Why This Exists § 2.6](01-why-this-exists.md#26-harness-independence).
 
 ### 1.1 File anatomy — configuration + instruction set
 
@@ -122,7 +122,7 @@ Two directives recur in every file and are worth knowing about:
 
 ## 3. Routing Strategy
 
-Routing is **declarative and configurable at runtime**. Each agent file still pins a fallback `model:` in its frontmatter, but the effective model is resolved from a config file — `config.default.json` (committed template) merged with `.agentic-tdd/config.json` (git-ignored user override) — and passed to opencode as `--model`. Precedence: `--model` flag → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter (see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)). The pre-flight log records the effective model and its source ([`#logPreFlight`](../../../src/infrastructure/open-code-agent-runner.ts#L76-L97)).
+Routing is **declarative and configurable at runtime**. Each agent file still pins a fallback `model:` in its frontmatter, but the effective model is resolved from a config file — `config.default.json` (committed template) merged with `.agentic-tdd/config.json` (git-ignored user override) — and consumed by the active backend (Pi appends a per-pass thinking level; opencode-cli passes `--model`). Precedence: `--model` flag → `--config <path>` → `.agentic-tdd/config.json` → `config.default.json` → agent-file frontmatter (see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)).
 
 ### 3.1 Shipped defaults (source of truth)
 
@@ -179,7 +179,7 @@ The implementation of everything above lives in the Contributor Track:
 | Topic | Where |
 |---|---|
 | Full file anatomy, the directive catalogue (`assess-first`, `indexer-first`, `target-symbols-priority`, `use-file-changes`), and the permission matrix | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
-| How the runner spawns opencode, attaches artefacts, and persists logs | [4. Infrastructure Adapters](../contributor-deep-dive/04-infrastructure-adapters.md) · [`open-code-agent-runner.ts`](../../../src/infrastructure/open-code-agent-runner.ts) |
+| How the agent runner executes a pass (Pi in-process / opencode CLI), attaches artefacts, and persists logs | [4. Infrastructure Adapters](../contributor-deep-dive/04-infrastructure-adapters.md) · [`agent-runners/`](../../../src/infrastructure/agent-runners/) |
 | How SKIP / retries are orchestrated by the machines | [1. Core Engine Internals §6 — Skip Signals](../contributor-deep-dive/01-core-engine-internals.md#6-skip-signals) |
 | Adding / modifying a pass end-to-end | [2. Prompt Engineering §5](../contributor-deep-dive/02-prompt-engineering.md#5-adding--modifying-a-pass) · [8. Developer Guide](../contributor-deep-dive/08-developer-guide.md) |
 

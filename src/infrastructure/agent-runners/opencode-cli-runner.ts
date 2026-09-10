@@ -1,14 +1,14 @@
 import { resolve } from 'node:path';
 import { join } from 'node:path';
 import { cwd } from 'node:process';
-import type { IFileSystem, ILogger, PipelineConfig, IAgentRunner, IOpencodeSpawner } from '../core/interfaces.js';
-import type { AgentRunRequest, AgentRunResult } from '../core/types.js';
-import { AGENT_NAMES } from '../core/types.js';
-import { sanitizeLogPayload } from '../core/log-sanitizer.js';
-import { PACKAGE_AGENTS_DIR } from '../utils/paths.js';
-import { getLogDir } from '../utils/paths.js';
+import type { IFileSystem, ILogger, PipelineConfig, IAgentRunner, IOpencodeSpawner } from '../../core/interfaces.js';
+import type { AgentRunRequest, AgentRunResult } from '../../core/types.js';
+import { AGENT_NAMES } from '../../core/types.js';
+import { sanitizeLogPayload } from '../../core/log-sanitizer.js';
+import { PACKAGE_AGENTS_DIR } from '../../utils/paths.js';
+import { getLogDir } from '../../utils/paths.js';
 
-export class OpenCodeAgentRunner implements IAgentRunner {
+export class OpenCodeCliRunner implements IAgentRunner {
   readonly #fs: IFileSystem;
   readonly #logger: ILogger;
   readonly #config: PipelineConfig;
