@@ -128,7 +128,11 @@ describe('runStaticIndexerChecks', () => {
       '/home/u/.pi/agent/settings.json': SETTINGS_NO_ADAPTER,
       '/proj/.mcp.json': VALID_MCP,
     });
-    const result = await runStaticIndexerChecks({ ...baseDeps, fs });
+    const result = await runStaticIndexerChecks({
+      ...baseDeps,
+      fs,
+      isExecutable: async () => true,
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.kind).toBe('adapter_not_found');
   });
@@ -138,7 +142,11 @@ describe('runStaticIndexerChecks', () => {
       '/home/u/.pi/agent/settings.json': SETTINGS_WITH_ADAPTER,
       '/home/u/.pi/agent/mcp.json': JSON.stringify({ mcpServers: {} }),
     });
-    const result = await runStaticIndexerChecks({ ...baseDeps, fs });
+    const result = await runStaticIndexerChecks({
+      ...baseDeps,
+      fs,
+      isExecutable: async () => true,
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.kind).toBe('mcp_entry_missing');
   });
@@ -148,7 +156,11 @@ describe('runStaticIndexerChecks', () => {
       '/home/u/.pi/agent/settings.json': SETTINGS_WITH_ADAPTER,
       '/proj/.mcp.json': MCP_NO_DIRECT,
     });
-    const result = await runStaticIndexerChecks({ ...baseDeps, fs });
+    const result = await runStaticIndexerChecks({
+      ...baseDeps,
+      fs,
+      isExecutable: async () => true,
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.kind).toBe('direct_tools_missing');
   });

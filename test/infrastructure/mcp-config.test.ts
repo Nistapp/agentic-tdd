@@ -262,11 +262,13 @@ describe('writeMcpConfig — existing .mcp.json', () => {
       throw new Error(`ENOENT: ${path}`);
     });
     const logger = makeLogger();
-    const result = await writeMcpConfig(fs, logger, '/proj', '/tpl/mcp.template.json');
+    const resolveBinary = vi.fn().mockResolvedValue(RESOLVED_BIN);
+    const result = await writeMcpConfig(fs, logger, '/proj', '/tpl/mcp.template.json', undefined, resolveBinary);
 
+    expect(resolveBinary).toHaveBeenCalledOnce();
     expect(result.created).toBe(true);
     const content = JSON.parse(result.writtenContent);
-    expect(content.mcpServers['codebase-memory'].command).toBeTruthy();
+    expect(content.mcpServers['codebase-memory'].command).toBe(RESOLVED_BIN);
   }, 10000);
 });
 

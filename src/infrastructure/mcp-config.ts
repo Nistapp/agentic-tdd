@@ -95,6 +95,9 @@ export function getMcpTemplateDir(): string {
  * @param resolvedBin   Pre-resolved binary path (defaults to calling
  *                      {@link resolveMcpBinary} when omitted, so tests
  *                      can inject a fixed value).
+ * @param resolveBinary Binary resolver used when *resolvedBin* is omitted
+ *                      (defaults to {@link resolveMcpBinary}; injectable so
+ *                      tests never touch the real PATH).
  */
 export async function writeMcpConfig(
   fs: IFileSystem,
@@ -102,8 +105,9 @@ export async function writeMcpConfig(
   workDir: string,
   templatePath: string,
   resolvedBin?: string,
+  resolveBinary?: () => Promise<string>,
 ): Promise<McpConfigResult> {
-  const bin = resolvedBin ?? await resolveMcpBinary();
+  const bin = resolvedBin ?? await (resolveBinary ?? resolveMcpBinary)();
   const templateRaw = await fs.readFile(templatePath);
   const serverEntry = JSON.parse(templateRaw).mcpServers?.[MCP_SERVER_KEY];
   if (!serverEntry) {
