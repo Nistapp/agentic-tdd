@@ -22,6 +22,7 @@ import {
   type ProcessRunner,
 } from './indexer-client.js';
 import { buildIndexerBridgeTools } from './agent-runners/indexer-bridge.js';
+import { OPENCODE_INDEXER_CORE_TOOL_SUFFIXES, opencodeToolName } from './opencode-config.js';
 
 export { resolveIndexerBinary, getResolvedIndexerBinary } from './indexer-client.js';
 
@@ -50,7 +51,12 @@ export type IndexerProbeFailureKind =
   | 'tools_missing'
   | 'binary_unresponsive'
   | 'probe_timeout'
-  | 'probe_failed';
+  | 'probe_failed'
+  | 'opencode_missing'
+  | 'opencode_boot_failed'
+  | 'mcp_leak'
+  | 'mcp_not_connected'
+  | 'mcp_roundtrip_failed';
 
 export interface IndexerProbeFailure {
   kind: IndexerProbeFailureKind;
@@ -475,4 +481,183 @@ export function toProbeFailure(err: unknown): IndexerProbeFailure {
     kind: 'probe_failed',
     message: `Indexer live probe failed: ${err instanceof Error ? err.message : String(err)}`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// opencode-path probes (G2 static + G5 LLM-free MCP round-trip)
+// ---------------------------------------------------------------------------
+
+export interface OpencodeStaticDeps {
+  logger: ILogger;
+  /** Resolved indexer binary (null = not found on PATH). */
+  binary: string | null;
+  /** Executable check (defaults to a real `access(X_OK)`). */
+  isExecutable?: (path: string) => Promise<boolean>;
+  /** Resolve the `opencode` binary (defaults to the real `which`). */
+  resolveOpencodeBinary?: () => Promise<string | null>;
+  /** Read the installed `opencode` version (defaults to the real binary). */
+  getOpencodeVersion?: () => Promise<string | null>;
+}
+
+export type OpencodeStaticResult =
+  | { ok: true; binary: string; opencodeVersion: string | null }
+  | { ok: false; failure: IndexerProbeFailure };
+
+/**
+ * G2 for the opencode backend: prove the indexer binary is present/executable
+ * and the `opencode` binary is resolvable (recording its version).
+ */
+export async function runOpencodeStaticChecks(deps: OpencodeStaticDeps): Promise<OpencodeStaticResult> {
+  const logger = deps.logger.child({ module: 'opencode-static-probe' });
+  const isExecutable = deps.isExecutable ?? defaultIsExecutable;
+
+  if (deps.binary === null) {
+    return {
+      ok: false,
+      failure: {
+        kind: 'binary_missing',
+        message:
+          'codebase-memory-mcp is not on PATH. ' +
+          'The indexer is a mandatory harness prerequisite — install it (see its README) ' +
+          'before running the pipeline.',
+      },
+    };
+  }
+  if (!(await isExecutable(deps.binary))) {
+    return {
+      ok: false,
+      failure: {
+        kind: 'binary_not_executable',
+        message: `codebase-memory-mcp resolves to '${deps.binary}' but is not executable — check its permissions.`,
+      },
+    };
+  }
+
+  const resolveOpencode = deps.resolveOpencodeBinary ?? (async () => {
+    const { resolveOpencodeBinary } = await import('./opencode-server.js');
+    return resolveOpencodeBinary();
+  });
+  const opencodeBinary = await resolveOpencode();
+  if (opencodeBinary === null) {
+    return {
+      ok: false,
+      failure: {
+        kind: 'opencode_missing',
+        message:
+          'The `opencode` binary is not on PATH. The opencode SDK backend requires it ' +
+          '(tested with opencode 1.18.29). Install opencode or run with --backend pi.',
+      },
+    };
+  }
+
+  const getVersion = deps.getOpencodeVersion ?? (async () => {
+    const { getOpencodeVersion } = await import('./opencode-server.js');
+    return getOpencodeVersion();
+  });
+  const version = await getVersion();
+  logger.info({ opencodeBinary, version }, 'opencode binary resolved');
+
+  return { ok: true, binary: deps.binary, opencodeVersion: version };
+}
+
+/** Minimal structural MCP client surface the round-trip needs. */
+export interface McpClientLike {
+  connect(transport: unknown): Promise<void>;
+  listTools(): Promise<{ tools: Array<{ name: string }> }>;
+  callTool(input: { name: string; arguments: Record<string, unknown> }): Promise<{ isError?: boolean }>;
+  close(): Promise<void>;
+}
+
+/** Minimal structural MCP SDK loader seam (tests inject a stub). */
+export interface McpSdkLike {
+  createClient(): McpClientLike;
+  createTransport(binary: string): unknown;
+}
+
+export interface OpencodeRoundTripDeps {
+  /** Resolved indexer binary. */
+  binary: string;
+  /** Whole-probe timeout (defaults to ~30s). */
+  timeoutMs?: number;
+  /** Core tool suffixes the round-trip must observe. */
+  coreToolSuffixes?: readonly string[];
+  /** Lazy MCP SDK loader (tests inject a fake). */
+  loadMcpSdk?: () => Promise<McpSdkLike>;
+}
+
+const defaultLoadMcpSdk = async (): Promise<McpSdkLike> => {
+  const [{ Client }, { StdioClientTransport }] = await Promise.all([
+    import('@modelcontextprotocol/sdk/client/index.js'),
+    import('@modelcontextprotocol/sdk/client/stdio.js'),
+  ]);
+  return {
+    createClient: () => new Client({ name: 'agentic-tdd', version: '0.0.0' }) as unknown as McpClientLike,
+    createTransport: (binary) => new StdioClientTransport({ command: binary, args: [], stderr: 'pipe' }),
+  };
+};
+
+/**
+ * G5 — LLM-free direct MCP stdio round-trip against the indexer binary:
+ * `initialize` → `tools/list` (assert core tool names) → `tools/call
+ * list_projects` (assert `isError !== true`). No LLM prompt, no API cost.
+ */
+export async function runOpencodeMcpRoundTrip(deps: OpencodeRoundTripDeps): Promise<IndexerProbeResult> {
+  const timeoutMs = deps.timeoutMs ?? 30_000;
+  const expected = (deps.coreToolSuffixes ?? OPENCODE_INDEXER_CORE_TOOL_SUFFIXES).map(opencodeToolName);
+  const loadMcpSdk = deps.loadMcpSdk ?? defaultLoadMcpSdk;
+
+  try {
+    return await withProbeTimeout(async (): Promise<IndexerProbeResult> => {
+      const sdk = await loadMcpSdk();
+      const client = sdk.createClient();
+      try {
+        await client.connect(sdk.createTransport(deps.binary));
+
+        const tools = await client.listTools();
+        const names = new Set(tools.tools.map((t) => t.name));
+        const missing = expected.filter((name) => !names.has(name));
+        if (missing.length > 0) {
+          return {
+            ok: false,
+            failure: {
+              kind: 'mcp_roundtrip_failed',
+              message:
+                `MCP tools/list did not expose the expected core indexer tools: ${missing.join(', ')}. ` +
+                'The indexer binary may be an incompatible version.',
+            },
+          };
+        }
+
+        const call = await client.callTool({ name: 'list_projects', arguments: {} });
+        if (call.isError === true) {
+          return {
+            ok: false,
+            failure: {
+              kind: 'mcp_roundtrip_failed',
+              message: 'MCP tools/call list_projects returned isError=true.',
+            },
+          };
+        }
+
+        return { ok: true };
+      } finally {
+        try {
+          await client.close();
+        } catch {
+          // Best-effort close.
+        }
+      }
+    }, timeoutMs);
+  } catch (err) {
+    if (err instanceof ProbeTimeoutError) {
+      return { ok: false, failure: { kind: 'probe_timeout', message: err.message } };
+    }
+    return {
+      ok: false,
+      failure: {
+        kind: 'mcp_roundtrip_failed',
+        message: `Direct MCP round-trip failed: ${err instanceof Error ? err.message : String(err)}`,
+      },
+    };
+  }
 }
