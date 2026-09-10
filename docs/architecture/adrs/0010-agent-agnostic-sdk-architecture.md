@@ -5,6 +5,11 @@
 * **Last updated:** 2026-09-05 (post-spike verification; amended after v3 design review — per-pass thinking map, MCP copy-or-merge template, environment decision, platform hardening)
 * **Deciders:** @kcramakrishna
 
+> **Default-backend note:** [ADR-0012](./0012-opencode-sdk-default-backend.md)
+> supersedes only the *default backend* decision below. The adapter architecture,
+> `IAgentRunner` contract, per-pass session isolation and prompt handling are
+> retained; `PiSdkRunner` remains as the backup backend.
+
 ---
 
 ## Context

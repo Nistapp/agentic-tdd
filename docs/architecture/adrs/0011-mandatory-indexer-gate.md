@@ -37,6 +37,9 @@ pass dispatches**, the harness runs a gate (`ensureIndexerAccess`, wired in
 
 1. **G1 — backend gate:** only `--backend pi` is supported. `opencode-cli` is a
    fatal exit until a checker exists for it.
+   > **Superseded by [ADR-0012](./0012-opencode-sdk-default-backend.md):** the
+   > default backend is now `opencode` (SDK server) and the gate owns its server;
+   > `pi` is the backup. `opencode-cli` remains a fatal exit.
 2. **G2 — static checks** (`src/infrastructure/indexer-probe.ts`): resolve the
    binary via `which`/`where` with **no hardcoded fallback** (missing binary is a
    fatal with install instructions); verify it is executable; verify the
