@@ -78,3 +78,25 @@ export async function validateAndResolveOptions(
     configPath: options.config ? String(options.config) : undefined,
   };
 }
+
+/** Valid `--backend` values (opencode is the default). */
+export const VALID_AGENT_BACKENDS = ['opencode', 'pi', 'opencode-cli'] as const;
+
+export type AgentBackendName = (typeof VALID_AGENT_BACKENDS)[number];
+
+/**
+ * Reject unknown `--backend` values early with a clear message. Returns the
+ * validated backend (or `undefined` when the flag was not supplied).
+ */
+export function validateBackend(
+  backend: string | undefined,
+  renderer: TerminalRenderer,
+): string | undefined {
+  if (backend === undefined) return undefined;
+  if ((VALID_AGENT_BACKENDS as readonly string[]).includes(backend)) return backend;
+  renderer.fatal(
+    `Unknown --backend '${backend}'. Supported: opencode (SDK server, default), ` +
+      'pi (in-process SDK, backup), opencode-cli (legacy shell-out).',
+  );
+  return undefined;
+}

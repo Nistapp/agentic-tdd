@@ -4,17 +4,19 @@ import { createInterface } from 'node:readline';
 
 import { PipelinePass, DEFAULT_MAX_CORRECTION_RETRIES } from '../core/types.js';
 import type { PipelineContext } from '../core/types.js';
-import type { IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
+import type { IAgentServerHandle, IFileSystem, IGitService, IStateStore } from '../core/interfaces.js';
 import type { PipelineOrchestrator } from '../core/orchestrator.js';
 import { TerminalRenderer } from './terminal-renderer.js';
 import type { ValidatedOptions } from './validators.js';
 import { createPipelineServices } from './di-container.js';
+import { runWithServer } from './run-with-server.js';
 import { resolveModelConfig } from './model-config.js';
 import { getErrorLogPath } from '../utils/paths.js';
 import type { AgentBackend } from '../infrastructure/agent-runners/index.js';
 import { writeMcpConfig, teardownMcpConfig, getMcpTemplateDir } from '../infrastructure/mcp-config.js';
 import type { McpConfigResult } from '../infrastructure/mcp-config.js';
 import { ensureIndexerAccess } from '../infrastructure/indexer-gate.js';
+import type { IndexerGateResult } from '../infrastructure/indexer-gate.js';
 import type { ModelConfig } from './model-config.js';
 import { PinoLoggerAdapter } from '../infrastructure/pino-logger.js';
 import { loggers } from '../utils/logger.js';
@@ -25,6 +27,10 @@ export function getActiveOrchestrator(): PipelineOrchestrator | undefined {
   return activeOrchestrator;
 }
 
+function isPiBackend(backend: AgentBackend | undefined): boolean {
+  return backend === 'pi';
+}
+
 async function setupMcpConfig(fs: IFileSystem): Promise<McpConfigResult> {
   const templatePath = resolve(getMcpTemplateDir(), 'mcp.template.json');
   const mcpLogger = new PinoLoggerAdapter(loggers.core);
@@ -32,8 +38,9 @@ async function setupMcpConfig(fs: IFileSystem): Promise<McpConfigResult> {
 }
 
 /**
- * Run the mandatory indexer gate (G7): backend check, static checks, live
- * probe, then index bootstrap. Any failure is fatal before a pass dispatches.
+ * Run the mandatory indexer gate. On the default `opencode` backend the gate
+ * also starts the shared opencode server and returns its handle. Any failure
+ * is fatal before a pass dispatches.
  */
 async function runIndexerGate(
   fs: IFileSystem,
@@ -41,7 +48,7 @@ async function runIndexerGate(
   renderer: TerminalRenderer,
   backend: AgentBackend | undefined,
   modelConfig: ModelConfig,
-): Promise<void> {
+): Promise<IndexerGateResult> {
   const logger = new PinoLoggerAdapter(loggers.core);
   const result = await ensureIndexerAccess({
     fs,
@@ -54,6 +61,7 @@ async function runIndexerGate(
   if (!result.ok) {
     renderer.fatal(result.message);
   }
+  return result;
 }
 
 async function teardownMcp(mcpResult: McpConfigResult, fs: IFileSystem): Promise<void> {
@@ -102,6 +110,35 @@ export async function abortSession(
   process.exit(0);
 }
 
+/**
+ * Run the orchestrator for one session entry point with guaranteed server
+ * teardown. `.mcp.json` is only materialised/torn down for the pi backend.
+ */
+async function runPipeline(
+  orchestrator: PipelineOrchestrator,
+  ctx: PipelineContext,
+  startPass: PipelinePass,
+  server: IAgentServerHandle | undefined,
+  mcpResult: McpConfigResult | undefined,
+  stateStore: IStateStore,
+  fs: IFileSystem,
+  renderer: TerminalRenderer,
+): Promise<void> {
+  activeOrchestrator = orchestrator;
+  try {
+    await runWithServer(server, async () => {
+      await orchestrator.run(ctx, startPass);
+    });
+    if (mcpResult !== undefined) await teardownMcp(mcpResult, fs);
+    await stateStore.delete();
+    activeOrchestrator = undefined;
+    process.exit(0);
+  } catch (err) {
+    activeOrchestrator = undefined;
+    renderer.fatal(err instanceof Error ? err.message : String(err));
+  }
+}
+
 export async function resumeSession(
   stateStore: IStateStore,
   fs: IFileSystem,
@@ -121,54 +158,53 @@ export async function resumeSession(
     { userPath: resolve(cwd(), '.agentic-tdd/config.json'), fs },
   );
 
+  const typedBackend = backend as AgentBackend | undefined;
   const snap = ctx.xstateSnapshot as Record<string, unknown> | undefined;
   const isPaused: boolean = snap?.status === 'active' && snap?.value === 'paused';
-
-  let startPass: PipelinePass;
-  let lastCompletedPass: number | null = null;
 
   if (isPaused) {
     await fs.mkdir(ctx.artefactDir);
     renderer.banner(ctx);
 
-      const mcpResult = await setupMcpConfig(fs);
-      await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
-      const { orchestrator } = createPipelineServices({
-        ctx,
-        fs,
-        git,
-        renderer,
-        version,
-        stateStore,
-        noContextEnrich,
-        modelConfig,
-        backend: backend as AgentBackend,
-      });
+    const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
+    const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
+    const { orchestrator } = createPipelineServices({
+      ctx,
+      fs,
+      git,
+      renderer,
+      version,
+      stateStore,
+      noContextEnrich,
+      modelConfig,
+      backend: typedBackend,
+      agentServer: gateResult.ok ? gateResult.server : undefined,
+    });
 
-      activeOrchestrator = orchestrator;
+    await runPipeline(
+      orchestrator,
+      ctx,
+      ctx.currentPass ?? PipelinePass.Design,
+      gateResult.ok ? gateResult.server : undefined,
+      mcpResult,
+      stateStore,
+      fs,
+      renderer,
+    );
+    return;
+  }
 
-      try {
-        await orchestrator.run(ctx);
-        await teardownMcp(mcpResult, fs);
-        await stateStore.delete();
-        activeOrchestrator = undefined;
-        process.exit(0);
-      } catch (err) {
-        renderer.fatal(err instanceof Error ? err.message : String(err));
-      }
-      return;
-    }
+  await git.resetWorkingTree();
+  console.log('\n  Resume: working tree cleaned.\n');
 
-    await git.resetWorkingTree();
-    console.log('\n  Resume: working tree cleaned.\n');
+  let startPass: PipelinePass;
+  let lastCompletedPass: number | null = null;
 
   if (ctx.currentPass !== undefined && Object.keys(ctx.history).length > 0) {
     const entry = ctx.history[ctx.currentPass];
     if (entry?.status === 'completed') {
       lastCompletedPass = ctx.currentPass;
       startPass = (ctx.currentPass + 1) as PipelinePass;
-    } else if (entry?.status === 'failed') {
-      startPass = ctx.currentPass;
     } else {
       startPass = ctx.currentPass;
     }
@@ -191,8 +227,8 @@ export async function resumeSession(
 
   renderer.banner(ctx);
 
-  const mcpResult = await setupMcpConfig(fs);
-  await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
+  const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
+  const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -202,21 +238,20 @@ export async function resumeSession(
     stateStore,
     noContextEnrich,
     modelConfig,
-    backend: backend as AgentBackend,
+    backend: typedBackend,
+    agentServer: gateResult.ok ? gateResult.server : undefined,
   });
 
-  activeOrchestrator = orchestrator;
-
-  try {
-    await orchestrator.run(ctx, startPass);
-    await teardownMcp(mcpResult, fs);
-    await stateStore.delete();
-    activeOrchestrator = undefined;
-    process.exit(0);
-  } catch (err) {
-    activeOrchestrator = undefined;
-    renderer.fatal(err instanceof Error ? err.message : String(err));
-  }
+  await runPipeline(
+    orchestrator,
+    ctx,
+    startPass,
+    gateResult.ok ? gateResult.server : undefined,
+    mcpResult,
+    stateStore,
+    fs,
+    renderer,
+  );
 }
 
 export async function startNewSession(
@@ -294,8 +329,9 @@ export async function startNewSession(
     { userPath: resolve(cwd(), '.agentic-tdd/config.json'), fs },
   );
 
-  const mcpResult = await setupMcpConfig(fs);
-  await runIndexerGate(fs, git, renderer, backend as AgentBackend, modelConfig);
+  const typedBackend = backend as AgentBackend | undefined;
+  const mcpResult = isPiBackend(typedBackend) ? await setupMcpConfig(fs) : undefined;
+  const gateResult = await runIndexerGate(fs, git, renderer, typedBackend, modelConfig);
   const { orchestrator } = createPipelineServices({
     ctx,
     fs,
@@ -305,19 +341,18 @@ export async function startNewSession(
     stateStore,
     noContextEnrich,
     modelConfig,
-    backend: backend as AgentBackend,
+    backend: typedBackend,
+    agentServer: gateResult.ok ? gateResult.server : undefined,
   });
 
-  activeOrchestrator = orchestrator;
-
-  try {
-    await orchestrator.run(ctx, PipelinePass.Design);
-    await teardownMcp(mcpResult, fs);
-    await stateStore.delete();
-    activeOrchestrator = undefined;
-    process.exit(0);
-  } catch (err) {
-    activeOrchestrator = undefined;
-    renderer.fatal(err instanceof Error ? err.message : String(err));
-  }
+  await runPipeline(
+    orchestrator,
+    ctx,
+    PipelinePass.Design,
+    gateResult.ok ? gateResult.server : undefined,
+    mcpResult,
+    stateStore,
+    fs,
+    renderer,
+  );
 }
