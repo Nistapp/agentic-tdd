@@ -97,8 +97,10 @@ stale `origin/<branch>` pointers.
 
 ### 3. Delete stale local branches (`npm run git:clean`)
 
-The janitor (`scripts/clean-branches.mjs`) is a cross-platform Node script that deletes local
-branches whose upstream is gone — without touching `main`, `dev`, or the current branch.
+The janitor (`src/utils/git-branch-janitor.ts`, compiled to `dist/`) is a cross-platform
+Node script that deletes local branches whose upstream is gone — without touching `main`,
+`dev`, or the current branch. It requires a build first (`npm run build`, already part of the
+build-from-source flow).
 
 ```bash
 npm run git:clean:dry   # dry run — list what would be deleted (safe default)

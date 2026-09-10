@@ -3,7 +3,7 @@ import {
   parseTrackedBranches,
   selectStaleBranches,
   DEFAULT_PROTECTED_BRANCHES,
-} from '../../scripts/clean-branches.mjs';
+} from '../../src/utils/git-branch-janitor.js';
 
 describe('parseTrackedBranches', () => {
   it('splits NUL-separated name and track fields', () => {

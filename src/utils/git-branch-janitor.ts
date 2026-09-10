@@ -1,20 +1,26 @@
-#!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-export const DEFAULT_PROTECTED_BRANCHES = ['main', 'dev'];
+export const DEFAULT_PROTECTED_BRANCHES: readonly string[] = ['main', 'dev'];
+
+export interface TrackedBranch {
+  name: string;
+  track: string;
+}
+
+export interface SelectStaleOptions {
+  protectedBranches?: readonly string[];
+  currentBranch?: string | null;
+}
 
 /**
  * Parse the output of
  * `git for-each-ref --format='%(refname:short)%00%(upstream:track)' refs/heads`
  * into `{ name, track }` records. Fields are separated by a NUL byte (`%00`)
  * so branch names cannot collide with the tracking-status marker.
- *
- * @param {string} raw
- * @returns {Array<{ name: string, track: string }>}
  */
-export function parseTrackedBranches(raw) {
-  const branches = [];
+export function parseTrackedBranches(raw: string): TrackedBranch[] {
+  const branches: TrackedBranch[] = [];
   for (const line of raw.split('\n')) {
     const trimmed = line.trim();
     if (trimmed === '') continue;
@@ -35,17 +41,16 @@ export function parseTrackedBranches(raw) {
  * Select local branches whose upstream remote branch has been deleted
  * (`[gone]`). Protected branches and the currently checked-out branch are
  * never selected.
- *
- * @param {Array<{ name: string, track: string }>} branches
- * @param {{ protectedBranches?: string[], currentBranch?: string | null }} [options]
- * @returns {string[]}
  */
-export function selectStaleBranches(branches, options = {}) {
+export function selectStaleBranches(
+  branches: readonly TrackedBranch[],
+  options: SelectStaleOptions = {},
+): string[] {
   const protectedBranches =
     options.protectedBranches ?? DEFAULT_PROTECTED_BRANCHES;
   const currentBranch = options.currentBranch ?? null;
   const protectedSet = new Set(protectedBranches);
-  const stale = [];
+  const stale: string[] = [];
   for (const branch of branches) {
     if (protectedSet.has(branch.name)) continue;
     if (branch.name === currentBranch) continue;
@@ -55,14 +60,14 @@ export function selectStaleBranches(branches, options = {}) {
   return stale;
 }
 
-function runGit(args) {
-  return execFileSync('git', args, {
+function runGit(args: readonly string[]): string {
+  return execFileSync('git', [...args], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
 
-function currentBranchName() {
+function currentBranchName(): string | null {
   try {
     return runGit(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
   } catch {
@@ -70,24 +75,25 @@ function currentBranchName() {
   }
 }
 
-function parseProtected(argv) {
+function parseProtected(argv: readonly string[]): string[] {
   const arg = argv.find((a) => a.startsWith('--protected='));
-  if (!arg) return DEFAULT_PROTECTED_BRANCHES;
+  if (!arg) return [...DEFAULT_PROTECTED_BRANCHES];
   const values = arg
     .slice('--protected='.length)
     .split(',')
     .map((s) => s.trim())
-    .filter(Boolean);
-  return values.length > 0 ? values : DEFAULT_PROTECTED_BRANCHES;
+    .filter((s) => s.length > 0);
+  return values.length > 0 ? values : [...DEFAULT_PROTECTED_BRANCHES];
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 /**
  * Janitor entry point. Defaults to a dry run; pass `--apply` to delete.
- *
- * @param {string[]} [argv]
- * @returns {number} exit code
  */
-export function main(argv = process.argv.slice(2)) {
+export function main(argv: string[] = process.argv.slice(2)): number {
   const apply = argv.includes('--apply') || argv.includes('-a');
   const quiet = argv.includes('--quiet') || argv.includes('-q');
   const protectedBranches = parseProtected(argv);
@@ -97,7 +103,7 @@ export function main(argv = process.argv.slice(2)) {
   } catch (err) {
     if (!quiet) {
       console.warn(
-        `warning: git fetch --prune failed (${err.message}); ` +
+        `warning: git fetch --prune failed (${errorMessage(err)}); ` +
           'proceeding with existing tracking metadata.',
       );
     }
@@ -120,11 +126,13 @@ export function main(argv = process.argv.slice(2)) {
   }
 
   const suffix = stale.length === 1 ? '' : 'es';
-  console.log(`${apply ? 'Deleting' : 'Would delete'} ${stale.length} stale branch${suffix}:`);
+  console.log(
+    `${apply ? 'Deleting' : 'Would delete'} ${stale.length} stale branch${suffix}:`,
+  );
   for (const name of stale) console.log(`  - ${name}`);
 
   if (!apply) {
-    console.log('\nDry run — no branches deleted. Re-run with --apply to delete.');
+    console.log('\nDry run - no branches deleted. Re-run with --apply to delete.');
     return 0;
   }
 
@@ -137,7 +145,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     process.exitCode = main();
   } catch (err) {
-    console.error(`error: ${err.message}`);
+    console.error(`error: ${errorMessage(err)}`);
     process.exitCode = 1;
   }
 }
