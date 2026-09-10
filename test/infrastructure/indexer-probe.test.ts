@@ -24,11 +24,12 @@ class StubLogger implements ILogger {
 }
 
 function makeFs(files: Record<string, string>): IFileSystem {
-  const store = new Map(Object.entries(files));
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+  const store = new Map(Object.entries(files).map(([k, v]) => [norm(k), v]));
   return {
-    exists: vi.fn(async (p: string) => store.has(p)),
+    exists: vi.fn(async (p: string) => store.has(norm(p))),
     readFile: vi.fn(async (p: string) => {
-      const content = store.get(p);
+      const content = store.get(norm(p));
       if (content === undefined) throw new Error(`ENOENT: ${p}`);
       return content;
     }),

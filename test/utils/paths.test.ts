@@ -30,7 +30,7 @@ describe('getStateFilePath', () => {
 
   it('defaults workDir to cwd()', () => {
     const path = getStateFilePath('hello');
-    expect(path).toContain('.agentic-tdd/state-hello.json');
+    expect(path).toContain(join('.agentic-tdd', 'state-hello.json'));
   });
 });
 
@@ -55,7 +55,7 @@ describe('getErrorLogPath', () => {
 
   it('defaults workDir to cwd()', () => {
     const path = getErrorLogPath('hello');
-    expect(path).toContain('.agentic-tdd/error-hello.log');
+    expect(path).toContain(join('.agentic-tdd', 'error-hello.log'));
   });
 });
 

@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { join } from 'node:path';
 
 import { writeMcpConfig, teardownMcpConfig, resolveMcpBinary, getMcpTemplateDir } from '../../src/infrastructure/mcp-config.js';
 import type { McpConfigResult } from '../../src/infrastructure/mcp-config.js';
@@ -15,6 +16,7 @@ const TEMPLATE_BODY = JSON.stringify({
 });
 
 const RESOLVED_BIN = '/usr/bin/codebase-memory-mcp';
+const PROJ_MCP = join('/proj', '.mcp.json');
 
 const EXPECTED_COPY = JSON.stringify({
   mcpServers: {
@@ -141,7 +143,7 @@ describe('writeMcpConfig', () => {
     await writeMcpConfig(fs, logger, '/proj', '/tpl/mcp.template.json', RESOLVED_BIN);
 
     const writeCalls = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
-    const [, content] = writeCalls.find((c) => c[0] === '/proj/.mcp.json')!;
+    const [, content] = writeCalls.find((c) => c[0] === PROJ_MCP)!;
     const parsed = JSON.parse(content);
     expect(parsed.mcpServers['codebase-memory'].command).toBe(RESOLVED_BIN);
     expect(parsed.mcpServers['codebase-memory'].lifecycle).toBe('lazy');
@@ -170,7 +172,7 @@ describe('writeMcpConfig — existing .mcp.json', () => {
 
   it('deep-merges the codebase-memory entry when mcpServers exist but the key is absent', async () => {
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', USER_MCP);
+    await fs.writeFile(PROJ_MCP, USER_MCP);
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
       if (String(path).endsWith('mcp.template.json')) return TEMPLATE_BODY;
       if (String(path).endsWith('.mcp.json')) return USER_MCP;
@@ -200,7 +202,7 @@ describe('writeMcpConfig — existing .mcp.json', () => {
     });
 
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', existingWithCbm);
+    await fs.writeFile(PROJ_MCP, existingWithCbm);
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
       if (String(path).endsWith('mcp.template.json')) return TEMPLATE_BODY;
       if (String(path).endsWith('.mcp.json')) return existingWithCbm;
@@ -219,7 +221,7 @@ describe('writeMcpConfig — existing .mcp.json', () => {
 
   it('treats an existing .mcp.json with invalid JSON as a no-op and logs a warning', async () => {
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', 'not json!!!');
+    await fs.writeFile(PROJ_MCP, 'not json!!!');
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
       if (String(path).endsWith('mcp.template.json')) return TEMPLATE_BODY;
       if (String(path).endsWith('.mcp.json')) return 'not json!!!';
@@ -239,7 +241,7 @@ describe('writeMcpConfig — existing .mcp.json', () => {
   it('adds codebase-memory when existing .mcp.json has no mcpServers key', async () => {
     const fs = makeFs();
     const existingNoServers = JSON.stringify({ settings: { theme: 'dark' } });
-    await fs.writeFile('/proj/.mcp.json', existingNoServers);
+    await fs.writeFile(PROJ_MCP, existingNoServers);
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
       if (String(path).endsWith('mcp.template.json')) return TEMPLATE_BODY;
       if (String(path).endsWith('.mcp.json')) return existingNoServers;
@@ -291,9 +293,9 @@ describe('teardownMcpConfig', () => {
 
   it('deletes .mcp.json when harness-created and content unchanged', async () => {
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', EXPECTED_COPY);
+    await fs.writeFile(PROJ_MCP, EXPECTED_COPY);
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (p) => {
-      if (String(p) === '/proj/.mcp.json') return EXPECTED_COPY;
+      if (String(p) === PROJ_MCP) return EXPECTED_COPY;
       throw new Error();
     });
     const logger = makeLogger();
@@ -301,16 +303,16 @@ describe('teardownMcpConfig', () => {
     await teardownMcpConfig(fs, logger, '/proj', RESULT_COPY);
 
     const deleteCalls = (fs.deleteFile as ReturnType<typeof vi.fn>).mock.calls;
-    expect(deleteCalls.some((c) => c[0] === '/proj/.mcp.json')).toBe(true);
+    expect(deleteCalls.some((c) => c[0] === PROJ_MCP)).toBe(true);
     expect(logger.messages.some((m) => m.includes('removed'))).toBe(true);
   });
 
   it('keeps .mcp.json when content has been modified since creation', async () => {
     const fs = makeFs();
     const modified = EXPECTED_COPY.replace('/usr/bin', '/opt/bin');
-    await fs.writeFile('/proj/.mcp.json', modified);
+    await fs.writeFile(PROJ_MCP, modified);
     (fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (p) => {
-      if (String(p) === '/proj/.mcp.json') return modified;
+      if (String(p) === PROJ_MCP) return modified;
       throw new Error();
     });
     const logger = makeLogger();
@@ -323,7 +325,7 @@ describe('teardownMcpConfig', () => {
 
   it('does nothing when the file was not created by the harness (kept case)', async () => {
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', EXPECTED_COPY);
+    await fs.writeFile(PROJ_MCP, EXPECTED_COPY);
     const logger = makeLogger();
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_KEPT);
@@ -333,7 +335,7 @@ describe('teardownMcpConfig', () => {
 
   it('does nothing when the file was merged (not created)', async () => {
     const fs = makeFs();
-    await fs.writeFile('/proj/.mcp.json', EXPECTED_COPY);
+    await fs.writeFile(PROJ_MCP, EXPECTED_COPY);
     const logger = makeLogger();
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_MERGED);

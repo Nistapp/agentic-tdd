@@ -1,6 +1,6 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { existsSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { vi } from 'vitest';
 
@@ -646,7 +646,7 @@ describe('PACKAGE_AGENTS_DIR', () => {
   it('is a non-empty absolute path ending with /agents', () => {
     expect(PACKAGE_AGENTS_DIR).toBeTruthy();
     expect(PACKAGE_AGENTS_DIR).toBeTypeOf('string');
-    expect(PACKAGE_AGENTS_DIR.startsWith('/')).toBe(true);
+    expect(isAbsolute(PACKAGE_AGENTS_DIR)).toBe(true);
     expect(PACKAGE_AGENTS_DIR.endsWith('agents')).toBe(true);
   });
 

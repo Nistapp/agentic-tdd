@@ -1,5 +1,5 @@
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
@@ -211,7 +211,7 @@ describe('JsonStateStore', () => {
     const fs = new NodeFileSystem();
     const store = new JsonStateStore(fs, 'corrupt', workDir);
 
-    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.mkdir(dirname(store.path));
     await fs.writeFile(store.path, 'not valid json {{{');
 
     await expect(store.load()).rejects.toThrow('Corrupt state file');
@@ -225,7 +225,7 @@ describe('JsonStateStore', () => {
       schemaVersion: '99.0.0',
       context: makeContext({ featureName: 'future-feature' }),
     };
-    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.mkdir(dirname(store.path));
     await fs.writeFile(store.path, JSON.stringify(envelope, null, 2));
 
     await expect(store.load()).rejects.toThrow('Unsupported schema version');
@@ -246,7 +246,7 @@ describe('JsonStateStore', () => {
         },
       },
     });
-    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.mkdir(dirname(store.path));
     await fs.writeFile(store.path, JSON.stringify(ctx, null, 2));
 
     const loaded = await store.load();
@@ -262,7 +262,7 @@ describe('JsonStateStore', () => {
       schemaVersion: '0.1.0',
       context: makeContext({ featureName: 'v010-feature' }),
     };
-    await fs.mkdir(store.path.replace(/\/[^/]+$/, ''));
+    await fs.mkdir(dirname(store.path));
     await fs.writeFile(store.path, JSON.stringify(envelope, null, 2));
 
     const loaded = await store.load();

@@ -29,29 +29,31 @@ class StubLogger implements ILogger {
 }
 
 function makeFs(initial: Record<string, string> = {}) {
-  const files = new Map(Object.entries(initial));
+  const norm = (p: string): string => p.replace(/\\/g, '/');
+  const files = new Map(Object.entries(initial).map(([k, v]) => [norm(k), v]));
   const dirs = new Set<string>();
   const fs: IFileSystem = {
-    exists: vi.fn(async (p: string) => files.has(p) || dirs.has(p)),
+    exists: vi.fn(async (p: string) => files.has(norm(p)) || dirs.has(norm(p))),
     readFile: vi.fn(async (p: string) => {
-      const content = files.get(p);
+      const content = files.get(norm(p));
       if (content === undefined) throw new Error(`ENOENT: ${p}`);
       return content;
     }),
     writeFile: vi.fn(async (p: string, c: string) => {
-      files.set(p, c);
+      files.set(norm(p), c);
     }),
     mkdir: vi.fn(async (p: string) => {
-      dirs.add(p);
+      dirs.add(norm(p));
     }),
     deleteFile: vi.fn(async (p: string) => {
-      files.delete(p);
+      files.delete(norm(p));
     }),
     renameFile: vi.fn(async () => undefined),
     readdir: vi.fn(async () => [...files.keys()]),
     deleteDirectory: vi.fn(async (p: string) => {
-      dirs.delete(p);
-      for (const key of [...files.keys()]) if (key.startsWith(p)) files.delete(key);
+      const target = norm(p);
+      dirs.delete(target);
+      for (const key of [...files.keys()]) if (key.startsWith(target)) files.delete(key);
     }),
   };
   return { fs, files, dirs };
