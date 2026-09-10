@@ -52,9 +52,9 @@ The pipeline delegates code indexing to `codebase-memory-mcp` ([opencode.json#L1
 
 Every pass prompt carries the **`indexer-first`** directive ([`pass-0-design-agent.md#L56`](../../../src/agents/pass-0-design-agent.md#L56)):
 
-> If an indexer, knowledge graph, or MCP server is referenced, verify its index is current (`detect_changes` / `index_status`) and re-index if needed before relying on it. Also check for available MCP tools … Fall back to read/glob/grep only when no indexer is available.
+> The harness provisions and verifies the codebase indexer for this run; the payload's `meta.indexer` field reports its status (`available`, `indexed`, `project`). Rely on that field — do NOT probe your environment for MCP tools. Use the indexer tools (`search_graph`, `search_code`, `get_code_snippet`, `trace_path`, `get_architecture`) as your primary discovery mechanism before reading files directly.
 
-So the agent's *first* move is to query the graph, and file-searching is the fallback — not the other way around. This is the accuracy lever: the agent starts from verified structure instead of guessing.
+Because the indexer gate is mandatory ([ADR-0011](../adrs/0011-mandatory-indexer-gate.md)), the directive no longer hedges with a `read`/`glob`/`grep` fallback: the agent's *first* move is to query the graph, and `meta.indexer` guarantees it is available and fresh. This is the accuracy lever: the agent starts from verified structure instead of guessing.
 
 ### 2.2 The curated payload: `CONTEXT_RULES`
 

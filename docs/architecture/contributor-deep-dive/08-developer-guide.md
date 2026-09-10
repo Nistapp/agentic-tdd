@@ -14,7 +14,7 @@ This guide covers how to stand up a working local environment, run and verify th
 > The default agent backend is the **opencode SDK** (real MCP, one server per session entry; [ADR-0012](../adrs/0012-opencode-sdk-default-backend.md)). Its external tools are **hard prerequisites** — the pipeline cannot run without them and they are not bundled by `npm install`:
 >
 > 1. **opencode binary + `@opencode-ai/sdk`** — the gate starts one `opencode serve` child per session via the pinned SDK (`@opencode-ai/sdk` **1.18.30** ↔ `opencode` **1.18.29**). The binary must be on `PATH`.
-> 2. **codebase-memory-mcp** — every pass agent's prompt mandates an `indexer-first` rule that calls the `codebase-memory_*` MCP tools before falling back to `read`/`glob`/`grep` (e.g. [`pass-0-design-agent.md#L56-L63`](../../../src/agents/pass-0-design-agent.md#L56-L63), and identically in `pass-1`…`pass-7`). The gate registers the server in a run-scoped isolated config, enforces the MCP allowlist, and proves the binary answers a direct MCP round-trip before Pass 0.
+> 2. **codebase-memory-mcp** — every pass agent's prompt mandates an `indexer-first` rule that uses the `codebase-memory_*` MCP tools as its primary discovery mechanism (e.g. [`pass-0-design-agent.md#L56-L63`](../../../src/agents/pass-0-design-agent.md#L56-L63), and identically in `pass-1`…`pass-7`), backed by a per-pass **reuse directive** (see [2. Prompt Engineering §3.2](02-prompt-engineering.md#32-indexer-first-and-the-reuse-directives)). The gate registers the server in a run-scoped isolated config, enforces the MCP allowlist, and proves the binary answers a direct MCP round-trip before Pass 0.
 > 3. **Backup `--backend pi`** — the in-process Pi SDK additionally needs the `pi-mcp-adapter` extension (`pi install npm:pi-mcp-adapter`) and reads `.mcp.json`. The legacy `--backend opencode-cli` spawns `opencode` per pass and needs a machine-local `opencode.json`.
 
 ---
@@ -98,7 +98,7 @@ Because it is gitignored, create it once per machine when using the opencode-cli
 The `agent.plan` / `agent.build` model routing is a **stack-level override**; the effective per-pass model is resolved at runtime from `config.default.json` + `.agentic-tdd/config.json` (see [ADR-0009](../adrs/0009-configurable-per-agent-models.md)). Align them or be deliberate about which wins.
 
 > [!TIP]
-> After registering the MCP server, confirm the indexer is up with `codebase-memory` tools (`list_projects` / `index_status`). Pass agents call `detect_changes`/`index_status` and only fall back to `read/glob/grep` when no indexer is available — so a healthy index is what actually unlocks the fast path.
+> After registering the MCP server, confirm the indexer is up with `codebase-memory` tools (`list_projects` / `index_status`). The indexer gate verifies this before Pass 0, and the payload's `meta.indexer` field tells every pass agent the index is available and fresh — so a healthy index is what actually unlocks the fast path.
 
 ---
 

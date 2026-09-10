@@ -73,7 +73,7 @@ Every agent file has the same skeleton. The two parts are *structurally differen
 |---|---|---|
 | **YAML frontmatter** (`---`) | `description`, `mode`, `model`, `permission` | Routing + tool scope — read by the runner |
 | `<agent_persona>` | Role, pass number, phase | Identity |
-| `<context_philosophy>` | Reframes the injected payload as a *starting point*; mandates `indexer-first` | Context discipline |
+| `<context_philosophy>` | Reframes the injected payload as a *starting point*; mandates `indexer-first` + the pass's reuse directive | Context discipline |
 | `<directives>` | Numbered `<rule id=…>` requirements (`assess-first`, `no-test-edit`, …) | The rules |
 | `<scope>` | Allowed / forbidden operations | Guardrail (declared intent) |
 | `<output_spec>` | Exact expected output shape (Passes 0, 1) | Output contract |
@@ -116,7 +116,7 @@ The **separation-of-concerns rules** in each file's `<directives>` reinforce the
 Two directives recur in every file and are worth knowing about:
 
 - **`assess-first` (the SKIP protocol)** — each agent first checks whether its pass is already satisfied, and if so emits exactly `SKIP:N:reason` and makes **no changes** ([`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts)). This makes passes idempotent no-ops and saves tokens.
-- **`indexer-first`** — the agent MUST prefer the `codebase-memory-mcp` knowledge graph over `read`/`glob`/`grep`, and verify the index is current before relying on it. Agents reason from *structure* (call chains, coupling) rather than text pattern-matching — the key guardrail against hallucinating non-existent APIs or duplicating existing utilities (see [1. § 2.4](01-why-this-exists.md#24-reducing-the-non-determinism-of-genai)).
+- **`indexer-first` + reuse directives** — the payload's `meta.indexer` field tells the agent the harness has provisioned and verified the `codebase-memory-mcp` knowledge graph for this run; the agent uses it as its primary discovery mechanism instead of probing its environment or falling back to text search. A per-pass **reuse directive** (`reuse-first`, `reuse-contracts`, `reuse-test-helpers`, `prefer-existing-utilities` + `no-duplicate-local-helpers`, the global `dry` check + `canonical-patterns`, `reuse-observability-patterns`, `reuse-security-utils`, `reuse-doc-patterns`) then turns that structural knowledge into reuse rather than reinvention. Agents reason from *structure* (call chains, coupling) rather than text pattern-matching — the key guardrail against hallucinating non-existent APIs or duplicating existing utilities (see [1. § 2.4](01-why-this-exists.md#24-reducing-the-non-determinism-of-genai)).
 
 ---
 
@@ -178,7 +178,7 @@ The implementation of everything above lives in the Contributor Track:
 
 | Topic | Where |
 |---|---|
-| Full file anatomy, the directive catalogue (`assess-first`, `indexer-first`, `target-symbols-priority`, `use-file-changes`), and the permission matrix | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
+| Full file anatomy, the directive catalogue (`assess-first`, `indexer-first` + reuse directives, `target-symbols-priority`, `use-file-changes`), and the permission matrix | [2. Prompt Engineering — Agent Files & Guardrails](../contributor-deep-dive/02-prompt-engineering.md) |
 | How the agent runner executes a pass (Pi in-process / opencode CLI), attaches artefacts, and persists logs | [4. Infrastructure Adapters](../contributor-deep-dive/04-infrastructure-adapters.md) · [`agent-runners/`](../../../src/infrastructure/agent-runners/) |
 | How SKIP / retries are orchestrated by the machines | [1. Core Engine Internals §6 — Skip Signals](../contributor-deep-dive/01-core-engine-internals.md#6-skip-signals) |
 | Adding / modifying a pass end-to-end | [2. Prompt Engineering §5](../contributor-deep-dive/02-prompt-engineering.md#5-adding--modifying-a-pass) · [8. Developer Guide](../contributor-deep-dive/08-developer-guide.md) |

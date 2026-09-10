@@ -92,11 +92,13 @@ Every pass opens with `assess-first` ([src/core/skip-parser.ts](../../../src/cor
 
 This makes passes **idempotent no-ops** when work isn't needed, saving tokens and avoiding churn. The machine detects `SKIP:` and records `status: 'skipped'` (see [1. Core Engine Internals §6](01-core-engine-internals.md#6-skip-signals)).
 
-### 3.2 `indexer-first`
+### 3.2 `indexer-first` and the reuse directives
 
-> Before starting work, check for AGENTS.md … If an indexer, knowledge graph, or MCP server is referenced, verify its index is current (`detect_changes` / `index_status`) and re-index if needed … Fall back to read/glob/grep only when no indexer is available.
+> The harness provisions and verifies the codebase indexer for this run; the payload's `meta.indexer` field reports its status (`available`, `indexed`, `project`). Rely on that field — do NOT probe your environment for MCP tools. Use the indexer tools (`search_graph`, `search_code`, `get_code_snippet`, `trace_path`, `get_architecture`) as your primary discovery mechanism before reading files directly.
 
-The knowledge graph (`codebase-memory-mcp`) outranks grep/glob so agents reason from **structure** (call chains, imports, coupling) rather than pattern-matching text — reducing hallucination and duplicate utilities. Present in all 8 files.
+The knowledge graph (`codebase-memory-mcp`) outranks read/grep so agents reason from **structure** (call chains, imports, coupling) rather than pattern-matching text — reducing hallucination and duplicate utilities. Because the indexer gate is mandatory ([ADR-0011](../adrs/0011-mandatory-indexer-gate.md)), the rule no longer hedges with a `read`/`glob`/`grep` fallback: `meta.indexer` is authoritative and always available on a successful run. Present in all 8 files.
+
+Each pass additionally carries a **reuse directive** — `reuse-first` (P0), `reuse-contracts` (P1), `reuse-test-helpers` (P2), `prefer-existing-utilities` + `no-duplicate-local-helpers` (P3), the global `dry` check + `canonical-patterns` (P4), `reuse-observability-patterns` (P5), `reuse-security-utils` (P6), `reuse-doc-patterns` (P7) — plus a single **batched discovery step** at pass start. Discovery is skipped when `meta.attemptNumber > 1` (the error log is then the focus and prior results are already in context), keeping indexer round-trips to one batch per pass — consistent with the token-cost invariant.
 
 ### 3.3 `target-symbols-priority` — strong-advisory scoping
 
@@ -143,7 +145,7 @@ Passes 3–6 are told to navigate via the `fileChanges` change descriptors (per-
 
 1. Copy the nearest existing agent file as a template.
 2. Set `model` (routing) and `permission` (scope).
-3. Write `<directives>` with `assess-first` + `indexer-first` + any `no-*` invariants.
+3. Write `<directives>` with `assess-first` + `indexer-first` + the pass's reuse directive + any `no-*` invariants, and add the batched discovery step to `<task>`.
 4. Add the pass to the pipeline machine (`pass_N_*` state), `SELF_CORRECTION_PASSES` / `GIT_COMMIT_PASSES` in `src/core/types.ts`, and `CONTEXT_RULES` in `src/core/context-builder.ts`.
 5. Rebuild: `npm run build`.
 

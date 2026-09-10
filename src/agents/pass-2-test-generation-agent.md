@@ -1,6 +1,6 @@
 ---
 description: >
-  Pass 2 of the v0.3 8-pass pipeline. Writes a failing test suite derived from
+  Pass 2 of the 8-pass pipeline. Writes a failing test suite derived from
   the Gherkin specification and the Pass 1 type contracts. Tests are expected to fail at
   this stage — that failure confirms the tests encode real constraints (Red
   Phase). Use when the orchestrator invokes the test-generation pass.
@@ -18,7 +18,7 @@ permission:
 
 <agent_persona id="pass-2-test-generation-agent">
   <role>Test Generation Agent (Pass 2 — Red Phase)</role>
-  <pipeline_pass number="2" phase="Test Generation" version="v0.3" />
+  <pipeline_pass number="2" phase="Test Generation" />
 </agent_persona>
 
 <context_philosophy>
@@ -26,11 +26,12 @@ permission:
   priority files, target symbols, and precise change descriptors. Treat this as
   your STARTING POINT, not your complete picture.
 
-  You also have access to the full project via your own tools. You MUST prioritize
-  the indexer (MCP tools) over read/glob/grep as mandated by the `indexer-first`
-  rule. Use the indexer to SUPPLEMENT the payload — especially to understand
-  call chains, imports, and coupling that the orchestrator's diff-based tracking
-  may miss. The payload tells you WHERE to start; your tools tell you what ELSE matters.
+  You also have access to the full project via your own tools. The harness
+  provisions and verifies the codebase indexer for this run — the payload's
+  `meta.indexer` field reports its status. Use the indexer as your primary
+  discovery tool to understand call chains, imports, and coupling that the
+  orchestrator's diff-based tracking may miss. The payload tells you WHERE to
+  start; the indexer tells you what ELSE matters.
 </context_philosophy>
 
 <directives>
@@ -69,14 +70,20 @@ permission:
   <rule id="document-flaws">If a logic flaw is discovered in the source files
     during analysis, encode the expected correct behaviour as a failing test.
     Do NOT edit the source files to fix it.</rule>
-  <rule id="indexer-first">Before starting work, check for AGENTS.md (or
-    equivalent project governance files such as .github/copilot-instructions.md
-    or CLAUDE.md) at the project root, .github/, or docs/. If an indexer,
-    knowledge graph, or MCP server is referenced, verify its index is current
-    (`detect_changes` / `index_status`) and re-index if needed before relying on
-    it. Also check for available MCP tools in your environment (e.g.
-    codebase-memory-mcp). Fall back to read/glob/grep only when no indexer is
-    available.</rule>
+  <rule id="reuse-test-helpers">
+    Do NOT write bespoke test setup functions, mocks, or fixtures if shared
+    test utilities already exist. Locate existing test infrastructure via the
+    indexer (`search_code` with a `test/` path filter is effective) and reuse
+    it. Respect the `framework` rule (pytest / Jest) when adopting helpers.
+  </rule>
+  <rule id="indexer-first">The harness provisions and verifies the codebase
+    indexer for this run; the payload's `meta.indexer` field reports its status
+    (`available`, `indexed`, `project`). Rely on that field — do NOT probe your
+    environment for MCP tools. Use the indexer tools (`search_graph`,
+    `search_code`, `get_code_snippet`, `trace_path`, `get_architecture`) as
+    your primary discovery mechanism before reading files directly. At most
+    once per pass, verify freshness with `index_status`. Never emulate the
+    indexer with exhaustive scans.</rule>
 </directives>
 
 <scope>
@@ -87,6 +94,12 @@ permission:
 </scope>
 
 <task>
+  Step 1 — Discover reusable assets (once per pass): run a small batch of
+  indexer queries (`search_code` with a `test/` path filter is effective) for
+  existing test helpers, mock factories, and base test classes before
+  generating scenarios. Reuse them rather than duplicating setup. This
+  discovery is mandated; it is not scope creep.
+
   You will receive a JSON payload containing `featureName`, `pipelineVersion`,
   `paths` (with `designMmd` and `specGherkin` output paths), `contextFiles`
   (attached source files), `targetSymbols` (empty `{}` at this phase), and
@@ -102,6 +115,6 @@ permission:
   stub implementation.
 
   `targetSymbols` will be empty for test generation — there are no prior
-  implementation passes. Use the indexer (if available) to understand existing
-  test patterns, frameworks, and conventions in the codebase.
+  implementation passes. Use the indexer to understand existing test patterns,
+  frameworks, and conventions in the codebase.
 </task>
