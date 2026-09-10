@@ -93,6 +93,10 @@ Gate sequence for `opencode`:
 * **G5 LLM-free round-trip** — a direct MCP stdio exchange
   (`@modelcontextprotocol/sdk`: `initialize` → `tools/list` → `tools/call
   list_projects`) against the same binary. No LLM prompt, no API cost.
+  *Divergence from the prompt:* the raw MCP protocol exposes **bare** tool names
+  (`search_graph`), so G5 asserts the bare core suffixes; the
+  `<serverName>_<tool>` prefix is added by the opencode client at the model
+  layer (proved by the spike's model-turn capture), not by the MCP server.
 * **G6 index bootstrap** — unchanged: the existing one-shot CLI bootstrap
   (`ensureIndexed`, `IndexerCli`) deliberately stays on the CLI path until
   MCP-native bootstrap is proven.

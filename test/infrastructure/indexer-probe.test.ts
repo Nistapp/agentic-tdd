@@ -420,9 +420,9 @@ function makeMcpSdk(overrides: {
     listTools: vi.fn(async () => ({
       tools:
         overrides.tools ?? [
-          { name: 'codebase-memory_search_graph' },
-          { name: 'codebase-memory_get_code_snippet' },
-          { name: 'codebase-memory_index_repository' },
+          { name: 'search_graph' },
+          { name: 'get_code_snippet' },
+          { name: 'index_repository' },
         ],
     })),
     callTool: vi.fn(async () => ({ isError: overrides.callIsError ?? false })),
@@ -444,7 +444,7 @@ describe('runOpencodeMcpRoundTrip', () => {
   });
 
   it('fails when a core tool is missing', async () => {
-    const { sdk } = makeMcpSdk({ tools: [{ name: 'codebase-memory_search_graph' }] });
+    const { sdk } = makeMcpSdk({ tools: [{ name: 'search_graph' }] });
     const result = await runOpencodeMcpRoundTrip({ binary: '/bin/cbm', loadMcpSdk: async () => sdk });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.kind).toBe('mcp_roundtrip_failed');

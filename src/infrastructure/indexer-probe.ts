@@ -22,7 +22,7 @@ import {
   type ProcessRunner,
 } from './indexer-client.js';
 import { buildIndexerBridgeTools } from './agent-runners/indexer-bridge.js';
-import { OPENCODE_INDEXER_CORE_TOOL_SUFFIXES, opencodeToolName } from './opencode-config.js';
+import { OPENCODE_INDEXER_CORE_TOOL_SUFFIXES } from './opencode-config.js';
 
 export { resolveIndexerBinary, getResolvedIndexerBinary } from './indexer-client.js';
 
@@ -579,7 +579,7 @@ export interface OpencodeRoundTripDeps {
   binary: string;
   /** Whole-probe timeout (defaults to ~30s). */
   timeoutMs?: number;
-  /** Core tool suffixes the round-trip must observe. */
+  /** Core tool suffixes the round-trip must observe (bare MCP names). */
   coreToolSuffixes?: readonly string[];
   /** Lazy MCP SDK loader (tests inject a fake). */
   loadMcpSdk?: () => Promise<McpSdkLike>;
@@ -600,10 +600,14 @@ const defaultLoadMcpSdk = async (): Promise<McpSdkLike> => {
  * G5 — LLM-free direct MCP stdio round-trip against the indexer binary:
  * `initialize` → `tools/list` (assert core tool names) → `tools/call
  * list_projects` (assert `isError !== true`). No LLM prompt, no API cost.
+ *
+ * Note: the raw MCP protocol exposes **bare** tool names (`search_graph`); the
+ * `<serverName>_<tool>` prefix is added by the opencode client when it presents
+ * the tools to the model, so it is not asserted here.
  */
 export async function runOpencodeMcpRoundTrip(deps: OpencodeRoundTripDeps): Promise<IndexerProbeResult> {
   const timeoutMs = deps.timeoutMs ?? 30_000;
-  const expected = (deps.coreToolSuffixes ?? OPENCODE_INDEXER_CORE_TOOL_SUFFIXES).map(opencodeToolName);
+  const expected = deps.coreToolSuffixes ?? OPENCODE_INDEXER_CORE_TOOL_SUFFIXES;
   const loadMcpSdk = deps.loadMcpSdk ?? defaultLoadMcpSdk;
 
   try {
