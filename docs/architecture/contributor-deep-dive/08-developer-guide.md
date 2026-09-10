@@ -11,11 +11,11 @@
 This guide covers how to stand up a working local environment, run and verify the build, and extend the pipeline — either by editing an existing pass's prompt or by adding a new DI port. It assumes you have read [5. CLI & Dependency Injection Wiring](05-cli-di-wiring.md) for the architecture and [7. Testing Strategy & Mock Patterns](07-testing-strategy.md) for how to verify changes.
 
 > [!IMPORTANT]
-> The default agent backend is **Pi** (in-process SDK, [ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md)). Its external tools are **hard prerequisites** — the pipeline cannot run without them and they are not bundled by `npm install`:
+> The default agent backend is the **opencode SDK** (real MCP, one server per session entry; [ADR-0012](../adrs/0012-opencode-sdk-default-backend.md)). Its external tools are **hard prerequisites** — the pipeline cannot run without them and they are not bundled by `npm install`:
 >
-> 1. **Pi SDK + the `pi-mcp-adapter` extension** — pass agents run inside `@earendil-works/pi-coding-agent` (an `npm` dependency of the harness), but MCP support needs the `pi-mcp-adapter` **extension** installed in Pi's config home (`~/.pi/agent`). This is a **one-time per-machine prerequisite**: `pi install npm:pi-mcp-adapter`. The harness deliberately does **not** set `PI_CODING_AGENT_DIR`, so it shares your interactive Pi config home (credentials in `auth.json`, installed extensions). See [ADR-0010 §10](../adrs/0010-agent-agnostic-sdk-architecture.md).
-> 2. **codebase-memory-mcp** — every pass agent's prompt mandates an `indexer-first` rule that calls `codebase-memory-mcp` MCP tools before falling back to `read`/`glob`/`grep` (e.g. [`pass-0-design-agent.md#L56-L63`](../../../src/agents/pass-0-design-agent.md#L56-L63), and identically in `pass-1`…`pass-7`). At pipeline start the harness resolves the binary per platform and materialises `.mcp.json` in the project cwd (copy-or-merge from the shipped `mcp.template.json` — see [4. Infrastructure Adapters §2](04-infrastructure-adapters.md#2-agent-runners--the-agent-invocation-seam)).
-> 3. **opencode CLI** — required **only** when running the legacy fallback backend (`--backend opencode-cli`), which spawns `opencode` as a subprocess. Not needed for the default Pi path.
+> 1. **opencode binary + `@opencode-ai/sdk`** — the gate starts one `opencode serve` child per session via the pinned SDK (`@opencode-ai/sdk` **1.18.30** ↔ `opencode` **1.18.29**). The binary must be on `PATH`.
+> 2. **codebase-memory-mcp** — every pass agent's prompt mandates an `indexer-first` rule that calls the `codebase-memory_*` MCP tools before falling back to `read`/`glob`/`grep` (e.g. [`pass-0-design-agent.md#L56-L63`](../../../src/agents/pass-0-design-agent.md#L56-L63), and identically in `pass-1`…`pass-7`). The gate registers the server in a run-scoped isolated config, enforces the MCP allowlist, and proves the binary answers a direct MCP round-trip before Pass 0.
+> 3. **Backup `--backend pi`** — the in-process Pi SDK additionally needs the `pi-mcp-adapter` extension (`pi install npm:pi-mcp-adapter`) and reads `.mcp.json`. The legacy `--backend opencode-cli` spawns `opencode` per pass and needs a machine-local `opencode.json`.
 
 ---
 
@@ -23,17 +23,18 @@ This guide covers how to stand up a working local environment, run and verify th
 
 | Requirement | Version / Notes | Why it is required |
 |---|---|---|
-| **Node.js** | ≥ 22.19 (`package.json` `engines`; README badge) | Runs the CLI, tests, and the Pi SDK in-process |
+| **Node.js** | ≥ 22.19 (`package.json` `engines`; README badge) | Runs the CLI, tests, and the SDK server in-process |
 | **npm** | bundled with Node.js | Installation and scripts |
-| **Pi CLI** | ≥ 0.85 (`pi` on PATH, from `@earendil-works/pi-coding-agent`) | One-time extension install: `pi install npm:pi-mcp-adapter` |
-| **pi-mcp-adapter** | installed into `~/.pi/agent` (Pi config home) | Lets pass agents reach MCP servers (codebase-memory) — the default backend's tool channel |
-| **codebase-memory-mcp** | `v0.8+` (binary referenced as `codebase-memory-mcp`; resolved per-platform at pipeline start) | The knowledge-graph indexer used by all pass agents |
+| **opencode CLI** | ≥ 1.18.29 (`opencode` on PATH) | Default backend: the gate boots one `opencode serve` child per session |
+| **`@opencode-ai/sdk`** | pinned `1.18.30` (npm dependency) | Default backend SDK (session/event/MCP client) |
+| **codebase-memory-mcp** | `v0.10.8` (binary referenced as `codebase-memory-mcp`; resolved via `which`) | The knowledge-graph indexer used by all pass agents |
 | **API key** | `OPENROUTER_API_KEY` (default) or `DEEPSEEK_API_KEY` (deepseek-direct) | `index.ts` **hard-fails** at startup if neither is set ([#L91-L96](../../../src/cli/index.ts#L91-L96)) |
 | **git** | initialized working directory | Feature branch creation + atomic commits per pass |
-| **opencode CLI** *(optional)* | latest from <https://opencode.ai> | Required only for the legacy `--backend opencode-cli` fallback |
+| **Pi CLI + `pi-mcp-adapter`** *(backup only)* | `pi install npm:pi-mcp-adapter` into `~/.pi/agent` | Required only for `--backend pi` |
+| **opencode CLI `opencode.json`** *(legacy only)* | machine-local config | Required only for `--backend opencode-cli` |
 
-> [!WARNING] Pi config home is shared
-> The harness does **not** set `PI_CODING_AGENT_DIR` — it shares the user's `~/.pi/agent`. Consequences: (a) stored credentials (`auth.json`) are picked up automatically; (b) any extension you installed for interactive Pi is auto-discovered by harness sessions. This is deliberate ([ADR-0010 §10](../adrs/0010-agent-agnostic-sdk-architecture.md)). Do **not** point `PI_CODING_AGENT_DIR` elsewhere — that would break both credential resolution and the `pi-mcp-adapter` extension discovery.
+> [!WARNING] Pi config home is shared (backup backend only)
+> With `--backend pi` the harness does **not** set `PI_CODING_AGENT_DIR` — it shares the user's `~/.pi/agent`. Consequences: (a) stored credentials (`auth.json`) are picked up automatically; (b) any extension you installed for interactive Pi is auto-discovered by harness sessions. This is deliberate ([ADR-0010 §10](../adrs/0010-agent-agnostic-sdk-architecture.md)). Do **not** point `PI_CODING_AGENT_DIR` elsewhere — that would break both credential resolution and the `pi-mcp-adapter` extension discovery. The default opencode backend does not read the Pi config home.
 
 ---
 
@@ -56,11 +57,11 @@ npm link
 cp .env.example .env
 #   edit .env → OPENROUTER_API_KEY=sk-or-...  (or DEEPSEEK_API_KEY=sk-...)
 
-# 5. One-time per-machine Pi prerequisite (default backend)
+# 5. (Backup backend only) One-time per-machine Pi prerequisite
 pi install npm:pi-mcp-adapter
 ```
 
-Then run the pipeline — at start it resolves `codebase-memory-mcp` per platform and materialises `.mcp.json` in the project cwd (copy-or-merge, auto-tidied at teardown). For the legacy `--backend opencode-cli` path you additionally need a machine-local `opencode.json` (see §3).
+Then run the pipeline with the default `opencode` backend — the gate resolves `codebase-memory-mcp` and `opencode` on PATH, boots one isolated server, and tears it down at the end. The backup `--backend pi` path materialises `.mcp.json` in the project cwd (copy-or-merge, auto-tidied at teardown). For the legacy `--backend opencode-cli` path you additionally need a machine-local `opencode.json` (see §3).
 
 > [!CAUTION]
 > `.env` is gitignored and holds your model-provider API keys (`OPENROUTER_API_KEY` and/or `DEEPSEEK_API_KEY`). Per AGENTS.md §9, the orchestrator never prints `.env` contents; never log, echo, or paste the key into a transcript.
@@ -70,7 +71,7 @@ Then run the pipeline — at start it resolves `codebase-memory-mcp` per platfor
 ## 3. Legacy backend only — The Local `opencode.json`
 
 > [!IMPORTANT]
-> The default **Pi** backend does **not** read `opencode.json` — MCP servers reach Pi sessions through `.mcp.json`, which the harness materialises automatically from the shipped `mcp.template.json`. This section applies **only** to the `--backend opencode-cli` fallback.
+> The default **opencode** backend does **not** read a project `opencode.json` — the gate generates a run-scoped, isolated config and enforces the MCP allowlist. The backup **Pi** backend reads `.mcp.json` instead. This section applies **only** to the `--backend opencode-cli` fallback.
 
 Because it is gitignored, create it once per machine when using the opencode-cli backend. At minimum it must register the MCP server so pass agents can honour the `indexer-first` rule:
 
@@ -149,7 +150,7 @@ agentic-tdd --feature-desc-file specs/my_feature.md --test-cmd "npm test" --log-
 | `--resume` | Resume an active session from its persisted snapshot |
 | `--abort` | Rewind git to the baseline SHA and delete the session |
 | `--no-context-enrich` | Force files-only context (skip method-level enrichment) |
-| `--backend <pi\|opencode-cli>` | Agent backend: `pi` (in-process Pi SDK, default) or `opencode-cli` (legacy shell-out). See [ADR-0010](../adrs/0010-agent-agnostic-sdk-architecture.md). |
+| `--backend <opencode\|pi\|opencode-cli>` | Agent backend: `opencode` (SDK server, default), `pi` (in-process SDK, backup) or `opencode-cli` (legacy shell-out). See [ADR-0012](../adrs/0012-opencode-sdk-default-backend.md). |
 
 New sessions, resume, and abort flow through [`session.ts`](../../../src/cli/session.ts); each also materialises `.mcp.json` at start (`setupMcpConfig`) and runs guarded teardown on exit ([`session.ts#L26-L35`](../../../src/cli/session.ts#L26-L35)). `startNewSession` records the baseline SHA and hands control to `PipelineOrchestrator.run` ([`session.ts#L160-L250`](../../../src/cli/session.ts#L160-L250)). SIGINT once pauses after the current pass; twice force-exits ([`index.ts#L33-L60`](../../../src/cli/index.ts#L33-L60)).
 

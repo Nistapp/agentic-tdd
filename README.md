@@ -10,7 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.19-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-blue)](https://www.typescriptlang.org)
 
-> **Agent backend:** the pipeline runs pass agents **in-process** via the [Pi coding-agent SDK](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) by default; a legacy `opencode` CLI backend remains available via `--backend opencode-cli`. See [ADR-0010](docs/architecture/adrs/0010-agent-agnostic-sdk-architecture.md).
+> **Agent backend:** the pipeline drives the [opencode](https://opencode.ai) SDK backend by default — one `opencode serve` server per session entry with **real MCP**. The in-process [Pi coding-agent SDK](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) is an opt-in backup (`--backend pi`); `opencode-cli` is legacy. See [ADR-0012](docs/architecture/adrs/0012-opencode-sdk-default-backend.md).
 
 ---
 
@@ -160,16 +160,17 @@ Start at the [architecture index](docs/architecture/README.md).
 
 ### Prerequisites
 
-- **Node.js >= 22.19** and **npm** — required by `@earendil-works/pi-coding-agent` (ADR-0010)
-- The **Pi coding agent** with the `pi-mcp-adapter` extension — the default backend runs pass agents in-process via the Pi SDK, and needs the MCP adapter installed once per machine:
+- **Node.js >= 22.19** and **npm**
+- The **[opencode](https://opencode.ai) CLI** (>= 1.18.29) installed and on your `PATH` — the default backend boots one `opencode serve` server per session entry via the pinned `@opencode-ai/sdk` (1.18.30) with **real MCP**
+- An API key for one of the model providers — e.g. [OpenRouter](https://openrouter.ai), Claude, or OpenAI (the default shipped models route through OpenRouter)
+- A `git` repository in your working directory (each pass is committed as an atomic git commit)
+- `codebase-memory-mcp` (v0.10.8) installed locally and on your `PATH` (the gate resolves it via `which`, registers it as the `codebase-memory` MCP server, and proves a direct MCP round-trip before Pass 0)
+- *(backup `--backend pi` only)* the **Pi coding agent** with the `pi-mcp-adapter` extension, installed once per machine:
   ```bash
   pi install npm:pi-mcp-adapter
   ```
   (The harness shares your `~/.pi/agent` config home — credentials and extensions — and does **not** set `PI_CODING_AGENT_DIR`; see [ADR-0010 §10](docs/architecture/adrs/0010-agent-agnostic-sdk-architecture.md).)
-- An API key for one of the model providers — e.g. [OpenRouter](https://openrouter.ai), Claude, or OpenAI (the default shipped models route through OpenRouter)
-- A `git` repository in your working directory (each pass is committed as an atomic git commit)
-- `codebase-memory-mcp` installed locally and on your `PATH` (the harness resolves it per-platform and writes `.mcp.json` at pipeline start)
-- *(opencode-cli fallback only)* the [opencode CLI](https://opencode.ai) installed and on your `PATH` when using `--backend opencode-cli`
+- *(legacy `--backend opencode-cli` only)* the [opencode CLI](https://opencode.ai) and a machine-local `opencode.json`
 - (optional) a suitable AGENTS.md file for your project.
 
 ### 1. Install from npm (recommended)
@@ -257,7 +258,7 @@ agentic-tdd --feature-desc-file <spec_file> [options]
 | --no-context-enrich | Force files-only context mode (skip method-level enrichment) |
 | --resume | Resume an active Agentic TDD session |
 | --abort | Abort the active session and rewind Git history |
-| --backend <backend> | Agent backend: `pi` (in-process Pi SDK, default) or `opencode-cli` (legacy CLI shell-out) |
+| --backend <backend> | Agent backend: `opencode` (SDK server, default), `pi` (in-process SDK, backup) or `opencode-cli` (legacy CLI shell-out) |
 | -h, --help | display help for command |
 
 
@@ -278,7 +279,7 @@ touch .agentic-tdd/config.json
 
 > **npm / npx users:** the bundled default template ships *inside* the installed package (not in your working directory), so there is no file to copy — create the file with your overrides as shown above. Source builds can start from the repo-root template with `cp config.default.json .agentic-tdd/config.json`.
 
-`config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to a canonical `provider/model` string (backend-agnostic — consumed by both the Pi and opencode-cli backends):
+`config.json` is a sectioned, JSONC file (comments allowed). Its `agents.models` section maps each agent — by its full name from `src/core/types.ts` (e.g. `pass-0-design-agent`) — to a canonical `provider/model` string (backend-agnostic — consumed by the opencode, Pi and opencode-cli backends):
 
 ```jsonc
 {
