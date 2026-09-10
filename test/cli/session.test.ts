@@ -393,3 +393,81 @@ describe('mandatory indexer gate at session entry points', () => {
     expect(di.createPipelineServices).toHaveBeenCalledTimes(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Guaranteed server teardown (gate-owned opencode server)
+// ---------------------------------------------------------------------------
+
+describe('server teardown at session entry points', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+
+  function stubServer() {
+    return {
+      baseUrl: 'http://127.0.0.1:4321',
+      isAlive: vi.fn(async () => true),
+      close: vi.fn(async () => undefined),
+    };
+  }
+
+  beforeEach(() => {
+    di.createPipelineServices.mockClear();
+    di.createPipelineServices.mockReturnValue({
+      orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
+    });
+    gate.ensureIndexerAccess.mockClear();
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
+      (code?: number | string | null | undefined) => {
+        if (code === 0) return undefined as never;
+        throw new Error('process.exit called');
+      },
+    );
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  it('hands the gate server to the DI container and closes it after success', async () => {
+    const handle = stubServer();
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle });
+    const fs = stubFs();
+    const git = stubGit({
+      createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
+      getCurrentCommitSha: vi.fn().mockResolvedValue('abc123'),
+    });
+    const stateStore = stubStateStore();
+
+    await startNewSession(validOptions, stateStore, fs, git, new TerminalRenderer(consoleWriter), '0.1.0');
+
+    expect(di.createPipelineServices).toHaveBeenCalledWith(
+      expect.objectContaining({ agentServer: handle }),
+    );
+    expect(handle.close).toHaveBeenCalledTimes(1);
+    const closeOrder = handle.close.mock.invocationCallOrder[0]!;
+    const exitOrder = exitSpy.mock.invocationCallOrder[0]!;
+    expect(closeOrder).toBeLessThan(exitOrder);
+  });
+
+  it('closes the server when the orchestrator throws', async () => {
+    const handle = stubServer();
+    gate.ensureIndexerAccess.mockResolvedValue({ ok: true, server: handle });
+    di.createPipelineServices.mockReturnValue({
+      orchestrator: { run: vi.fn().mockRejectedValue(new Error('pass exploded')) },
+    });
+    const fs = stubFs();
+    const git = stubGit({
+      createFeatureBranch: vi.fn().mockResolvedValue({ kind: 'created', branch: 'feat/pay-404' } as const),
+      getCurrentCommitSha: vi.fn().mockResolvedValue('abc123'),
+    });
+    const stateStore = stubStateStore();
+    const renderer = new TerminalRenderer(consoleWriter);
+    const fatalSpy = vi.spyOn(renderer, 'fatal');
+
+    await expect(
+      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
+    ).rejects.toThrow('process.exit called');
+
+    expect(handle.close).toHaveBeenCalledTimes(1);
+    expect(fatalSpy).toHaveBeenCalledWith('pass exploded');
+  });
+});

@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { runLiveIndexerProbe, runStaticIndexerChecks, resolveIndexerBinary } from '../../src/infrastructure/indexer-probe.js';
+import { runLiveIndexerProbe, runStaticIndexerChecks, resolveIndexerBinary, runOpencodeStaticChecks, runOpencodeMcpRoundTrip } from '../../src/infrastructure/indexer-probe.js';
 import { INDEXER_TOOLS } from '../../src/infrastructure/agent-runners/pi-sdk-runner.js';
 import type { IFileSystem, ILogger } from '../../src/core/interfaces.js';
-import type { PiSdkLike, PiSessionLike } from '../../src/infrastructure/indexer-probe.js';
+import type { McpClientLike, McpSdkLike, PiSdkLike, PiSessionLike } from '../../src/infrastructure/indexer-probe.js';
 import type { ProcessRunner } from '../../src/infrastructure/indexer-client.js';
 
 // ---------------------------------------------------------------------------
@@ -357,6 +357,120 @@ describe('runLiveIndexerProbe', () => {
       timeoutMs: 50,
     });
 
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('probe_timeout');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// opencode-path probes (G2 static + G5 LLM-free MCP round-trip)
+// ---------------------------------------------------------------------------
+
+describe('runOpencodeStaticChecks', () => {
+  const base = {
+    logger: new StubLogger(),
+    binary: '/bin/codebase-memory-mcp',
+    isExecutable: async () => true,
+    resolveOpencodeBinary: async () => '/usr/bin/opencode',
+    getOpencodeVersion: async () => '1.18.29',
+  };
+
+  it('fails when the indexer binary is missing', async () => {
+    const result = await runOpencodeStaticChecks({ ...base, binary: null });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('binary_missing');
+  });
+
+  it('fails when the indexer binary is not executable', async () => {
+    const result = await runOpencodeStaticChecks({ ...base, isExecutable: async () => false });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('binary_not_executable');
+  });
+
+  it('fails with opencode_missing when the opencode binary is absent', async () => {
+    const result = await runOpencodeStaticChecks({ ...base, resolveOpencodeBinary: async () => null });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.failure.kind).toBe('opencode_missing');
+      expect(result.failure.message).toMatch(/opencode/);
+    }
+  });
+
+  it('passes and records the opencode version', async () => {
+    const result = await runOpencodeStaticChecks(base);
+    expect(result).toEqual({
+      ok: true,
+      binary: '/bin/codebase-memory-mcp',
+      opencodeVersion: '1.18.29',
+    });
+  });
+});
+
+function makeMcpSdk(overrides: {
+  tools?: Array<{ name: string }>;
+  callIsError?: boolean;
+  connectError?: unknown;
+  hangConnect?: boolean;
+} = {}): { sdk: McpSdkLike; client: McpClientLike } {
+  const client: McpClientLike = {
+    connect: vi.fn(async () => {
+      if (overrides.hangConnect) await new Promise((resolve) => setTimeout(resolve, 5000));
+      if (overrides.connectError !== undefined) throw overrides.connectError;
+    }),
+    listTools: vi.fn(async () => ({
+      tools:
+        overrides.tools ?? [
+          { name: 'codebase-memory_search_graph' },
+          { name: 'codebase-memory_get_code_snippet' },
+          { name: 'codebase-memory_index_repository' },
+        ],
+    })),
+    callTool: vi.fn(async () => ({ isError: overrides.callIsError ?? false })),
+    close: vi.fn(async () => undefined),
+  };
+  return {
+    sdk: { createClient: () => client, createTransport: () => ({}) },
+    client,
+  };
+}
+
+describe('runOpencodeMcpRoundTrip', () => {
+  it('passes when core tools are listed and list_projects succeeds', async () => {
+    const { sdk, client } = makeMcpSdk();
+    const result = await runOpencodeMcpRoundTrip({ binary: '/bin/cbm', loadMcpSdk: async () => sdk });
+    expect(result.ok).toBe(true);
+    expect(client.callTool).toHaveBeenCalledWith({ name: 'list_projects', arguments: {} });
+    expect(client.close).toHaveBeenCalled();
+  });
+
+  it('fails when a core tool is missing', async () => {
+    const { sdk } = makeMcpSdk({ tools: [{ name: 'codebase-memory_search_graph' }] });
+    const result = await runOpencodeMcpRoundTrip({ binary: '/bin/cbm', loadMcpSdk: async () => sdk });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('mcp_roundtrip_failed');
+  });
+
+  it('fails when list_projects reports isError', async () => {
+    const { sdk } = makeMcpSdk({ callIsError: true });
+    const result = await runOpencodeMcpRoundTrip({ binary: '/bin/cbm', loadMcpSdk: async () => sdk });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('mcp_roundtrip_failed');
+  });
+
+  it('fails when the transport cannot connect', async () => {
+    const { sdk } = makeMcpSdk({ connectError: new Error('spawn failed') });
+    const result = await runOpencodeMcpRoundTrip({ binary: '/bin/cbm', loadMcpSdk: async () => sdk });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.failure.kind).toBe('mcp_roundtrip_failed');
+  });
+
+  it('times out when the round-trip exceeds the budget', async () => {
+    const { sdk } = makeMcpSdk({ hangConnect: true });
+    const result = await runOpencodeMcpRoundTrip({
+      binary: '/bin/cbm',
+      loadMcpSdk: async () => sdk,
+      timeoutMs: 50,
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.kind).toBe('probe_timeout');
   });

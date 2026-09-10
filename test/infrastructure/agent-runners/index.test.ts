@@ -3,7 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createAgentRunner, CreateAgentRunnerDeps } from '../../../src/infrastructure/agent-runners/index.js';
 import { PiSdkRunner } from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
 import { OpenCodeCliRunner } from '../../../src/infrastructure/agent-runners/opencode-cli-runner.js';
-import type { IFileSystem, ILogger, IOpencodeSpawner, PipelineConfig } from '../../../src/core/interfaces.js';
+import { OpencodeSdkRunner } from '../../../src/infrastructure/agent-runners/opencode-sdk-runner.js';
+import type { IAgentServerHandle, IFileSystem, ILogger, IOpencodeSpawner, PipelineConfig } from '../../../src/core/interfaces.js';
 
 // ---------------------------------------------------------------------------
 // Mock the Pi SDK module boundary — PiSdkRunner constructor triggers lazy
@@ -45,11 +46,30 @@ function makeDeps(overrides?: Partial<CreateAgentRunnerDeps>): CreateAgentRunner
     spawn: vi.fn<() => Promise<string>>(() => Promise.resolve('ok')),
   };
 
-  return { fs, logger, config, cmdRunner, ...overrides };
+  const agentServer: IAgentServerHandle = {
+    baseUrl: 'http://127.0.0.1:4096',
+    isAlive: vi.fn(async () => true),
+    close: vi.fn(async () => undefined),
+  };
+
+  return { fs, logger, config, cmdRunner, agentServer, ...overrides };
 }
 
 // ---------------------------------------------------------------------------
 describe('createAgentRunner', () => {
+  it('returns an OpencodeSdkRunner instance for backend "opencode"', () => {
+    const deps = makeDeps();
+    const runner = createAgentRunner('opencode', deps);
+    expect(runner).toBeInstanceOf(OpencodeSdkRunner);
+  });
+
+  it('throws when opencode backend is requested without a server handle', () => {
+    const deps = makeDeps({ agentServer: undefined });
+    expect(() => createAgentRunner('opencode', deps)).toThrow(
+      'agentServer is required for opencode backend',
+    );
+  });
+
   it('returns a PiSdkRunner instance for backend "pi"', () => {
     const deps = makeDeps();
     const runner = createAgentRunner('pi', deps);

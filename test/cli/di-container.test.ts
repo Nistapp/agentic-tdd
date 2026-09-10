@@ -1,9 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPipelineServices, buildPipelineConfig } from '../../src/cli/di-container.js';
-import type { IFileSystem, IGitService } from '../../src/core/interfaces.js';
+import type { IAgentServerHandle, IFileSystem, IGitService } from '../../src/core/interfaces.js';
 import type { PipelineContext } from '../../src/core/types.js';
 import { TerminalRenderer } from '../../src/cli/terminal-renderer.js';
 import { PipelineOrchestrator } from '../../src/core/orchestrator.js';
+
+const stubAgentServer: IAgentServerHandle = {
+  baseUrl: 'http://127.0.0.1:4096',
+  isAlive: vi.fn(async () => true),
+  close: vi.fn(async () => undefined),
+};
 
 function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
   return {
@@ -58,6 +64,7 @@ describe('createPipelineServices', () => {
       git: mockGit,
       renderer,
       version: '1.0.0',
+      agentServer: stubAgentServer,
     });
     expect(services).toHaveProperty('orchestrator');
   });
@@ -71,6 +78,7 @@ describe('createPipelineServices', () => {
       git: mockGit,
       renderer,
       version: '1.0.0',
+      agentServer: stubAgentServer,
     });
     expect(orchestrator).toBeInstanceOf(PipelineOrchestrator);
   });
@@ -84,8 +92,31 @@ describe('createPipelineServices', () => {
       git: mockGit,
       renderer,
       version: '1.0.0',
+      agentServer: stubAgentServer,
     });
     expect(typeof orchestrator.run).toBe('function');
+  });
+
+  it('defaults to the opencode backend and requires a server handle', () => {
+    const renderer = new TerminalRenderer();
+    const ctx = makeCtx();
+    expect(() =>
+      createPipelineServices({ ctx, fs: mockFs, git: mockGit, renderer, version: '1.0.0' }),
+    ).toThrow('agentServer is required for opencode backend');
+  });
+
+  it('still constructs the pi backup backend without a server handle', () => {
+    const renderer = new TerminalRenderer();
+    const ctx = makeCtx();
+    const { orchestrator } = createPipelineServices({
+      ctx,
+      fs: mockFs,
+      git: mockGit,
+      renderer,
+      version: '1.0.0',
+      backend: 'pi',
+    });
+    expect(orchestrator).toBeInstanceOf(PipelineOrchestrator);
   });
 });
 

@@ -8,6 +8,8 @@ const probeMocks = vi.hoisted(() => ({
   resolveIndexerBinary: vi.fn(),
   runStaticIndexerChecks: vi.fn(),
   runLiveIndexerProbe: vi.fn(),
+  runOpencodeStaticChecks: vi.fn(),
+  runOpencodeMcpRoundTrip: vi.fn(),
   defaultIsExecutable: vi.fn(),
 }));
 
@@ -15,15 +17,34 @@ const clientMocks = vi.hoisted(() => ({
   ensureIndexed: vi.fn(),
 }));
 
+const serverMocks = vi.hoisted(() => ({
+  startOpencodeServer: vi.fn(),
+  OpencodeServerError: class OpencodeServerError extends Error {
+    readonly kind: string;
+    constructor(kind: string, message: string) {
+      super(message);
+      this.name = 'OpencodeServerError';
+      this.kind = kind;
+    }
+  },
+}));
+
 vi.mock('../../src/infrastructure/indexer-probe.js', () => ({
   resolveIndexerBinary: probeMocks.resolveIndexerBinary,
   runStaticIndexerChecks: probeMocks.runStaticIndexerChecks,
   runLiveIndexerProbe: probeMocks.runLiveIndexerProbe,
+  runOpencodeStaticChecks: probeMocks.runOpencodeStaticChecks,
+  runOpencodeMcpRoundTrip: probeMocks.runOpencodeMcpRoundTrip,
   defaultIsExecutable: probeMocks.defaultIsExecutable,
 }));
 
 vi.mock('../../src/infrastructure/indexer-client.js', () => ({
   ensureIndexed: clientMocks.ensureIndexed,
+}));
+
+vi.mock('../../src/infrastructure/opencode-server.js', () => ({
+  startOpencodeServer: serverMocks.startOpencodeServer,
+  OpencodeServerError: serverMocks.OpencodeServerError,
 }));
 
 class StubLogger implements ILogger {
@@ -81,8 +102,33 @@ beforeEach(() => {
   probeMocks.resolveIndexerBinary.mockResolvedValue('/bin/codebase-memory-mcp');
   probeMocks.runStaticIndexerChecks.mockResolvedValue(okStatic());
   probeMocks.runLiveIndexerProbe.mockResolvedValue({ ok: true });
+  probeMocks.runOpencodeStaticChecks.mockResolvedValue({
+    ok: true,
+    binary: '/bin/codebase-memory-mcp',
+    opencodeVersion: '1.18.29',
+  });
+  probeMocks.runOpencodeMcpRoundTrip.mockResolvedValue({ ok: true });
   clientMocks.ensureIndexed.mockResolvedValue({ kind: 'fresh', project: 'repo-a' });
+  serverMocks.startOpencodeServer.mockResolvedValue(stubServer());
 });
+
+function stubServer() {
+  return {
+    baseUrl: 'http://127.0.0.1:4321',
+    isAlive: vi.fn(async () => true),
+    close: vi.fn(async () => undefined),
+  };
+}
+
+const opencodeDeps = {
+  fs: stubFs(),
+  git: stubGit(),
+  logger: new StubLogger(),
+  backend: 'opencode',
+  workDir: '/proj',
+  agentsDir: '/agents',
+  parseFrontmatter: async () => ({ frontmatter: { model: 'openrouter/x' }, body: '<body/>' }),
+};
 
 describe('ensureIndexerAccess', () => {
   const baseDeps = {
@@ -158,5 +204,83 @@ describe('ensureIndexerAccess', () => {
     expect(clientMocks.ensureIndexed).toHaveBeenCalledWith(
       expect.objectContaining({ currentHeadSha: undefined }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// opencode backend (default) — gate owns the server
+// ---------------------------------------------------------------------------
+
+describe('ensureIndexerAccess — opencode backend', () => {
+  it('defaults to the opencode backend when none is supplied and returns a server handle', async () => {
+    const result = await ensureIndexerAccess({ ...opencodeDeps, backend: undefined });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.server).toBeDefined();
+      expect(result.server?.baseUrl).toBe('http://127.0.0.1:4321');
+    }
+    expect(probeMocks.runOpencodeStaticChecks).toHaveBeenCalled();
+    expect(probeMocks.runStaticIndexerChecks).not.toHaveBeenCalled();
+    expect(serverMocks.startOpencodeServer).toHaveBeenCalledTimes(1);
+    expect(probeMocks.runOpencodeMcpRoundTrip).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates an opencode static failure without starting the server', async () => {
+    probeMocks.runOpencodeStaticChecks.mockResolvedValue({
+      ok: false,
+      failure: { kind: 'opencode_missing', message: 'install opencode' },
+    });
+    const result = await ensureIndexerAccess(opencodeDeps);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain('opencode_missing');
+    expect(serverMocks.startOpencodeServer).not.toHaveBeenCalled();
+  });
+
+  it('maps a typed server boot failure to the gate message', async () => {
+    serverMocks.startOpencodeServer.mockRejectedValue(
+      new serverMocks.OpencodeServerError('opencode_boot_failed', 'port 4321 in use'),
+    );
+    const result = await ensureIndexerAccess(opencodeDeps);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain('opencode_boot_failed');
+      expect(result.message).toContain('port 4321 in use');
+    }
+  });
+
+  it('closes the server when the MCP round-trip fails', async () => {
+    const handle = stubServer();
+    serverMocks.startOpencodeServer.mockResolvedValue(handle);
+    probeMocks.runOpencodeMcpRoundTrip.mockResolvedValue({
+      ok: false,
+      failure: { kind: 'mcp_roundtrip_failed', message: 'list_projects failed' },
+    });
+
+    const result = await ensureIndexerAccess(opencodeDeps);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain('mcp_roundtrip_failed');
+    expect(handle.close).toHaveBeenCalledTimes(1);
+    expect(clientMocks.ensureIndexed).not.toHaveBeenCalled();
+  });
+
+  it('closes the server when the index bootstrap fails after a successful probe', async () => {
+    const handle = stubServer();
+    serverMocks.startOpencodeServer.mockResolvedValue(handle);
+    clientMocks.ensureIndexed.mockResolvedValue({
+      kind: 'failed',
+      reason: 'timeout',
+      message: 'index_repository timed out',
+    });
+
+    const result = await ensureIndexerAccess(opencodeDeps);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toContain('timed out');
+    expect(handle.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an unknown backend', async () => {
+    const result = await ensureIndexerAccess({ ...opencodeDeps, backend: 'goose' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toMatch(/unknown backend/i);
   });
 });
