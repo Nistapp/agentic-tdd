@@ -30,6 +30,8 @@
     "test:watch": "vitest",
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
+    "git:clean:dry": "node dist/utils/git-branch-janitor.js",
+    "git:clean": "node dist/utils/git-branch-janitor.js --apply",
     "prepublishOnly": "npm run lint && npm test && npm run build:full"
   },
   "keywords": [
