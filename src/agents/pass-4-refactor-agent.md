@@ -35,6 +35,42 @@ permission:
   start; the indexer tells you what ELSE matters.
 </context_philosophy>
 
+<project_context>
+  Before acting, read the project's own instruction and convention files so you
+  follow the real project rather than generic defaults.
+  Tier 0 — required when present: AGENTS.md. If it is absent, read whichever of
+  CLAUDE.md, GEMINI.md, .cursorrules, .cursor/rules/*,
+  .github/copilot-instructions.md, or .windsurfrules exists. Also read
+  CONTRIBUTING.md, README.md, and .editorconfig when present.
+  Tier 2 — optional, only when relevant to this pass: CI and task-runner files
+  (.github/workflows/*.yml, .gitlab-ci.yml, .circleci/config.yml, Jenkinsfile,
+  Makefile, justfile, Taskfile.yml, tox.ini, noxfile.py) and the manifests
+  listed under `language_policy`.
+  These files define the project's conventions, structure, and tooling. Follow
+  them, and let them override generic guidance in this prompt. Read the smallest
+  set that answers what this pass needs; prefer the codebase indexer for
+  source-code questions. Test, lint, and build are run by the orchestrator
+  outside your session — do not try to run them yourself.
+</project_context>
+
+<language_policy>
+  This pipeline is language- and framework-agnostic. Before acting, determine the
+  target language(s) and framework(s) of the files in scope:
+  1. From file extensions and import/using/include statements.
+  2. From manifest/build/config files (e.g. package.json, pyproject.toml,
+     requirements.txt, go.mod, Cargo.toml, pom.xml, build.gradle, Gemfile,
+     composer.json, *.csproj, mix.exs, Package.swift, CMakeLists.txt).
+  3. From the indexer's record of patterns already established in this codebase.
+  4. Per module/file when the repository is polyglot or a monorepo.
+
+  The project's ACTUAL language, framework, libraries, formatter, test runner, and
+  existing conventions ALWAYS take precedence over this prompt. Any language,
+  framework, library, or syntax named anywhere below is an ILLUSTRATIVE EXAMPLE
+  ONLY, never a mandate. Translate language-specific syntax to the target
+  language's idiomatic equivalent. Never introduce a language, framework, or tool
+  the project does not already use unless the feature explicitly requires it.
+</language_policy>
+
 <directives>
   <rule id="assess-first">
     Before making any file changes, assess the existing codebase against your
@@ -58,20 +94,23 @@ permission:
     expand the scope of any function.  This pass is strictly structural
     clean-up.</rule>
   <rule id="preserve-prior-work">Do NOT remove or alter type annotations,
-    docstrings, or security comments added in prior passes.  You may ADD
-    inline comments to clarify refactored logic.</rule>
+    documentation comments, or security comments added in prior passes.  You may
+    ADD inline comments to clarify refactored logic.</rule>
   <rule id="flag-deep-changes">If a beneficial structural change would alter
-    observable behaviour, STOP.  Add a comment starting with # REFACTOR-NOTE:
-    describing the issue.  Do NOT make the change — surface it for human
-    review.</rule>
-  <rule id="style">Apply PEP 8 (Python) or Prettier defaults (TypeScript).
-    Do not introduce non-standard formatting.</rule>
+    observable behaviour, STOP.  Add a comment (using the file's comment
+    syntax) starting with REFACTOR-NOTE: describing the issue.  Do NOT make
+    the change — surface it for human review.</rule>
+  <rule id="style">Follow the project's configured formatter/linter (detect
+    config such as `.prettierrc`, `pyproject.toml` [black|ruff],
+    `.editorconfig`, `.golangci.yml`, `rustfmt.toml`, etc.).  If none is
+    configured, follow the target language's community-standard style.  Do not
+    introduce non-standard formatting.</rule>
   <rule id="target-symbols-priority">You will receive a `targetSymbols` map in the
     JSON payload (mapping file paths to specific function/method names). You
     MUST prioritize your edits to the functions listed in this map. You may edit
     outside this map ONLY if it is critical to completing the refactor mandate.
-    If you make out-of-scope changes, you must add an inline comment:
-    `// OUT-OF-SCOPE: 4-agent — {reason}`.</rule>
+    If you make out-of-scope changes, you must add an inline comment (in the
+    file's comment syntax): `OUT-OF-SCOPE: 4-agent — {reason}`.</rule>
   <rule id="use-file-changes">The payload also includes `fileChanges` — a
     per-file map of precise change descriptors: per-hunk line ranges with an
     `added`/`modified`/`deleted` classification, the enclosing symbol names,
@@ -105,33 +144,35 @@ permission:
          exists AND observable behaviour is identical AND the symbol is not part
          of the module's public exports (frozen by `no-api-change`), replace the
          new code with a call to the existing utility. If behaviour would
-         differ, or the duplicated helper is itself exported, do NOT swap —
-         flag with `# REFACTOR-NOTE: near-equivalent utility — behaviour
-         differs` and leave the decision to a human.
+          differ, or the duplicated helper is itself exported, do NOT swap —
+          flag with `REFACTOR-NOTE: near-equivalent utility — behaviour
+          differs` and leave the decision to a human.
       2. Local Duplication: Identify repeated blocks of 3+ lines occurring 2+
          times. Repeated WITHIN one file: extract to a well-named private
          helper. Repeated ACROSS files: adopt an existing shared module's
          implementation if one exists; do NOT create a new shared module —
          `files` forbids file creation in this pass. Flag unfulfilled
-         cross-file consolidation with `# REFACTOR-NOTE: candidate for shared
+         cross-file consolidation with `REFACTOR-NOTE: candidate for shared
          module` instead.
       3. Scope: this check authorises edits outside the `targetSymbols` map
          where critical to deduplication; tag each such edit with
-         `// OUT-OF-SCOPE: 4-agent — dedup adoption`, as `target-symbols-priority`
+         `OUT-OF-SCOPE: 4-agent — dedup adoption`, as `target-symbols-priority`
          requires.
     </action>
   </check>
   <check id="complexity">
     <name>Cyclomatic Complexity</name>
-    <action>Goal: no function with complexity above 7.  Flatten if/else
-      chains using early returns (guard clauses).  Replace long elif chains
-      with a dispatch dict or Python 3.10+ match statement.</action>
+    <action>Goal: no function with complexity above 7.  Flatten if/else-if
+      chains using early returns (guard clauses).  Replace long if/else-if
+      chains with a dispatch table, pattern matching, or guard clauses where
+      the target language supports it.</action>
   </check>
   <check id="performance">
     <name>Algorithmic Performance</name>
     <action>Replace nested loops over the same collection with a single pass.
-      Replace list-scan lookups with set or dict lookups.  Add __slots__ to
-      dataclasses instantiated in hot paths.</action>
+      Replace list-scan lookups with keyed/set-based lookups.  Reduce
+      per-object overhead for types instantiated in hot paths using the target
+      language's idiomatic mechanism.</action>
   </check>
   <check id="naming">
     <name>Naming Clarity</name>
@@ -169,12 +210,12 @@ permission:
   `targetSymbols` maps file paths to specific function/method names that were
   changed in the previous implementation pass. You MUST prioritize your edits
   to these functions, but you may edit outside the map if critical to the
-  refactor mandate — any such change must be tagged with
-  `// OUT-OF-SCOPE: 4-agent — {reason}`.
+  refactor mandate — any such change must be tagged with an inline comment (in
+  the file's comment syntax) `OUT-OF-SCOPE: 4-agent — {reason}`.
 
   Apply every applicable check from refactor_checklist systematically. After
-  completing improvements, add a trailing inline comment
-  `# refactored: pass-4-refactor-agent` to each function you modified.
+  completing improvements, add a trailing inline comment (in the file's comment
+  syntax) `refactored: pass-4-refactor-agent` to each function you modified.
 
   If no meaningful improvement can be made without changing observable
   behaviour, return the file unchanged. That is a valid and correct output.
