@@ -90,21 +90,23 @@ just reactively — at every significant stage of work.
 
 ### Quick-start recipes
 
+> Run `codebase-memory_list_projects()` to inspect active indexed project names, then supply the matching identifier as `<project>`.
+
 ```
 # High-level architecture
-codebase-memory_get_architecture(project="Nistapp-agentic-tdd", aspects=["all"])
+codebase-memory_get_architecture(project="<project>", aspects=["all"])
 
 # Find a symbol
-codebase-memory_search_graph(project="Nistapp-agentic-tdd", query="PipelineOrchestrator")
+codebase-memory_search_graph(project="<project>", query="PipelineOrchestrator")
 
 # Read a function body
-codebase-memory_get_code_snippet(project="Nistapp-agentic-tdd", node_id="<qualified_name>")
+codebase-memory_get_code_snippet(project="<project>", node_id="<qualified_name>")
 
 # Trace call path between two symbols
-codebase-memory_trace_path(project="Nistapp-agentic-tdd", from_node="...", to_node="...")
+codebase-memory_trace_path(project="<project>", from_node="...", to_node="...")
 
 # Check index freshness before starting work
-codebase-memory_detect_changes(project="Nistapp-agentic-tdd")
+codebase-memory_detect_changes(project="<project>")
 ```
 
 > [!TIP]
@@ -118,6 +120,23 @@ codebase-memory_detect_changes(project="Nistapp-agentic-tdd")
 2. **Use `get_code_snippet`** to read specific function/method bodies.
 3. **Use `view_file` with explicit line ranges** only when the snippet tool is insufficient.
 4. **Never open entire large files** without a compelling reason — query by symbol name instead.
+5. **`artefacts/` is prohibited.** The root `./artefacts/` folder holds exploratory,
+   unverified, and deprecated scratch documents (WIP plans, research drafts,
+   superseded notes). Agents MUST NOT crawl, glob, grep, or read files in
+   `artefacts/` automatically. Access is permitted **only** when the human user
+   explicitly passes a specific file path in their prompt. Do not treat its
+   contents as architectural source of truth or current requirements.
+   - Root `./artefacts/` = unofficial, stale scratchpad notes (prohibited).
+   - `specs/<feature>.{mmd,gherkin}` = active, verified specification artefacts
+     produced by the pipeline and attached by the orchestrator (allowed).
+   - The indexer additionally excludes `artefacts/`, `artifacts/`, and
+     `.agentic-tdd/` in every target repo via a merged `.cbmignore`
+     (`src/infrastructure/indexer-ignore.ts`), so these never appear in graph
+     or code-search results.
+   - **Coverage caveat:** this policy is enforced for `AGENTS.md`-aware agents
+     (opencode, Antigravity, Codex, etc.). It does **not** cover external tools
+     that ignore `AGENTS.md` (e.g. Cursor, Aider, Copilot); those require their
+     own ignore files and are out of scope here.
 
 ### Required workflow
 
@@ -247,6 +266,10 @@ each file's frontmatter + body and emits one `primary` opencode agent per pass
 - Do not skip the `codebase-memory-mcp` indexing step at the start of a session.
 - Do not run `opencode` or make real API calls in tests.
 - Do not modify `dist/` manually — it is generated.
+- Do not inspect, grep, glob, or read from `artefacts/` unless the user explicitly
+  passes a specific file path in their prompt (see §4 File Reading Policy).
+- Do not treat documents in `artefacts/` as architectural source of truth or
+  current requirements.
 - Never configure `permission: ask` on any generated opencode agent — it raises `permission.asked` and blocks forever headless.
 - Never leave the opencode server (or its run-scoped config directory) behind after a run — close the gate-owned handle on every path.
 

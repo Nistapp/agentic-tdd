@@ -8,7 +8,7 @@ Both human contributors and AI coding assistants **MUST** follow these rules whe
 
 Every piece of documentation written in this repository must uphold these five fundamental invariants:
 
-1. **Single Source of Truth:** `docs/` is the only valid directory for permanent, published documentation. The `artefacts/` directory is strictly for transient workspace items (in-progress plans, research, scratch notes).
+1. **Single Source of Truth:** `docs/` is the only valid directory for permanent, published documentation. The `artefacts/` directory is strictly for transient workspace items (in-progress plans, research, scratch notes) and is **prohibited for automatic agent reading/indexing** — see [`AGENTS.md` §4 File Reading Policy](../AGENTS.md).
 2. **Zero Specification Drift:** Code and architecture specs (`.mmd` Mermaid diagrams, `.gherkin` specs) must remain synchronized. When logic changes, documentation and specifications MUST update in the same change set.
 3. **Empirical Grounding:** Never document aspirational or planned features as existing facts. If a feature is deferred or planned, it MUST carry an explicit notice banner (e.g., `> [!NOTE] This feature is planned...`).
 4. **Symbol & Link Anchoring:** Always link code references directly to source files using explicit line ranges (e.g. `[orchestrator.ts#L37-L61](../src/core/orchestrator.ts#L37-L61)`).
@@ -94,6 +94,13 @@ Use this master index to determine exact file paths and naming conventions for a
 | **Document Templates** | `docs/templates/` | `<type>-template.md` | Reusable Markdown scaffolds for new docs |
 | **In-Progress Wiki Prep** | `artefacts/documentation-prep/wiki/` | *transient* | Working drafts & planning notes; promoted to `docs/architecture/` tracks once drafted |
 | **Transient Agent Work** | `artefacts/` | `Imp-Plan-*.md`, `Research-*.md` | Temporary scratch files & sub-agent plans |
+
+> **`artefacts/` is transient and off-limits to agents.** It is merged out of the
+> codebase-memory index in every target repo (`.cbmignore`, see
+> `src/infrastructure/indexer-ignore.ts`) and must not be crawled, globbed, or
+> read by agents unless the user passes an explicit file path. This policy is
+> enforced for `AGENTS.md`-aware agents; external tools that ignore `AGENTS.md`
+> are out of scope (see [`AGENTS.md` §4](../AGENTS.md)).
 
 ### 4.1 Standard Document Templates (`docs/templates/`)
 
@@ -221,3 +228,7 @@ Project domain terms MUST be capitalized consistently according to [`docs/archit
 | Per-run execution logs & debug output | `.agentic-tdd/logs/` |
 | Manually edited API signatures | `docs/api/` (auto-generated via TypeDoc) |
 | Hardcoded environment secrets or API keys | `.env` (never committed) |
+
+`artefacts/` is never an architectural source of truth and is excluded from the
+codebase index; see [`AGENTS.md` §4](../AGENTS.md).
+

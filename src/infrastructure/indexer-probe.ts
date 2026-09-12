@@ -1,7 +1,7 @@
 /**
  * Deterministic, one-per-session verification that the mandatory
  * `codebase-memory` indexer is usable by the pipeline (G2 static checks + G3
- * live probe in artefacts/Plan-Mandatory-indexer-gate.md).
+ * live probe).
  *
  * All failures are **typed result objects** (never throws) so callers and
  * tests can branch on the specific failed check. No real binary or pi session

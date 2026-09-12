@@ -16,8 +16,8 @@ type CreateAgentSessionOpts = NonNullable<Parameters<PiSdkModule['createAgentSes
 
 /**
  * Canonical tool names the `codebase-memory` MCP server registers when its
- * server entry carries `"directTools": true` (see `mcp.template.json` and
- * artefacts/Plan-Mandatory-indexer-gate.md §1.4). The `pi-mcp-adapter`
+ * server entry carries `"directTools": true` (see `mcp.template.json`).
+ * The `pi-mcp-adapter`
  * extension registers one individually-named tool per MCP tool under the
  * `mcp__<server>__<tool>` scheme.
  *

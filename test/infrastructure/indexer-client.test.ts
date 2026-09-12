@@ -173,6 +173,25 @@ describe('ensureIndexed', () => {
     expect(cli.indexRepository).not.toHaveBeenCalled();
   });
 
+  it('forces a reindex when force is true even when the index is fresh', async () => {
+    const cli = makeFakeCli();
+    cli.findProjectForRoot.mockResolvedValue(makeProject('repo-a', '/x/repo-a'));
+    cli.indexStatus.mockResolvedValue({ status: 'ready', headSha: 'abc123', project: 'repo-a' });
+    cli.indexRepository.mockResolvedValue(undefined);
+
+    const outcome = await ensureIndexed({
+      binary: '/bin/codebase-memory-mcp',
+      workDir: '/x/repo-a',
+      currentHeadSha: 'abc123',
+      force: true,
+      cli: cli as unknown as IndexerCli,
+    });
+
+    expect(cli.indexStatus).not.toHaveBeenCalled();
+    expect(cli.indexRepository).toHaveBeenCalledWith('/x/repo-a', 'full', expect.any(Number));
+    expect(outcome).toEqual({ kind: 'indexed', project: 'repo-a' });
+  });
+
   it('reindexes when the index is stale (headSha differs from current HEAD)', async () => {
     const cli = makeFakeCli();
     cli.findProjectForRoot.mockResolvedValue(makeProject('repo-a', '/x/repo-a'));

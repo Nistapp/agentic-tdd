@@ -3,9 +3,8 @@
  *
  * The indexer binary exposes a CLI mode (`codebase-memory-mcp cli --json
  * <tool> --flags`) that returns an MCP-style JSON envelope on stdout. The
- * harness uses it for the **mandatory index bootstrap** (G6 in
- * artefacts/Plan-Mandatory-indexer-gate.md): guarantee the target repo is
- * indexed before Pass 0 dispatches.
+ * harness uses it for the **mandatory index bootstrap** (G6): guarantee the
+ * target repo is indexed before Pass 0 dispatches.
  *
  * All process spawning goes through an injected {@link ProcessRunner} so unit
  * tests never touch the real binary.
@@ -289,6 +288,12 @@ export interface EnsureIndexedDeps {
   runner?: ProcessRunner;
   /** Current HEAD SHA of *workDir*; when provided a stale index is refreshed. */
   currentHeadSha?: string;
+  /**
+   * Force a full reindex even when the index is present and matches
+   * *currentHeadSha*. Used when the ignore rules changed (e.g. a new
+   * `.cbmignore`) so the exclusion set is guaranteed to take effect.
+   */
+  force?: boolean;
   /** `index_repository` mode (default `'full'`). */
   mode?: string;
   /** Timeout for a single CLI call (default 120s for indexing, 30s for checks). */
@@ -305,7 +310,8 @@ export interface EnsureIndexedDeps {
  * Decision ladder:
  *   1. Locate the project by matching `root_path` against *workDir*.
  *   2. If found and `index_status` reports `ready` with a `head_sha` equal to
- *      *currentHeadSha* → fresh, nothing to do.
+ *      *currentHeadSha* → fresh, nothing to do. When `force` is set the
+ *      freshness shortcut is skipped so changed ignore rules are applied.
  *   3. Otherwise run `index_repository --repo-path <workDir> --mode <mode>`
  *      (absent or stale). A crash/timeout/non-zero exit is a hard failure.
  *
@@ -322,6 +328,10 @@ export async function ensureIndexed(deps: EnsureIndexedDeps): Promise<BootstrapO
     const project = await cli.findProjectForRoot(deps.workDir, checkTimeout);
 
     if (project !== undefined) {
+      if (deps.force === true) {
+        // Ignore rules changed — reindex so the new exclusions take effect.
+        return await reindex(cli, deps, mode, indexTimeout);
+      }
       if (deps.currentHeadSha === undefined) {
         return { kind: 'already_indexed', project: project.name };
       }

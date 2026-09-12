@@ -28,6 +28,7 @@ session-*
 .DS_Store
 Thumbs.db
 
-# Other
-artefacts/*
-artifacts/*
+# Other — transient scratch docs & exploratory WIP notes (see AGENTS.md §4).
+# Directory ignores are shared by git, ripgrep, and language servers.
+artefacts/
+artifacts/

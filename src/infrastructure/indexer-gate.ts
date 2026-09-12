@@ -26,6 +26,7 @@ import {
   type BootstrapOutcome,
   type ProcessRunner,
 } from './indexer-client.js';
+import { ensureCbmIgnore } from './indexer-ignore.js';
 import {
   defaultIsExecutable,
   resolveIndexerBinary,
@@ -341,6 +342,10 @@ async function runBootstrap(
   binaryPath: string,
   workDir: string,
 ): Promise<BootstrapResult> {
+  // Guarantee the target repo excludes transient scratch/run state from the
+  // index. A changed ignore file forces a reindex so new exclusions apply.
+  const ignore = await ensureCbmIgnore({ fs: deps.fs, workDir, logger: deps.logger });
+
   let currentHeadSha = deps.currentHeadSha;
   if (currentHeadSha === undefined) {
     try {
@@ -355,6 +360,7 @@ async function runBootstrap(
     binary: binaryPath,
     workDir,
     currentHeadSha,
+    force: ignore.changed,
     runner: deps.runCli,
     mode: deps.indexMode,
     cliTimeoutMs: deps.cliTimeoutMs,

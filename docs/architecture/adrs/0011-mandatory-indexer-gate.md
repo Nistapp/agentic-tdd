@@ -2,7 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-09-09
-* **Supersedes:** the "optional accelerator" stance of `artefacts/Prompt-Ensuring-code-reuse.md` (Layer 1, H1–H3)
+* **Supersedes:** the earlier "optional accelerator" stance (Layer 1, H1–H3)
 
 ---
 

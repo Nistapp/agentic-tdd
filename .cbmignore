@@ -1,0 +1,11 @@
+# codebase-memory index exclusions.
+# The pipeline merges these entries into every target repo before indexing
+# (see src/infrastructure/indexer-ignore.ts). Do not remove without updating
+# AGENTS.md §4.
+
+# Transient scratch documents & exploratory WIP notes (never indexed).
+artefacts/
+artifacts/
+
+# Pipeline run state (logs, error logs, snapshots) — transient.
+.agentic-tdd/

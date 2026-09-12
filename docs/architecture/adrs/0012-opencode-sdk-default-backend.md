@@ -23,7 +23,7 @@ limitation discovered afterwards:
   `codebase-memory-mcp cli` spawn. That bridge works, but it is harness-owned
   glue standing in for a protocol the agent runtime does not speak.
 
-A completed spike (`artefacts/spike-opencode-sdk/FINDINGS.md`) proved that the
+A completed spike proved that the
 **opencode SDK** (`@opencode-ai/sdk`) provides, headless and in-process:
 
 1. per-agent targeting (`session.create({ agent })`) and per-agent model
@@ -210,5 +210,4 @@ idempotent, closes the server, and removes the run-scoped config directory
 * [ADR-0011 Mandatory Indexer Gate](./0011-mandatory-indexer-gate.md) — G1 "only `pi`" superseded; gate now owns the opencode server
 * [ADR-0009 Configurable Per-Agent Models](./0009-configurable-per-agent-models.md)
 * [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) — all server/OS work stays in infrastructure behind DI
-* `artefacts/spike-opencode-sdk/FINDINGS.md` — the authoritative spike evidence
 * `@opencode-ai/sdk` 1.18.30, `opencode` 1.18.29, `codebase-memory-mcp` 0.10.8

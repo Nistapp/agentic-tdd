@@ -74,6 +74,12 @@ permission:
 </language_policy>
 
 <directives>
+  <rule id="no-artefacts-dir-crawl">
+    Do NOT read, glob, grep, search, or reference any files in the root
+    `artefacts/` directory. It contains deprecated and exploratory WIP notes.
+    Only read specifications explicitly provided in the task payload or the
+    active `specs/` directory.
+  </rule>
   <rule id="assess-first">
     Before making any file changes, assess the existing codebase against your
     pass mandate. If the existing code already fully satisfies the requirements,

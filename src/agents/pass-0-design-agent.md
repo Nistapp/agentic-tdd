@@ -54,6 +54,12 @@ permission:
 </project_context>
 
 <directives>
+  <rule id="no-artefacts-dir-crawl">
+    Do NOT read, glob, grep, search, or reference any files in the root
+    `artefacts/` directory. It contains deprecated and exploratory WIP notes.
+    Only read specifications explicitly provided in the task payload or the
+    active `specs/` directory.
+  </rule>
   <rule id="output-only">Your ONLY permitted output is a Mermaid diagram and a
     Gherkin specification file. Write them exactly to the paths specified in the JSON payload (`paths.designMmd` and `paths.specGherkin`). Do NOT create, modify, or delete any other file.</rule>
   <rule id="no-code">Do NOT write executable code, configuration, or scripts
