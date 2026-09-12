@@ -105,6 +105,14 @@ export class OpenCodeCliRunner implements IAgentRunner {
         await this.#fs.mkdir(logDir);
       }
       const runId = request.runId ?? 'unknown';
+      const inputFile = join(logDir, `pass-${request.pass}-${runId}.input.log`);
+      const input = sanitizeLogPayload(
+        { pass: request.pass, runId: request.runId, prompt: request.prompt, artefacts: request.artefacts },
+        'debug',
+      );
+      await this.#fs.writeFile(inputFile, JSON.stringify(input, null, 2));
+      logger.debug({ inputFile }, 'Persisted agent input context to per-pass log');
+
       const logFile = join(logDir, `pass-${request.pass}-${runId}.log`);
       await this.#fs.writeFile(logFile, response);
       logger.debug({ logFile }, 'Persisted opencode output to per-pass log');

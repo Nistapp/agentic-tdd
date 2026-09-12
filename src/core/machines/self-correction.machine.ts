@@ -365,7 +365,7 @@ export function createSelfCorrectionMachine(services: {
 
           logger.info(`Entering Pass ${pass} [Attempt ${attempt}]`);
           logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
+            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
             'Dispatching prompt to agent',
           );
 

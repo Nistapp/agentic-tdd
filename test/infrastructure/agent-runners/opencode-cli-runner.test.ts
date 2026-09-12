@@ -314,6 +314,12 @@ describe('OpenCodeCliRunner', () => {
       const logCall = writeFileCalls.find(c => c[0].includes('pass-0-my-run-123.log'));
       expect(logCall).toBeTruthy();
       expect(logCall![1]).toBe('agent output');
+
+      const inputCall = writeFileCalls.find(c => c[0].endsWith('pass-0-my-run-123.input.log'));
+      expect(inputCall).toBeTruthy();
+      const inputPayload = JSON.parse(inputCall![1]) as { pass: PipelinePass; prompt: string };
+      expect(inputPayload.pass).toBe(PipelinePass.Design);
+      expect(inputPayload.prompt).toContain('test_feature');
     });
   });
 

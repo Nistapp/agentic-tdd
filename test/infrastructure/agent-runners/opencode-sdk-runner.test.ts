@@ -179,6 +179,13 @@ describe('OpencodeSdkRunner.execute', () => {
     expect(result.structured?.usage).toEqual({ inputTokens: 100, outputTokens: 20 });
     expect(deleteSession).toHaveBeenCalledWith({ sessionID: 'sess-1' });
     expect(fs.writeFile).toHaveBeenCalled();
+
+    const writeCalls = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
+    const inputCall = writeCalls.find(([p]) => p.endsWith('pass-0-run-1.input.log'));
+    expect(inputCall).toBeDefined();
+    const inputPayload = JSON.parse(inputCall![1]) as { pass: PipelinePass; prompt: string };
+    expect(inputPayload.pass).toBe(PipelinePass.Design);
+    expect(inputPayload.prompt).toBe('do the thing');
   });
 
   it('marks tool errors via isError', async () => {

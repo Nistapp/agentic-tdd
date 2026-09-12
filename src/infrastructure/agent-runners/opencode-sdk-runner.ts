@@ -302,6 +302,14 @@ export class OpencodeSdkRunner implements IAgentRunner {
         await this.#fs.mkdir(logDir);
       }
       const runId = request.runId ?? 'unknown';
+      const inputFile = join(logDir, `pass-${request.pass}-${runId}.input.log`);
+      const input = sanitizeLogPayload(
+        { pass: request.pass, runId: request.runId, prompt: request.prompt, artefacts: request.artefacts },
+        'debug',
+      );
+      await this.#fs.writeFile(inputFile, JSON.stringify(input, null, 2));
+      logger.debug({ inputFile }, 'Persisted agent input context to per-pass log');
+
       const logFile = join(logDir, `pass-${request.pass}-${runId}.log`);
       const sanitized = sanitizeLogPayload({ output: result.output, structured: result.structured }, this.#logger.level);
       await this.#fs.writeFile(logFile, JSON.stringify(sanitized, null, 2));

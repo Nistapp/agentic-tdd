@@ -768,7 +768,7 @@ export function createPipelineMachine(services: {
           const built = contextProvider.build(ctx, ctx.currentPass);
           const prompt = getAgentContextPayload(ctx, built);
           logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
+            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
             'Dispatching prompt to Opencode',
           );
 
@@ -809,7 +809,7 @@ export function createPipelineMachine(services: {
           const built = contextProvider.build(ctx, pass);
           const prompt = getAgentContextPayload(ctx, built);
           logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, 'info') } },
+            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
             'Dispatching prompt to Opencode',
           );
 
