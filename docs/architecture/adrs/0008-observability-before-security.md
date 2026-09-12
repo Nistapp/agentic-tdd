@@ -51,7 +51,7 @@ Responsibilities under the new order:
 **Gating is unaffected by the swap.** Both passes remain guarded self-correction passes with an atomic commit ([`SELF_CORRECTION_PASSES`](../../../src/core/types.ts#L53-L59), [`GIT_COMMIT_PASSES`](../../../src/core/types.ts#L62-L71)), so each is independently verifiable and rollback-able via `git revert` ([ADR-0003](./0003-atomic-commits-per-pass.md)).
 
 > [!NOTE] CONTEXT_RULES and the file set
-> Both passes inherit the same implementation-file set from Refactor (`files.implementation: [Refactor]` in [`src/core/context-builder.ts#L46-L69`](../../../src/core/context-builder.ts#L46-L69)). Pass 6 reads the files **as they exist after Pass 5's commit**, so it physically sees the log statements — but its `targetSymbols`/`fileChanges` still derive from Refactor only, not Observability (open item O-1).
+> Both passes inherit the **chained** implementation-file set — Pass 5 gets `[CoreImplementation, Refactor]`, Pass 6 gets `[CoreImplementation, Refactor, Observability]` ([`src/core/context-builder.ts#L50-L81`](../../../src/core/context-builder.ts#L50-L81)). Pass 6 reads the files **as they exist after Pass 5's commit**, so it physically sees the log statements, and its `targetSymbols`/`fileChanges` now derive from CoreImplementation, Refactor **and** Observability (O-1 resolved — see [ADR-0013](./0013-context-rule-chaining.md)).
 
 ---
 
@@ -68,7 +68,7 @@ Responsibilities under the new order:
 ### Negative / Trade-offs
 
 * **Security now reviews a larger surface** — it must audit the added log statements in addition to the pre-existing code; both passes are additive and touch the same files, so line numbers shift between their change records (the drift-resistant anchor mechanism absorbs this — see the worked example in [6. Context Engineering § 3.1](../user-overview/06-context-and-token-savings.md#31-worked-example--a-real-session-state-file)).
-* **Imprecise change descriptors for Pass 5 hunks** — `CONTEXT_RULES` does not chain Observability → Security, so Pass 6's payload omits the precise `fileChanges` for the log statements Pass 5 added; the agent must locate them by reading (open item O-1).
+* **Precise change descriptors for Pass 5 hunks** — `CONTEXT_RULES` now chains Observability → Security, so Pass 6's payload includes the `fileChanges`/`targetSymbols` for the log statements Pass 5 added (O-1 resolved; see [ADR-0013](./0013-context-rule-chaining.md)). `fileChanges` remains latest-wins-per-file, so a file touched by both Refactor and Observability carries Observability's hunks; the drift-resistant anchors cover the rest.
 * **Unreviewed-log window is inherent** — the only statements Pass 6 cannot audit are ones added by Pass 6 itself (targeted security logging); these land under its own self-correction gate.
 * **Adjacent-specialist ordering cost** — the pipeline must run two additive passes back-to-back, slightly increasing total passes-to-PR; this is the accepted price for the accuracy gain.
 
@@ -78,7 +78,7 @@ Responsibilities under the new order:
 
 | # | Topic | What is missing |
 |---|---|---|
-| O-1 | CONTEXT_RULES chaining | Security's `files`/`target` lists Refactor only ([`context-builder.ts#L58-L69`](../../../src/core/context-builder.ts#L58-L69)); decide whether to add `Observability` so Pass 6 receives Pass 5's `targetSymbols`/`fileChanges` change descriptors. |
+| O-1 | CONTEXT_RULES chaining | **Resolved** — Security now chains CoreImplementation + Refactor + Observability, so Pass 6 receives Pass 5's `targetSymbols`/`fileChanges` ([ADR-0013](./0013-context-rule-chaining.md)). |
 | O-2 | Historical evidence of the old order | The original Security-before-Observability order predates this repository's history (types.ts references a retired Python `cli.py`); no code ever shipped with it here — verify against `git log` if an audit trail is needed. |
 | O-3 | Decision date & deciders | Date is estimated (2026-08-01); no decider GitHub handles are recorded. |
 

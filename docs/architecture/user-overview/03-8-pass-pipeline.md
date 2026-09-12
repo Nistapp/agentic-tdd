@@ -122,9 +122,9 @@ Compiled from the shipped agent files ([`src/agents/pass-0..7-*.md`](../../../sr
 | **2. Test Generation (Red Phase)** | `pass-2-test-generation-agent` | `openrouter/deepseek/deepseek-v4-pro` | Gherkin spec + Pass 1 contracts | **HITL** + tests must **fail** (confirms constraints) |
 | **3. Core Implementation (Green Phase)** | `pass-3-core-implementation-agent` | `openrouter/deepseek/deepseek-v4-flash` | `design.mmd` (binding contract) + tests + contracts | Test gate + **self-correction loop** |
 | **4. Refactor & Optimise** | `pass-4-refactor-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 3 output | Test gate + self-correction loop |
-| **5. Observability & Logging** | `pass-5-observability-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 4 output | Test gate + self-correction loop |
-| **6. Security Hardening** | `pass-6-security-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 5 output (incl. log statements) | Test gate + self-correction loop; OWASP Top-10 review |
-| **7. Documentation** | `pass-7-documentation-agent` | `openrouter/deepseek/deepseek-v4-flash` | Changed symbols from Passes 3–6 (`targetSymbols`) + their files | Test gate; `@see` links to `.mmd` on the targeted symbols; accurate existing docstrings and all inline comments untouched |
+| **5. Observability & Logging** | `pass-5-observability-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 3–4 output + their changed symbols | Test gate + self-correction loop |
+| **6. Security Hardening** | `pass-6-security-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 3–5 output (incl. Pass 5 log statements) + their changed symbols | Test gate + self-correction loop; OWASP Top-10 review |
+| **7. Documentation** | `pass-7-documentation-agent` | `openrouter/deepseek/deepseek-v4-flash` | Changed symbols from Passes 1, 3–6 (`targetSymbols`) + their files | Test gate; `@see` links to `.mmd` on the targeted symbols; accurate existing docstrings and all inline comments untouched |
 
 **Shared guardrails (all passes):** read/edit/glob/grep allowed; `bash`, `webfetch`, `task` denied (no arbitrary execution, no network, no sub-agents). See [5. Agent Prompt System & Routing](05-agent-prompt-system.md).
 

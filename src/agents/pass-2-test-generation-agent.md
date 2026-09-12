@@ -87,10 +87,6 @@ permission:
     Do NOT use exploration tools to invent new out-of-scope work if the primary
     mandate is met. If work is needed, do NOT output SKIP — proceed normally.
   </rule>
-  <rule id="use-file-changes">Use the `fileChanges` metadata provided in the JSON
-    payload to accurately locate upstream changes. Rely on the `range` and `anchor`
-    snippets, as well as the `commitHash` to cross-reference lines instead of
-    searching blindly.</rule>
   <rule id="test-files">Create the necessary test files to cover the contracts.</rule>
   <rule id="no-source-edit">Do NOT modify, overwrite, or alter any implementation source file in any way.</rule>
   <rule id="spec-traceability">Each test case must map to a named Scenario in
@@ -154,7 +150,7 @@ permission:
 
   Read the Mermaid diagram and Gherkin specification from the paths in
   `paths.designMmd` and `paths.specGherkin`. Read
-  the source files listed in `contextFiles.implementation` to understand the
+  the source files listed in `contextFiles.contracts` to understand the
   type contracts from Pass 1.
 
   Create test files to cover the contracts. At this stage the tests are expected

@@ -40,16 +40,16 @@ IAgentRunner.execute()                  → PiSdkRunner (in-process session) | O
 | 0 Design | — | — | — | — |
 | 1 Contracts | — | — | — | — |
 | 2 TestGeneration | Pass 1 | — | — | — |
-| 3 CoreImplementation | Pass 1 | Pass 2 | — | — |
+| 3 CoreImplementation | Pass 1 | Pass 2 | — | Pass 1, Pass 2 |
 | 4 Refactor | — | Pass 2 | Pass 3 | Pass 3 |
-| 5 Observability | — | — | Pass 4 | Pass 4 |
-| 6 Security | — | — | Pass 4 | Pass 4 |
-| 7 Documentation | — | — | Pass 3,4,5,6 | Pass 3,4,5,6 |
+| 5 Observability | — | — | Pass 3, Pass 4 | Pass 3, Pass 4 |
+| 6 Security | — | — | Pass 3, Pass 4, Pass 5 | Pass 3, Pass 4, Pass 5 |
+| 7 Documentation | Pass 1 | — | Pass 3,4,5,6 | Pass 1, Pass 3,4,5,6 |
 
-Rules are evaluated against `ctx.history[pass].filesTouched` to collect concrete file lists. This is the **"N's output = N+1's read-only context"** invariant, made declarative.
+Rules are evaluated against `ctx.history[pass].filesTouched` to collect concrete file lists. This is the **"N's output = N+1's read-only context"** invariant, made declarative. Additive passes **chain the full implementation history** (each pass retains its upstream passes' files and symbols) rather than inheriting only the immediately preceding pass — so a skipped or partial Refactor can never blank out Pass 5/6 context, and Security inherits Observability's `targetSymbols`/`fileChanges`.
 
 > [!NOTE] Pass 7 merges a wider target set
-> Documentation (Pass 7) attaches the implementation files from Passes 3–6 **and** merges their `targetSymbols`/`fileChanges`. It is the one pass that treats the merged symbol map as a **hard scope boundary**: it documents exactly those changed symbols and no others.
+> Documentation (Pass 7) attaches the contract files from Pass 1 and the implementation files from Passes 3–6, **and** merges their `targetSymbols`/`fileChanges`. It is the one pass that treats the merged symbol map as a **hard scope boundary**: it documents exactly those changed symbols and no others.
 
 ---
 
@@ -80,9 +80,8 @@ Serialises the JSON prompt passed to the agent ([`src/core/runners/shared.ts#L5-
 ```json
 {
   "featureName": "...",
-  "featureDescription": "...",
   "pipelineVersion": "...",
-  "paths": { "designMmd": "...", "specGherkin": "...", "errorLog": "..." },
+  "paths": { "designMmd": "...", "specGherkin": "...", "specFile": "...", "errorLog": "..." },
   "contextFiles": { "contracts": [], "tests": [], "implementation": [] },
   "targetSymbols": {},
   "fileChanges": {},
@@ -93,7 +92,7 @@ Serialises the JSON prompt passed to the agent ([`src/core/runners/shared.ts#L5-
 }
 ```
 
-On self-correction cycles (attempt ≥ 2), `meta.attemptNumber` is set and the error log path is attached so the agent can diagnose the failure.
+The feature specification is passed **by path** (`paths.specFile`) and read by the agent in-session — it is never inlined as raw text, keeping the harness-controlled prompt bounded and cache-stable. On self-correction cycles (attempt ≥ 2), `meta.attemptNumber` is set and the error log path is attached so the agent can diagnose the failure.
 
 `meta.indexer` carries the **harness-owned** indexer status set by the CLI after the mandatory indexer gate passes (`ctx.indexerStatus`, see [ADR-0011](../adrs/0011-mandatory-indexer-gate.md)). Because the gate is mandatory, a successful run always reports `available: true` / `indexed: true`; prompts rely on this field instead of probing their environment. When `ctx.indexerStatus` is unset (e.g. a persisted snapshot predating the field), it defaults to `{ available: false, indexed: false }`.
 

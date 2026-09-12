@@ -29,7 +29,11 @@ export const CONTEXT_RULES: Record<
       tests: [PipelinePass.TestGeneration],
       implementation: [],
     },
-    target: { contracts: [], tests: [], implementation: [] },
+    target: {
+      contracts: [PipelinePass.Contracts],
+      tests: [PipelinePass.TestGeneration],
+      implementation: [],
+    },
   },
   [PipelinePass.Refactor]: {
     files: {
@@ -47,29 +51,37 @@ export const CONTEXT_RULES: Record<
     files: {
       contracts: [],
       tests: [],
-      implementation: [PipelinePass.Refactor],
+      implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor],
     },
     target: {
       contracts: [],
       tests: [],
-      implementation: [PipelinePass.Refactor],
+      implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor],
     },
   },
   [PipelinePass.Security]: {
     files: {
       contracts: [],
       tests: [],
-      implementation: [PipelinePass.Refactor],
+      implementation: [
+        PipelinePass.CoreImplementation,
+        PipelinePass.Refactor,
+        PipelinePass.Observability,
+      ],
     },
     target: {
       contracts: [],
       tests: [],
-      implementation: [PipelinePass.Refactor],
+      implementation: [
+        PipelinePass.CoreImplementation,
+        PipelinePass.Refactor,
+        PipelinePass.Observability,
+      ],
     },
   },
   [PipelinePass.Documentation]: {
     files: {
-      contracts: [],
+      contracts: [PipelinePass.Contracts],
       tests: [],
       implementation: [
         PipelinePass.CoreImplementation,
@@ -79,7 +91,7 @@ export const CONTEXT_RULES: Record<
       ],
     },
     target: {
-      contracts: [],
+      contracts: [PipelinePass.Contracts],
       tests: [],
       implementation: [
         PipelinePass.CoreImplementation,

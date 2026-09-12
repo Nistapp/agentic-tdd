@@ -74,7 +74,7 @@ describe('buildContextFiles', () => {
     expect(result.contracts).toEqual([]);
   });
 
-  it('returns only implementation from Refactor for Pass 5 (Observability) — AD-5', () => {
+  it('returns implementation from CoreImplementation and Refactor for Pass 5 (Observability)', () => {
     const ctx = makeContext({
       [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
       [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
@@ -86,16 +86,42 @@ describe('buildContextFiles', () => {
     expect(result.implementation).toEqual(['src/models/user.ts', 'src/utils/helper.ts']);
   });
 
-  it('returns only implementation from Refactor for Pass 6 (Security) — AD-5', () => {
+  it('returns implementation from CoreImplementation, Refactor and Observability for Pass 6 (Security)', () => {
     const ctx = makeContext({
       [PipelinePass.TestGeneration]: makePassHistory(['test/user.test.ts']),
       [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
       [PipelinePass.Refactor]: makePassHistory(['src/utils/helper.ts']),
+      [PipelinePass.Observability]: makePassHistory(['src/logging.ts']),
     });
     const result = buildContextFiles(ctx, PipelinePass.Security);
     expect(result.tests).toEqual([]);
     expect(result.contracts).toEqual([]);
-    expect(result.implementation).toEqual(['src/utils/helper.ts']);
+    expect(result.implementation).toEqual([
+      'src/models/user.ts',
+      'src/utils/helper.ts',
+      'src/logging.ts',
+    ]);
+  });
+
+  it('still returns CoreImplementation files for Pass 5 when Refactor is absent (skipped)', () => {
+    const ctx = makeContext({
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+    });
+    const result = buildContextFiles(ctx, PipelinePass.Observability);
+    expect(result.implementation).toEqual(['src/models/user.ts']);
+    expect(result.tests).toEqual([]);
+    expect(result.contracts).toEqual([]);
+  });
+
+  it('returns contract files alongside implementation for Pass 7 (Documentation)', () => {
+    const ctx = makeContext({
+      [PipelinePass.Contracts]: makePassHistory(['src/contracts/api.ts']),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+    });
+    const result = buildContextFiles(ctx, PipelinePass.Documentation);
+    expect(result.contracts).toEqual(['src/contracts/api.ts']);
+    expect(result.implementation).toEqual(['src/models/user.ts']);
+    expect(result.tests).toEqual([]);
   });
 
   it('returns implementation files from passes 3-6 for Pass 7 (Documentation)', () => {
@@ -160,8 +186,11 @@ describe('buildTargetPasses', () => {
     expect(buildTargetPasses(PipelinePass.TestGeneration)).toEqual([]);
   });
 
-  it('returns empty for Pass 3 (CoreImplementation)', () => {
-    expect(buildTargetPasses(PipelinePass.CoreImplementation)).toEqual([]);
+  it('returns contracts and tests for Pass 3 (CoreImplementation)', () => {
+    expect(buildTargetPasses(PipelinePass.CoreImplementation)).toEqual([
+      PipelinePass.Contracts,
+      PipelinePass.TestGeneration,
+    ]);
   });
 
   it('returns CoreImplementation for Pass 4 (Refactor)', () => {
@@ -170,20 +199,24 @@ describe('buildTargetPasses', () => {
     ]);
   });
 
-  it('returns Refactor for Pass 5 (Observability)', () => {
+  it('returns CoreImplementation and Refactor for Pass 5 (Observability)', () => {
     expect(buildTargetPasses(PipelinePass.Observability)).toEqual([
+      PipelinePass.CoreImplementation,
       PipelinePass.Refactor,
     ]);
   });
 
-  it('returns Refactor for Pass 6 (Security)', () => {
+  it('returns CoreImplementation, Refactor and Observability for Pass 6 (Security)', () => {
     expect(buildTargetPasses(PipelinePass.Security)).toEqual([
+      PipelinePass.CoreImplementation,
       PipelinePass.Refactor,
+      PipelinePass.Observability,
     ]);
   });
 
-  it('returns the symbol-bearing implementation passes for Pass 7 (Documentation)', () => {
+  it('returns contracts and the symbol-bearing implementation passes for Pass 7 (Documentation)', () => {
     expect(buildTargetPasses(PipelinePass.Documentation)).toEqual([
+      PipelinePass.Contracts,
       PipelinePass.CoreImplementation,
       PipelinePass.Refactor,
       PipelinePass.Observability,
@@ -249,14 +282,14 @@ describe('CONTEXT_RULES structural integrity', () => {
     }
   });
 
-  it('Documentation returns full implementation files and targets the symbol-bearing passes', () => {
+  it('Documentation returns contracts and full implementation files and targets the symbol-bearing passes', () => {
     const docRule = CONTEXT_RULES[PipelinePass.Documentation]!;
     expect(docRule.files.implementation).toContain(PipelinePass.CoreImplementation);
     expect(docRule.files.implementation).toContain(PipelinePass.Refactor);
     expect(docRule.files.implementation).toContain(PipelinePass.Observability);
     expect(docRule.files.implementation).toContain(PipelinePass.Security);
     expect(docRule.files.tests).toEqual([]);
-    expect(docRule.files.contracts).toEqual([]);
+    expect(docRule.files.contracts).toEqual([PipelinePass.Contracts]);
 
     const targetPasses = [
       ...docRule.target.contracts,
@@ -264,6 +297,7 @@ describe('CONTEXT_RULES structural integrity', () => {
       ...docRule.target.implementation,
     ];
     expect(targetPasses).toEqual([
+      PipelinePass.Contracts,
       PipelinePass.CoreImplementation,
       PipelinePass.Refactor,
       PipelinePass.Observability,

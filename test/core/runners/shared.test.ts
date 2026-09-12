@@ -17,6 +17,7 @@ function makeContext(overrides: Partial<PipelineContext> = {}): PipelineContext 
     designMmdPath: '/tmp/specs/design.mmd',
     specGherkinPath: '/tmp/specs/spec.gherkin',
     errorLogPath: '/tmp/specs/error.log',
+    specFileAbsPath: '/tmp/specs/feature.md',
     history: {},
     currentPass: PipelinePass.CoreImplementation,
     ...overrides,
@@ -64,6 +65,23 @@ describe('getAgentContextPayload', () => {
 
     expect(parsed.targetSymbols).toEqual({});
     expect(parsed.fileChanges).toEqual({});
+  });
+
+  it('passes the spec file path instead of inlining featureDescription', () => {
+    const ctx = makeContext({ featureDescription: 'FULL SPEC TEXT THAT MUST NOT BE INLINED' });
+    const parsed = JSON.parse(getAgentContextPayload(ctx)) as Record<string, unknown> & {
+      paths: Record<string, unknown>;
+    };
+
+    expect(parsed.featureDescription).toBeUndefined();
+    expect(parsed.paths.specFile).toBe('/tmp/specs/feature.md');
+  });
+
+  it('omits paths.specFile when ctx.specFileAbsPath is unset', () => {
+    const ctx = makeContext({ specFileAbsPath: undefined });
+    const parsed = JSON.parse(getAgentContextPayload(ctx)) as { paths: Record<string, unknown> };
+
+    expect(parsed.paths.specFile).toBeUndefined();
   });
 
   it('defaults meta.indexer to unavailable/unindexed when ctx.indexerStatus is unset', () => {

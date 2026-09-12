@@ -141,13 +141,14 @@ permission:
   symbol [EXISTING] or [NEW]. This discovery is mandated; it is not scope creep.
 
   You will receive a JSON payload containing `featureName`, `pipelineVersion`,
-  `paths` (with `designMmd` and `specGherkin` output paths), `contextFiles`
-  (source file paths to read), `targetSymbols` (always empty `{}` at this phase),
-  and `meta` (pipeline metadata).
+  `paths` (with `designMmd` and `specGherkin` output paths, and the input spec
+  file at `specFile`), `contextFiles` (source file paths to read),
+  `targetSymbols` (always empty `{}` at this phase), and `meta` (pipeline
+  metadata).
 
-  Read the feature requirements from the `featureDescription` field in the
-  payload. Design
-  the Mermaid diagram and Gherkin spec based on those requirements.
+  Read the feature requirements from the spec file at `paths.specFile` using your
+  read tool. Design the Mermaid diagram and Gherkin spec based on those
+  requirements.
 
   Write your outputs exactly to the paths specified in `paths.designMmd` and
   `paths.specGherkin`. Use those paths verbatim.

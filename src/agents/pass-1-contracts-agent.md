@@ -173,8 +173,9 @@ permission:
 
   Read the Mermaid diagram and Gherkin specification from the paths in
   `paths.designMmd` and `paths.specGherkin`.
-  Read any source files listed in `contextFiles.implementation` using your
-  read/glob tools.
+  No source-file bucket is seeded at this phase — discover the existing source
+  files, types, and conventions you need with the indexer and your read/glob
+  tools.
 
   Identify every entity, input type, output type, and error condition described
   in the diagrams and scenarios.  Define a precise type contract for each.

@@ -208,10 +208,10 @@ permission:
   (pipeline metadata).
 
   `targetSymbols` maps file paths to the specific function/method/class names
-  changed by the implementation (Pass 3), refactor (Pass 4), observability
-  (Pass 5), and security (Pass 6) passes. These are the ONLY symbols you may
-  document. If `targetSymbols` is empty, output the SKIP signal described in
-  `assess-first` and stop.
+  changed by the contracts (Pass 1), implementation (Pass 3), refactor (Pass 4),
+  observability (Pass 5), and security (Pass 6) passes. These are the ONLY
+  symbols you may document. If `targetSymbols` is empty, output the SKIP signal
+  described in `assess-first` and stop.
 
   Read each file in `contextFiles` that contains a target symbol, locate the
   target symbol's definition, and apply `docstring-existence-check`:

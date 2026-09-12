@@ -60,7 +60,7 @@ describe('StateContextProvider', () => {
     expect(result.targetSymbols).toEqual({});
   });
 
-  it('Pass 5 (Observability) merges targetSymbols from Refactor only', () => {
+  it('Pass 5 (Observability) merges targetSymbols from CoreImplementation and Refactor', () => {
     const ctx = makeContext({
       [PipelinePass.CoreImplementation]: makePassHistory(
         ['src/models/user.ts'],
@@ -81,12 +81,27 @@ describe('StateContextProvider', () => {
     expect(result.files.tests).toEqual([]);
 
     expect(result.targetSymbols).toEqual({
-      'src/models/user.ts': ['User.update'],
+      'src/models/user.ts': ['User', 'User.create', 'User.update'],
       'src/utils/helper.ts': ['formatDate'],
     });
   });
 
-  it('Pass 6 (Security) merges targetSymbols from Refactor only', () => {
+  it('Pass 5 (Observability) still receives CoreImplementation targets when Refactor is skipped', () => {
+    const ctx = makeContext({
+      [PipelinePass.CoreImplementation]: makePassHistory(
+        ['src/models/user.ts'],
+        { 'src/models/user.ts': ['User', 'User.create'] },
+      ),
+    });
+    const result = provider.build(ctx, PipelinePass.Observability);
+
+    expect(result.files.implementation).toEqual(['src/models/user.ts']);
+    expect(result.targetSymbols).toEqual({
+      'src/models/user.ts': ['User', 'User.create'],
+    });
+  });
+
+  it('Pass 6 (Security) merges targetSymbols from CoreImplementation, Refactor and Observability', () => {
     const ctx = makeContext({
       [PipelinePass.CoreImplementation]: makePassHistory(
         ['src/auth.ts'],
@@ -96,18 +111,29 @@ describe('StateContextProvider', () => {
         ['src/auth.ts', 'src/session.ts'],
         { 'src/auth.ts': ['Auth.verifyToken'], 'src/session.ts': ['Session.create'] },
       ),
+      [PipelinePass.Observability]: makePassHistory(
+        ['src/auth.ts'],
+        { 'src/auth.ts': ['Auth.logAttempt'] },
+      ),
     });
     const result = provider.build(ctx, PipelinePass.Security);
 
-    expect(result.files.implementation).toEqual(['src/auth.ts', 'src/session.ts']);
+    expect(result.files.implementation).toEqual([
+      'src/auth.ts',
+      'src/session.ts',
+    ]);
     expect(result.targetSymbols).toEqual({
-      'src/auth.ts': ['Auth.verifyToken'],
+      'src/auth.ts': ['Auth.logAttempt', 'Auth.login', 'Auth.verifyToken'],
       'src/session.ts': ['Session.create'],
     });
   });
 
-  it('Documentation returns full implementation files and merged target symbols', () => {
+  it('Documentation returns contract and implementation files and merged target symbols', () => {
     const ctx = makeContext({
+      [PipelinePass.Contracts]: makePassHistory(
+        ['src/contracts/api.ts'],
+        { 'src/contracts/api.ts': ['ApiPort'] },
+      ),
       [PipelinePass.CoreImplementation]: makePassHistory(
         ['src/models/user.ts'],
         { 'src/models/user.ts': ['User.create'] },
@@ -127,6 +153,7 @@ describe('StateContextProvider', () => {
     });
     const result = provider.build(ctx, PipelinePass.Documentation);
 
+    expect(result.files.contracts).toEqual(['src/contracts/api.ts']);
     expect(result.files.implementation).toEqual(
       expect.arrayContaining([
         'src/models/user.ts',
@@ -136,8 +163,8 @@ describe('StateContextProvider', () => {
       ]),
     );
     expect(result.files.tests).toEqual([]);
-    expect(result.files.contracts).toEqual([]);
     expect(result.targetSymbols).toEqual({
+      'src/contracts/api.ts': ['ApiPort'],
       'src/models/user.ts': ['User.create'],
       'src/utils/helper.ts': ['formatDate'],
       'src/logger.ts': ['logMetric'],
@@ -264,7 +291,9 @@ describe('StateContextProvider', () => {
     });
     const result = provider.build(ctx, PipelinePass.Observability);
     expect(result.fileChanges).toEqual(refactorFileChanges);
-    expect(result.targetSymbols).toEqual({ 'src/models/user.ts': ['User.update'] });
+    expect(result.targetSymbols).toEqual({
+      'src/models/user.ts': ['User', 'User.create', 'User.update'],
+    });
   });
 
   it('latest upstream pass wins per file for fileChanges records', () => {
@@ -315,6 +344,6 @@ describe('StateContextProvider', () => {
     expect(result.fileChanges['src/shared.ts']?.commitHash).toBe('bbb');
     expect(result.fileChanges['src/shared.ts']?.hunks[0]?.symbols).toEqual(['teardown']);
     // targetSymbols still unions symbols across upstream passes
-    expect(result.targetSymbols).toEqual({ 'src/shared.ts': ['teardown'] });
+    expect(result.targetSymbols).toEqual({ 'src/shared.ts': ['init', 'teardown'] });
   });
 });

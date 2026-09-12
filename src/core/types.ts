@@ -174,7 +174,13 @@ export interface PipelineContext {
   /** Resolved absolute path of the --feature-desc-file. Used for display, branch naming, and --file attachment. */
   specFileAbsPath?: string;
 
-  /** Full contents of the --spec file; drives Pass 0 in both standard and Autopilot modes. */
+  /**
+   * Full contents of the --spec file.
+   *
+   * Retained on the context for the legacy `opencode-cli` backend (which
+   * attaches it via `--file`) and for diagnostics. It is **not** inlined into
+   * the agent payload: agents read `paths.specFile` (`specFileAbsPath`) instead.
+   */
   featureDescription?: string;
 
   /** Optional explicit base branch override for git branching. */

@@ -156,7 +156,7 @@ permission:
 
   Read the Mermaid diagram and Gherkin specification from the paths in
   `paths.designMmd` and `paths.specGherkin`. Read
-  the source files listed in `contextFiles.implementation` — these contain the
+  the source files listed in `contextFiles.contracts` — these contain the
   Pass 1 type contracts (stub functions). The test files from Pass 2 are in
   `contextFiles.tests`. Read them all.
 
@@ -169,8 +169,10 @@ permission:
   change test assertions.
 
   `targetSymbols` indicates which functions were changed in prior passes. On
-  first run it will be empty `{}`. On self-correction cycles it may list
-  functions from the previous attempt.
+  first run it lists the Pass 1 contract symbols and the Pass 2 test symbols;
+  on self-correction cycles it may also list functions from the previous
+  attempt. The accompanying `fileChanges` map carries the exact hunks and
+  anchors for those upstream changes.
 
   The payload also includes `fileChanges` — a per-file map of precise change
   descriptors. Each entry records the commit that introduced the change, the

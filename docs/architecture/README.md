@@ -19,6 +19,7 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-04 |
 | [0011](adrs/0011-mandatory-indexer-gate.md) | codebase-memory Indexer Is a Mandatory Harness Prerequisite | Accepted | 2026-09-09 |
 | [0012](adrs/0012-opencode-sdk-default-backend.md) | opencode SDK Is the Default Agent Backend | Accepted | 2026-09-10 |
+| [0013](adrs/0013-context-rule-chaining.md) | Chain Cumulative Context Across Additive Passes | Accepted | 2026-09-12 |
 
 ## Key Documents
 

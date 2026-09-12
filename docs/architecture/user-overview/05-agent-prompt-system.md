@@ -111,7 +111,7 @@ The **separation-of-concerns rules** in each file's `<directives>` reinforce the
 | 4 Refactor | Behaviour-preserving; no API change |
 | 5 Observability | Additive only; structured logs; no `print` |
 | 6 Security | OWASP checklist; business logic unchanged |
-| 7 Docs | Comments/docstrings only, scoped to `targetSymbols`; keeps accurate existing docstrings, regenerates stale ones; never touches inline comments; `@see` on the targeted symbols |
+| 7 Docs | Comments/docstrings only, scoped to `targetSymbols` (Pass 1 contracts + Passes 3–6 implementation); keeps accurate existing docstrings, regenerates stale ones; never touches inline comments; `@see` on the targeted symbols |
 
 Two directives recur in every file and are worth knowing about:
 

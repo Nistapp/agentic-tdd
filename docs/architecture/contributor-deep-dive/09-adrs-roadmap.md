@@ -29,6 +29,9 @@ This page is the single destination for two kinds of project memory:
 | [0008](../adrs/0008-observability-before-security.md) | Swap pass order — Observability (5) before Security (6) | Accepted | 2026-08-01 |
 | [0009](../adrs/0009-configurable-per-agent-models.md) | Configurable per-agent models via `config.json` | Accepted | 2026-08-17 |
 | [0010](../adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-agnostic SDK architecture (Pi default) | Accepted | 2026-09-04 |
+| [0011](../adrs/0011-mandatory-indexer-gate.md) | codebase-memory indexer is a mandatory harness prerequisite | Accepted | 2026-09-09 |
+| [0012](../adrs/0012-opencode-sdk-default-backend.md) | opencode SDK is the default agent backend | Accepted | 2026-09-10 |
+| [0013](../adrs/0013-context-rule-chaining.md) | Chain cumulative context across additive passes | Accepted | 2026-09-12 |
 
 > [!IMPORTANT]
 > All ADR bodies are fully drafted (Context / Decision / Consequences). Deprecation note: **0006** (Static Prefix) is tombstoned in place with its deprecation notice (per STYLE_GUIDE §7.1 — never delete, only supersede).

@@ -13,11 +13,11 @@ export function getAgentContextPayload(
 
   const payload = {
     featureName: ctx.featureName,
-    featureDescription: ctx.featureDescription,
     pipelineVersion: ctx.pipelineVersion,
     paths: {
       designMmd: ctx.designMmdPath,
       specGherkin: ctx.specGherkinPath,
+      specFile: ctx.specFileAbsPath,
       errorLog: ctx.errorLogPath,
     },
     contextFiles,
