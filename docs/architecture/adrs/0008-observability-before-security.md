@@ -78,7 +78,7 @@ Responsibilities under the new order:
 
 | # | Topic | What is missing |
 |---|---|---|
-| O-1 | CONTEXT_RULES chaining | Security's `files`/`target` lists Refactor only ([`context-builder.ts#L58-L68`](../../../src/core/context-builder.ts#L58-L68)); decide whether to add `Observability` so Pass 6 receives Pass 5's `targetSymbols`/`fileChanges` change descriptors. |
+| O-1 | CONTEXT_RULES chaining | Security's `files`/`target` lists Refactor only ([`context-builder.ts#L58-L69`](../../../src/core/context-builder.ts#L58-L69)); decide whether to add `Observability` so Pass 6 receives Pass 5's `targetSymbols`/`fileChanges` change descriptors. |
 | O-2 | Historical evidence of the old order | The original Security-before-Observability order predates this repository's history (types.ts references a retired Python `cli.py`); no code ever shipped with it here — verify against `git log` if an audit trail is needed. |
 | O-3 | Decision date & deciders | Date is estimated (2026-08-01); no decider GitHub handles are recorded. |
 

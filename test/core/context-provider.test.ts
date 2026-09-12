@@ -106,7 +106,7 @@ describe('StateContextProvider', () => {
     });
   });
 
-  it('Documentation returns full implementation files but empty target', () => {
+  it('Documentation returns full implementation files and merged target symbols', () => {
     const ctx = makeContext({
       [PipelinePass.CoreImplementation]: makePassHistory(
         ['src/models/user.ts'],
@@ -137,6 +137,23 @@ describe('StateContextProvider', () => {
     );
     expect(result.files.tests).toEqual([]);
     expect(result.files.contracts).toEqual([]);
+    expect(result.targetSymbols).toEqual({
+      'src/models/user.ts': ['User.create'],
+      'src/utils/helper.ts': ['formatDate'],
+      'src/logger.ts': ['logMetric'],
+      'src/middleware/auth.ts': ['validateToken'],
+    });
+  });
+
+  it('Documentation returns empty target symbols when upstream passes have none', () => {
+    const ctx = makeContext({
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts']),
+      [PipelinePass.Refactor]: makePassHistory(['src/utils/helper.ts']),
+      [PipelinePass.Observability]: makePassHistory(['src/logger.ts']),
+      [PipelinePass.Security]: makePassHistory(['src/middleware/auth.ts']),
+    });
+    const result = provider.build(ctx, PipelinePass.Documentation);
+
     expect(result.targetSymbols).toEqual({});
   });
 

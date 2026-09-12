@@ -33,7 +33,7 @@ IAgentRunner.execute()                  → PiSdkRunner (in-process session) | O
 
 ## 1. `CONTEXT_RULES` — the per-pass selection table
 
-`src/core/context-builder.ts#L10-L83` declares, for every pass, two categories — `files` (which upstream pass outputs to attach) and `target` (which upstream passes' `targetSymbols`/`fileChanges` to merge):
+`src/core/context-builder.ts#L10-L92` declares, for every pass, two categories — `files` (which upstream pass outputs to attach) and `target` (which upstream passes' `targetSymbols`/`fileChanges` to merge):
 
 | Pass | files.contracts | files.tests | files.implementation | target (merge from) |
 |---|---|---|---|---|
@@ -44,9 +44,12 @@ IAgentRunner.execute()                  → PiSdkRunner (in-process session) | O
 | 4 Refactor | — | Pass 2 | Pass 3 | Pass 3 |
 | 5 Observability | — | — | Pass 4 | Pass 4 |
 | 6 Security | — | — | Pass 4 | Pass 4 |
-| 7 Documentation | — | — | Pass 3,4,5,6 | — |
+| 7 Documentation | — | — | Pass 3,4,5,6 | Pass 3,4,5,6 |
 
 Rules are evaluated against `ctx.history[pass].filesTouched` to collect concrete file lists. This is the **"N's output = N+1's read-only context"** invariant, made declarative.
+
+> [!NOTE] Pass 7 merges a wider target set
+> Documentation (Pass 7) attaches the implementation files from Passes 3–6 **and** merges their `targetSymbols`/`fileChanges`. It is the one pass that treats the merged symbol map as a **hard scope boundary**: it documents exactly those changed symbols and no others.
 
 ---
 
@@ -119,7 +122,7 @@ On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, s
 4. Persist `targetSymbols` + `fileChanges` to `ctx.history[pass]` and the state store.
 
 > [!TIP] Real worked example
-> See [docs/architecture/examples/example-state-file.json](../examples/example-state-file.json) — a verbatim session state file from a real run. It shows `history[0..6].fileChanges` in practice: scoped hunks, drift-resistant anchors, and the `commitHash` provenance that makes each entry retrievable via `git show <sha>:<file>`. The descriptor *chases the changes* from pass to pass (contracts → tests → implementation → refactor → observability → security).
+> See [docs/architecture/examples/example-state-file.json](../examples/example-state-file.json) — a verbatim session state file from a real run. It shows `history[0..6].fileChanges` in practice: scoped hunks, drift-resistant anchors, and the `commitHash` provenance that makes each entry retrievable via `git show <sha>:<file>`. The descriptor *chases the changes* from pass to pass (contracts → tests → implementation → refactor → observability → security → documentation).
 
 > [!NOTE] Non-fatal degradation
 > If diff/symbol resolution fails, the commit still lands with empty metadata (`catch {}`). Design intent: context enrichment must never block the pipeline.
@@ -128,7 +131,7 @@ On guarded-pass success, `cleanupAfterSuccess` **deletes the pass error log**, s
 
 ## 7. How Agents Consume It
 
-- `context_philosophy` in every prompt: the payload is a **starting point**, not the whole picture; use the indexer to supplement.
+- `context_philosophy` in every prompt: the payload is a **starting point**, not the whole picture; use the indexer to supplement. **Exception:** Pass 7 treats `targetSymbols` as a hard scope boundary and documents only the listed symbols.
 - `target-symbols-priority`: focus edits on listed symbols, with an `OUT-OF-SCOPE` justification gate for discoveries.
 - `use-file-changes`: navigate by `range` + `anchor` + `commitHash` (`git show <sha>:<file>`), not absolute lines.
 

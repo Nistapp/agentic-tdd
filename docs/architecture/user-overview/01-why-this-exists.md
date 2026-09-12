@@ -81,7 +81,7 @@ No agent is allowed to write core logic until a Mermaid diagram and a Gherkin sp
 
 ### 2.3 Minimising Specification Drift
 
-Architectural diagrams and Gherkin specs are version-controlled, executable code. The pipeline enforces a mandatory **artifact sync rule**: agents MUST update `.mmd`/`.gherkin` and gain human approval before touching core logic, and the final Documentation pass re-checks specs against the finished code.
+Architectural diagrams and Gherkin specs are version-controlled, executable code. The pipeline enforces a mandatory **artifact sync rule**: agents MUST update `.mmd`/`.gherkin` and gain human approval before touching core logic, and the final Documentation pass anchors the changed symbols back to that design via `@see` links (the design/spec files themselves remain immutable in this pass).
 
 > [!NOTE] Where we hit the limits:
 > While we started working on true spec parity, we soon realised that the complexity was delaying the rest of this framework. We do **not** claim true spec parity — fully synchronising diagrams, specs, and code is a hard open problem. What we deliver is *drift minimisation*: artifacts are committed and reviewed alongside code, so drift is caught early and cheaply instead of discovered months later. True parity is planned for future versions. We plan to have another agent to sync the specs with the code after the final pass. There is no timeline for this yet.
@@ -147,7 +147,7 @@ Pass 3  Core Implementation    →  logic                       [Green phase]
 Pass 4  Refactor & Optimise    →  complexity / DRY
 Pass 5  Observability & Logs   →  error classes + logging
 Pass 6  Security Hardening     →  OWASP + sanitisation
-Pass 7  Documentation          →  docstrings + @see links + spec sync
+Pass 7  Documentation          →  docstrings for changed symbols + @see links
 ```
 
 Each pass's output is the **next pass's read-only context**, and each guarded pass runs the local test suite with self-correction before advancing. Every pass commits atomically, so rollback is a deterministic `git revert` of exactly one step ([ADR-0003 — Atomic Commits per Pass](../adrs/0003-atomic-commits-per-pass.md)).

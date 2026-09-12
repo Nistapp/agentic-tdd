@@ -78,7 +78,16 @@ export const CONTEXT_RULES: Record<
         PipelinePass.Security,
       ],
     },
-    target: { contracts: [], tests: [], implementation: [] },
+    target: {
+      contracts: [],
+      tests: [],
+      implementation: [
+        PipelinePass.CoreImplementation,
+        PipelinePass.Refactor,
+        PipelinePass.Observability,
+        PipelinePass.Security,
+      ],
+    },
   },
 };
 

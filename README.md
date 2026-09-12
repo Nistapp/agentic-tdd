@@ -35,7 +35,7 @@ Pass 3  Core Implementation    →  logic                       [Green Phase + s
 Pass 4  Refactor & Optimise    →  complexity/DRY              [self-correction]
 Pass 5  Observability & Logs   →  logging + error classes     [self-correction]
 Pass 6  Security Hardening     →  Secure Code + OWASP         [self-correction]
-Pass 7  Documentation          →  docstrings + @see links
+Pass 7  Documentation          →  docstrings for changed symbols + @see links
 ```
 
 Each guarded pass runs your local test suite and self-corrects (up to 3 retries) before advancing. Every pass produces an **atomic git commit** — so if an agent breaks something, you `git revert` one step and retry.
@@ -111,14 +111,14 @@ stateDiagram-v2
     Gate_6 --> Pass_6 : Security Blocked Valid Logic (Fix)
     Gate_6 --> Pass_7 : Tests Passed
 
-    Pass_7 : Pass 7 - Sync Docs & Spec Artifacts
+    Pass_7 : Pass 7 - Document Changed Symbols
     class Pass_7 agent
 
     Gate_7 : Final CI/CD Verification
     class Gate_7 testGate
 
     Pass_7 --> Gate_7
-    Gate_7 --> Pass_7 : Spec Drift Detected (Update Specs)
+    Gate_7 --> Pass_7 : Verification Failed (Fix)
     Gate_7 --> [*] : Branch Ready for PR
 ```
 
@@ -129,7 +129,7 @@ stateDiagram-v2
 | ------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Reliability & failure rates                | Partially           | Deterministic sandboxing, strict pass gates, atomic commits, model routing, quota controls. | Reduces blast radius and improves recovery, but model errors still exist.    |
 | Code quality & maintainability             | Yes                 | 8-pass pipeline, TDD, refactor pass, scope guardrails, atomic commits.                      | Directly targets spaghetti code and unreadable cross-cutting changes.        |
-| Specification drift                        | Planned                 | Artifact-driven development, mandatory spec sync, Pass 7 documentation sync.                | Specs are treated as source of truth and kept in lockstep with code.         |
+| Specification drift                        | Planned                 | Artifact-driven development, HITL artefact approval, Pass 7 `@see` traceability links on changed symbols. | Specs are treated as source of truth and kept in lockstep with code.         |
 | Security vulnerabilities                   | Partially/Ongoing           | Security pass, DLP/PII masking, Semgrep hard-fail gates.                                    | Strong baseline, but deeper whole-repo analysis is still needed.             |
 | Architectural / legacy context             | Partially           | codebase-memory-mcp (or similar MCP based semantic indexing), Pass 0 context retrieval, human approval of design artifacts.      | Improves codebase awareness, but large refactors still need human oversight. |
 | Process bottlenecks / duplicate PRs        | Partially           | Atomic commits per pass, existing-context retrieval, CI gates before PR.                    | Helps review flow, but approval latency remains a tradeoff.                  |

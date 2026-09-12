@@ -73,7 +73,7 @@ Every agent file has the same skeleton. The two parts are *structurally differen
 |---|---|---|
 | **YAML frontmatter** (`---`) | `description`, `mode`, `model`, `permission` | Routing + tool scope — read by the runner |
 | `<agent_persona>` | Role, pass number, phase | Identity |
-| `<context_philosophy>` | Reframes the injected payload as a *starting point*; mandates `indexer-first` + the pass's reuse directive | Context discipline |
+| `<context_philosophy>` | Reframes the injected payload as a *starting point* (Pass 7: a hard scope boundary); mandates `indexer-first` + the pass's reuse directive | Context discipline |
 | `<directives>` | Numbered `<rule id=…>` requirements (`assess-first`, `no-test-edit`, …) | The rules |
 | `<scope>` | Allowed / forbidden operations | Guardrail (declared intent) |
 | `<output_spec>` | Exact expected output shape (Passes 0, 1) | Output contract |
@@ -111,7 +111,7 @@ The **separation-of-concerns rules** in each file's `<directives>` reinforce the
 | 4 Refactor | Behaviour-preserving; no API change |
 | 5 Observability | Additive only; structured logs; no `print` |
 | 6 Security | OWASP checklist; business logic unchanged |
-| 7 Docs | Comments/docstrings only; `@see` links to the design artefact |
+| 7 Docs | Comments/docstrings only, scoped to `targetSymbols`; keeps accurate existing docstrings, regenerates stale ones; never touches inline comments; `@see` on the targeted symbols |
 
 Two directives recur in every file and are worth knowing about:
 
@@ -135,7 +135,7 @@ Routing is **declarative and configurable at runtime**. Each agent file still pi
 | 4 Refactor | `pass-4-refactor-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
 | 5 Observability | `pass-5-observability-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
 | 6 Security Hardening | `pass-6-security-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
-| 7 Documentation | `pass-7-documentation-agent.md#L9` | `openrouter/deepseek/deepseek-v4-flash` |
+| 7 Documentation | `pass-7-documentation-agent.md#L11` | `openrouter/deepseek/deepseek-v4-flash` |
 
 The split follows the recommendation in [3. The 8-Pass Pipeline](03-8-pass-pipeline.md): the *heavy-reasoning* passes (0–2 — design, contracts, tests) run a strong reasoning model, while the *generation & polish* passes (3–7 — implementation, refactor, observability, security, documentation) run the lighter, cheaper `flash` tier. The same values are the committed default in [`config.default.json`](../../../config.default.json).
 

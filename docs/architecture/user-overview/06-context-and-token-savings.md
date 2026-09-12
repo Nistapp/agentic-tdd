@@ -58,7 +58,7 @@ Because the indexer gate is mandatory ([ADR-0011](../adrs/0011-mandatory-indexer
 
 ### 2.2 The curated payload: `CONTEXT_RULES`
 
-The orchestrator also tells each pass *exactly which files matter*, via a declarative per-pass table ([`src/core/context-builder.ts#L10-L83`](../../../src/core/context-builder.ts#L10-L83)). This enforces the pipeline invariant **"N's output is N+1's read-only context"**:
+The orchestrator also tells each pass *exactly which files matter*, via a declarative per-pass table ([`src/core/context-builder.ts#L10-L92`](../../../src/core/context-builder.ts#L10-L92)). This enforces the pipeline invariant **"N's output is N+1's read-only context"**:
 
 | Pass | Context it receives |
 |---|---|
@@ -67,7 +67,7 @@ The orchestrator also tells each pass *exactly which files matter*, via a declar
 | 4 Refactor | Pass 2 tests + Pass 3 implementation |
 | 5 Observability | Pass 4 implementation |
 | 6 Security | Pass 4 implementation |
-| 7 Documentation | Pass 3,4,5,6 implementation |
+| 7 Documentation | Pass 3,4,5,6 implementation + their changed symbols (`targetSymbols`) |
 
 The result is **surgical context instead of context stuffing**: each agent sees only the upstream artefacts it is directly responsible for honouring. See [3. Context Engineering § 1 (Contributor)](../contributor-deep-dive/03-context-engineering.md#1-context_rules--the-per-pass-selection-table) for the full table.
 

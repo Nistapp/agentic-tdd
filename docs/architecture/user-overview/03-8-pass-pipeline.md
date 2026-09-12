@@ -71,7 +71,7 @@ stateDiagram-v2
     Gate_6 : Test Runner (Verify Security)
     class Gate_6 testGate
 
-    Pass_7 : Pass 7 - Sync Docs & Spec Artifacts
+    Pass_7 : Pass 7 - Document Changed Symbols
     class Pass_7 agent
 
     Gate_7 : Final CI/CD Verification
@@ -105,7 +105,7 @@ stateDiagram-v2
     Gate_6 --> Pass_7 : Tests Passed (Git Commit)
 
     Pass_7 --> Gate_7
-    Gate_7 --> Pass_7 : Spec Drift Detected (Update Specs)
+    Gate_7 --> Pass_7 : Verification Failed (Fix)
     Gate_7 --> [*] : Branch Ready for PR
 ```
 
@@ -124,7 +124,7 @@ Compiled from the shipped agent files ([`src/agents/pass-0..7-*.md`](../../../sr
 | **4. Refactor & Optimise** | `pass-4-refactor-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 3 output | Test gate + self-correction loop |
 | **5. Observability & Logging** | `pass-5-observability-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 4 output | Test gate + self-correction loop |
 | **6. Security Hardening** | `pass-6-security-agent` | `openrouter/deepseek/deepseek-v4-flash` | Pass 5 output (incl. log statements) | Test gate + self-correction loop; OWASP Top-10 review |
-| **7. Documentation & Spec-Sync** | `pass-7-documentation-agent` | `openrouter/deepseek/deepseek-v4-flash` | Finalised implementation | Test gate + spec-drift check; `@see` links to `.mmd` |
+| **7. Documentation** | `pass-7-documentation-agent` | `openrouter/deepseek/deepseek-v4-flash` | Changed symbols from Passes 3–6 (`targetSymbols`) + their files | Test gate; `@see` links to `.mmd` on the targeted symbols; accurate existing docstrings and all inline comments untouched |
 
 **Shared guardrails (all passes):** read/edit/glob/grep allowed; `bash`, `webfetch`, `task` denied (no arbitrary execution, no network, no sub-agents). See [5. Agent Prompt System & Routing](05-agent-prompt-system.md).
 

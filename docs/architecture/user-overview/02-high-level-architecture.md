@@ -132,7 +132,7 @@ stateDiagram-v2
 
     Pass_6 --> Pass_7
 
-    Pass_7 : Pass 7 - Sync Docs & Spec Artifacts
+    Pass_7 : Pass 7 - Document Changed Symbols
     class Pass_7 agent
 
     Pass_7 --> [*] : Branch Ready for PR

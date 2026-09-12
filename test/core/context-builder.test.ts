@@ -182,8 +182,13 @@ describe('buildTargetPasses', () => {
     ]);
   });
 
-  it('returns empty for Pass 7 (Documentation)', () => {
-    expect(buildTargetPasses(PipelinePass.Documentation)).toEqual([]);
+  it('returns the symbol-bearing implementation passes for Pass 7 (Documentation)', () => {
+    expect(buildTargetPasses(PipelinePass.Documentation)).toEqual([
+      PipelinePass.CoreImplementation,
+      PipelinePass.Refactor,
+      PipelinePass.Observability,
+      PipelinePass.Security,
+    ]);
   });
 });
 
@@ -244,7 +249,7 @@ describe('CONTEXT_RULES structural integrity', () => {
     }
   });
 
-  it('Documentation returns full implementation files but empty target passes', () => {
+  it('Documentation returns full implementation files and targets the symbol-bearing passes', () => {
     const docRule = CONTEXT_RULES[PipelinePass.Documentation]!;
     expect(docRule.files.implementation).toContain(PipelinePass.CoreImplementation);
     expect(docRule.files.implementation).toContain(PipelinePass.Refactor);
@@ -258,6 +263,11 @@ describe('CONTEXT_RULES structural integrity', () => {
       ...docRule.target.tests,
       ...docRule.target.implementation,
     ];
-    expect(targetPasses).toEqual([]);
+    expect(targetPasses).toEqual([
+      PipelinePass.CoreImplementation,
+      PipelinePass.Refactor,
+      PipelinePass.Observability,
+      PipelinePass.Security,
+    ]);
   });
 });

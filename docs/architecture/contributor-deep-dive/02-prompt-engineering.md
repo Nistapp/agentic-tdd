@@ -23,7 +23,7 @@ Every agent file has the same skeleton:
 |---|---|
 | `---` YAML frontmatter | `description`, `mode`, `model`, `permission` — routing + tool scope |
 | `<agent_persona>` | Declared role, pass number, phase |
-| `<context_philosophy>` | Reframes the injected JSON payload as a **starting point**, not the whole picture; mandates `indexer-first` |
+| `<context_philosophy>` | Reframes the injected JSON payload as a **starting point** (Pass 7 instead treats `targetSymbols` as a hard scope boundary); mandates `indexer-first` |
 | `<directives>` | Numbered `<rule id=…>` requirements |
 | `<scope>` | Allowed / forbidden operations |
 | `<output_spec>` (0, 1) | Exact expected output shape |
@@ -102,9 +102,11 @@ Each pass additionally carries a **reuse directive** — `reuse-first` (P0), `re
 
 ### 3.3 `target-symbols-priority` — strong-advisory scoping
 
-Passes 3–6 receive a `targetSymbols` map (which functions upstream passes changed). The rule is **advisory, not a hard ban**:
+Passes 3–7 receive a `targetSymbols` map (which functions upstream passes changed). For Passes 3–6 the rule is **advisory, not a hard ban**:
 
 > You MUST prioritize your edits to the functions listed in this map. You may edit outside this map ONLY if it is critical to completing the pass mandate. If you make out-of-scope changes, add an inline comment: `// OUT-OF-SCOPE: {pass}-agent — {reason}`.
+
+**Pass 7 (Documentation) is the exception:** it treats `targetSymbols` as a **hard scope boundary** — it may only add or correct doc comments on the listed symbols, and must never document the rest of the file.
 
 This reconciles tight scoping with the `indexer-first` exploration mandate — see [3. Context Engineering §7](03-context-engineering.md#7-how-agents-consume-it) for the analysis that led here.
 
@@ -123,13 +125,15 @@ Passes 3–6 are told to navigate via the `fileChanges` change descriptors (per-
 | 4 Refactor | Behaviour-preserving; no API change; apply PEP8/Prettier; `flag-deep-changes` |
 | 5 Observability | **Additive only**; structured logs (`logger.info`…); no `print`; custom exception classes; no hot-loop logs |
 | 6 Security | OWASP `security_checklist`; business logic must not change; `SEC: {check_id} — reason` per change; `SECURITY-NOTE:` for non-security flaws |
-| 7 Docs | Comments/docstrings only; every public function gets `@see` link to the design artefact (digital twin); `describe-not-fix` |
+| 7 Docs | Comments/docstrings only — scoped to the incoming `targetSymbols` (keep accurate existing docstrings, regenerate stale, add missing); never touch inline comments; `@see` link to the design artefact on the targeted symbols; `describe-not-fix` |
 
 ### 3.6 `no-*` invariants shared broadly
 
 - `no-test-edit` (all passes) — the test suite is the correctness contract; never change tests to fit code.
 - `no-artefact-edit` (1, 2) — Mermaid/Gherkin are immutable once HITL-approved.
 - `no-logging` (3) / `no-docs` (3) — ownership deferred to later passes.
+- `no-inline-comments` (7) — the documentation pass may change leading doc comments only; every inline comment stays byte-identical.
+- `no-out-of-context-docs` (7) — never write README/ADRs/how-tos/`docs/**`; those files are read-only for conventions.
 
 ---
 

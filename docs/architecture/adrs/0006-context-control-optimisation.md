@@ -32,13 +32,13 @@ The risk without explicit ordering discipline was that cache hits become **accid
 
 Adopt **Static Prefix ordering**: each pass's context is assembled **deterministically** with the most stable, cacheable content placed first, so consecutive passes sharing the same model maximise the provider-level KV-cache hit.
 
-The implementation vehicle is the per-pass selection table `CONTEXT_RULES` ([`src/core/context-builder.ts#L10-L83`](../../../src/core/context-builder.ts#L10-L83)), which declares, for every pass, which upstream pass outputs appear in `files.contracts` / `files.tests` / `files.implementation` and which upstream passes' `targetSymbols`/`fileChanges` are merged (`target`). This enforces the pipeline invariant **"N's output is N+1's read-only context"** and gives the payload a stable, categorised ordering (contracts → tests → implementation) resolved by `buildContextFiles` ([`context-builder.ts#L101-L115`](../../../src/core/context-builder.ts#L101-L115)) and `buildTargetPasses` ([`context-builder.ts#L121-L130`](../../../src/core/context-builder.ts#L121-L130)).
+The implementation vehicle is the per-pass selection table `CONTEXT_RULES` ([`src/core/context-builder.ts#L10-L92`](../../../src/core/context-builder.ts#L10-L92)), which declares, for every pass, which upstream pass outputs appear in `files.contracts` / `files.tests` / `files.implementation` and which upstream passes' `targetSymbols`/`fileChanges` are merged (`target`). This enforces the pipeline invariant **"N's output is N+1's read-only context"** and gives the payload a stable, categorised ordering (contracts → tests → implementation) resolved by `buildContextFiles` ([`context-builder.ts#L110-L124`](../../../src/core/context-builder.ts#L110-L124)) and `buildTargetPasses` ([`context-builder.ts#L130-L139`](../../../src/core/context-builder.ts#L130-L139)).
 
 The full path that realises (and today, still reflects) the decision:
 
 | Stage | Where | Role |
 |---|---|---|
-| 1. Selection & ordering | `CONTEXT_RULES` ([`context-builder.ts#L10-L83`](../../../src/core/context-builder.ts#L10-L83)) | Declarative, per-pass, stable file ordering (contracts/tests/implementation). |
+| 1. Selection & ordering | `CONTEXT_RULES` ([`context-builder.ts#L10-L92`](../../../src/core/context-builder.ts#L10-L92)) | Declarative, per-pass, stable file ordering (contracts/tests/implementation). |
 | 2. Payload assembly | `StateContextProvider.build` ([`context-provider.ts#L11-L43`](../../../src/core/context-provider.ts#L11-L43)) | Pure, synchronous assembler — deterministic `{ files, targetSymbols, fileChanges }`. |
 | 3. Serialisation | `getAgentContextPayload` ([`src/core/runners/shared.ts#L5-L29`](../../../src/core/runners/shared.ts#L5-L29)) | Fixed-key JSON; stable serialisation of the curated payload. |
 | 4. Invocation | `OpenCodeAgentRunner.#buildArgs` ([`src/infrastructure/open-code-agent-runner.ts#L42-L69`](../../../src/infrastructure/open-code-agent-runner.ts#L42-L69)) | `opencode run --agent pass-N --file <artefacts> <prompt>` — the byte-prefix boundary. |
@@ -53,7 +53,7 @@ The full path that realises (and today, still reflects) the decision:
 ### Positive
 
 * **Deterministic, cacheable prompts** — stable key order + categorised, ordered file lists make the request head reproducible across passes (and across retries of the same pass).
-* **Declarative single source of truth** — `CONTEXT_RULES` is the one table that defines what each pass sees; no per-pass bespoke code ([`context-builder.ts#L10-L83`](../../../src/core/context-builder.ts#L10-L83)).
+* **Declarative single source of truth** — `CONTEXT_RULES` is the one table that defines what each pass sees; no per-pass bespoke code ([`context-builder.ts#L10-L92`](../../../src/core/context-builder.ts#L10-L92)).
 * **Complementary to Context Compaction** — a stable *head* (Static Prefix) plus a clean *tail* (compaction, [ADR-0005](./0005-context-compaction.md)) together control attention drift and context rot while managing cost.
 * **Zero runtime cost** — pure ordering at build time; no extra I/O, no per-run overhead.
 
