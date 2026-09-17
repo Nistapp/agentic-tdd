@@ -120,15 +120,20 @@ The `agent.plan` / `agent.build` model routing is a **stack-level override**; th
 
 | Command | What it does |
 |---|---|
-| `npm run lint` | `tsc --noEmit` — **strict** type-check. MUST pass with zero errors. |
+| `npm run format` | Prettier `--write .` — rewrites formatting. |
+| `npm run format:check` | Prettier `--check .` — verifies formatting, fails on drift. |
+| `npm run typecheck` | `tsc --noEmit` — **strict** type-check. MUST pass with zero errors. |
+| `npm run lint` | Alias for `npm run typecheck` (no separate code linter exists). |
 | `npm test` | `vitest run` — full suite, 100% pass required (never `.skip` a failing test). |
+| `npm run check` | The single pre-PR gate: `format:check` → `typecheck` → `test`. |
+| `npm run security` | `npm audit --audit-level=high` — dependency-CVE gate. |
 | `npm run build` | `tsc` + `npm run copy:agents` (copies `src/agents/*` → `dist/agents/`). |
 | `npm run test:watch` | Vitest watch mode during development. |
 
 > [!IMPORTANT]
 > After **any** edit to `src/agents/pass-*.md`, rerun `npm run build`. The pipeline loads agent prompts from `dist/agents/` (resolved via `PACKAGE_AGENTS_DIR` in [`command-runner.ts#L12-L13`](../../../src/infrastructure/command-runner.ts#L12-L13), re-exported from [`utils/paths.ts`](../../../src/utils/paths.ts#L34)), so the `copy:agents` step is what makes your prompt edits take effect. Do not edit `dist/` by hand — it is generated.
 
-The full release gate is `npm run prepublishOnly` → `lint && test && build:full`.
+The full release gate is `npm run prepublishOnly` → `check && build:full`.
 
 ---
 
@@ -165,7 +170,7 @@ The 8 pass agents live in `src/agents/pass-{0-7}-*.md`. Each has YAML frontmatte
 
 1. Edit the relevant `src/agents/pass-N-*.md`, preserving its YAML frontmatter and keeping scope narrow to that single pass.
 2. Rerun `npm run build` to refresh `dist/agents/`.
-3. Add/update tests as needed and run `npm run lint && npm test`.
+3. Add/update tests as needed and run `npm run check`.
 
 ### 7.2 Adding a new pass (or pass number)
 
@@ -183,7 +188,7 @@ Any new OS-level operation follows the port → adapter → wiring recipe:
 2. **Implement the concrete adapter** in `src/infrastructure/` (git/fs/spawn/logger concerns only).
 3. **Wire it** in `src/cli/di-container.ts` so `createPipelineServices` constructs and injects it, and thread it through the relevant machine input (follow how `contextProvider` is passed).
 4. **Never** let `src/core/` reach into `src/infrastructure/` or `src/cli/` — that breaks the [ADR-0001](../adrs/0001-pure-core-engine.md) DI contract.
-5. Add ≥1 positive + ≥1 negative test and run `npm run lint && npm test`.
+5. Add ≥1 positive + ≥1 negative test and run `npm run check`.
 
 Environ/config reads go through `PipelineConfig` (constructed in `di-container.ts` from `index.ts`) — never `process.env` inside `orchestrator.ts` or the machines.
 

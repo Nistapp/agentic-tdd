@@ -49,7 +49,10 @@ While the exact file tree may evolve, agents MUST respect these structural rules
 | Module system | `NodeNext` — always use `.js` extensions in `import` paths |
 | Pipeline State | `xstate` (Core state machine engine) |
 | Test runner | Vitest — run with `npm test` |
-| Type-check | `npm run lint` (`tsc --noEmit`) |
+| Format | Prettier — `npm run format` (write) / `npm run format:check` (verify) |
+| Type-check | `npm run typecheck` (`tsc --noEmit`) |
+| Full gate | `npm run check` (format:check → typecheck → test) |
+| Dependency audit | `npm run security` (`npm audit --audit-level=high`) |
 | Build | `npm run build` (tsc + copy agents) |
 | Agent backend (default) | `@opencode-ai/sdk` (pinned 1.18.30 ↔ `opencode` 1.18.29) |
 | Agent backend (backup) | `@earendil-works/pi-coding-agent` (`--backend pi`) |
@@ -166,7 +169,7 @@ codebase-memory_detect_changes(project="<project>")
 
 ### TypeScript
 
-- **Strict mode is non-negotiable.** All new code must pass `npm run lint` with
+- **Strict mode is non-negotiable.** All new code must pass `npm run typecheck` with
   zero errors.
 - Use `noUncheckedIndexedAccess` — always guard array/record access (`.at(0)`,
   optional chaining, or explicit bounds checks).
@@ -224,7 +227,7 @@ codebase-memory_detect_changes(project="<project>")
   there is no alternative. Stubs must satisfy the full DI interface.
 - **No real I/O**: Tests must not touch the real filesystem, run real git commands,
   or invoke the real `opencode` binary. Use the injected DI interfaces and stub them.
-- After any refactoring step, run `npm run lint && npm test` before committing.
+- After any refactoring step, run `npm run check` before committing.
 - The test suite must stay green at 100% pass rate — never comment out or `.skip`
   a failing test; fix it.
 

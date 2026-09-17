@@ -39,7 +39,7 @@ graph TD
 
 ## 1. Test Suite Layout
 
-Vitest is configured in [`vitest.config.ts`](../../../vitest.config.ts): `globals: true`, `environment: 'node'`, discovering both `src/**/*.test.ts` and `test/**/*.test.ts`. Run with `npm test` (`vitest run`), watch with `npm run test:watch`, type-check with `npm run lint` (`tsc --noEmit`).
+Vitest is configured in [`vitest.config.ts`](../../../vitest.config.ts): `globals: true`, `environment: 'node'`, discovering both `src/**/*.test.ts` and `test/**/*.test.ts`. Run with `npm test` (`vitest run`), watch with `npm run test:watch`, type-check with `npm run typecheck` (`tsc --noEmit`), and run the full pre-PR gate with `npm run check`.
 
 | Test file | Layer | Subject under test | Isolation |
 |---|---|---|---|
