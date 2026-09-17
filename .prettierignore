@@ -1,0 +1,14 @@
+# Generated / vendored
+dist/
+node_modules/
+package-lock.json
+
+# Content-managed files — do not reformat
+CHANGELOG.md
+LICENSE
+artefacts/
+specs/
+src/agents/
+
+# Markdown is excluded for now; widen coverage in a follow-up if desired.
+*.md

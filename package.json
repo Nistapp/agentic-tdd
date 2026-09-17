@@ -23,6 +23,8 @@
   },
   "scripts": {
     "clean": "shx rm -rf dist",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "build": "tsc && npm run copy:agents",
     "copy:agents": "shx rm -rf dist/agents && shx mkdir -p dist/agents && shx cp -r src/agents/* dist/agents/ && shx cp config.default.json dist/config.default.json && shx cp mcp.template.json dist/mcp.template.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({ type: 'module' }) + '\\n')\"",
     "build:full": "npm run clean && npm run build",
@@ -73,6 +75,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "prettier": "^3.9.7",
     "shx": "^0.4.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"
