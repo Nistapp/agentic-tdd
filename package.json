@@ -30,11 +30,12 @@
     "local-install": "npm run build:full && node scripts/local-install.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check": "npm run format:check && npm run typecheck && npm test",
     "dev": "tsc --watch",
     "lint": "npm run typecheck",
     "git:clean:dry": "node dist/utils/git-branch-janitor.js",
     "git:clean": "node dist/utils/git-branch-janitor.js --apply",
-    "prepublishOnly": "npm run lint && npm test && npm run build:full"
+    "prepublishOnly": "npm run check && npm run build:full"
   },
   "keywords": [
     "agentic",
