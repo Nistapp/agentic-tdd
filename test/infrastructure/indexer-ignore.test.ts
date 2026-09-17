@@ -80,6 +80,7 @@ describe('ensureCbmIgnore', () => {
     const written = vi.mocked(fs.writeFile).mock.calls[0]?.[1] ?? '';
     expect(written).toContain('artefacts/');
     expect(written).toContain('artifacts/');
+    expect(written).toContain('.codebase-memory/');
   });
 
   it('merges missing entries into an existing file', async () => {

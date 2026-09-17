@@ -19,13 +19,15 @@ import type { IFileSystem, ILogger } from '../core/interfaces.js';
 export const CBM_IGNORE_FILENAME = '.cbmignore';
 
 /**
- * Directories that must never be indexed: transient scratch documents and
- * pipeline run state. Trailing slashes are gitignore directory syntax.
+ * Directories that must never be indexed: transient scratch documents,
+ * pipeline run state, and the codebase-memory ADR store blob. Trailing slashes
+ * are gitignore directory syntax.
  */
 export const CBM_IGNORE_ENTRIES: readonly string[] = [
   'artefacts/',
   'artifacts/',
   '.agentic-tdd/',
+  '.codebase-memory/',
 ];
 
 const HEADER =

@@ -144,9 +144,6 @@ The shipped pipeline has **two** human gates — after Pass 0 and after Pass 2 (
 
 The interaction is a readline prompt in [`src/cli/hitl-handler.ts`](../../../src/cli/hitl-handler.ts); the gate itself is the `HITL_REQUIRED` event emitted by the XState machine. Use `--skip-hitl` for unattended CI runs.
 
-> [!NOTE] ADR-0004 title is stale
-> [ADR-0004 — HITL Gate After Pass 0 Only](../adrs/0004-hitl-gate-after-pass-0.md) documents the shipped **two** gates (Pass 0 + Pass 2); only its title still reads "After Pass 0 Only" — see open item [H-2](../adrs/0004-hitl-gate-after-pass-0.md#placeholders--open-items).
-
 ---
 
 ## 4. One Atomic Commit Per Pass → Rollback, Pause, Resume, Abort
@@ -204,7 +201,7 @@ The commit-per-pass boundary is what makes pause/resume/abort safe — the repo 
 | # | Topic | What is missing |
 |---|---|---|
 | P-1 | Model routing truth | Defaults confirmed from `config.default.json` + agent files; re-check if either changes (see [5. Agent Prompt System](05-agent-prompt-system.md) R-2). |
-| P-2 | ADR-0004 vs two gates | Resolved — ADR-0004 now documents the shipped two-gate behaviour; the title rename is tracked as ADR-0004 open item H-2. |
+| P-2 | ADR-0004 vs two gates | Resolved — ADR-0004 documents the shipped two-gate behaviour and its title now matches. |
 | P-3 | HITL UI fidelity | Screenshots / exact terminal rendering of the gate (see [`terminal-renderer.ts`](../../../src/cli/terminal-renderer.ts)). |
 
 ---

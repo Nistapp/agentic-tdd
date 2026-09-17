@@ -21,8 +21,8 @@ Key design invariants:
   filesystems, Git, or shell commands.
 - All OS interactions are injected via DI interfaces (`src/core/interfaces.ts`).
 - Each pass outputs a git commit; rollback is `git revert`.
-- Token cost is minimised via a **Static Prefix** (cacheable file ordering) and
-  **Context Compaction** (error logs deleted on pass success).
+- Token cost is minimised via a curated, deterministic per-pass context payload
+  and **Context Compaction** (error logs deleted on pass success).
 
 ---
 

@@ -2,18 +2,18 @@
 
 * **Status:** Accepted
 * **Date:** 2026-09-10
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
-* **Supersedes:** the "Pi is the default backend" decision of [ADR-0010](./0010-agent-agnostic-sdk-architecture.md) (the adapter architecture itself is retained; only the default backend changes)
-* **Amends:** [ADR-0011](./0011-mandatory-indexer-gate.md) — its G1 "only `pi` is supported" statement is superseded
+* **Related:** refines the default-backend choice of [ADR-0010](./0010-agent-agnostic-sdk-architecture.md) (the adapter architecture itself is retained) and widens [ADR-0011](./0011-mandatory-indexer-gate.md) G1 to the opencode default backend
 
 ---
 
 ## Context
 
-ADR-0010 made the in-process Pi SDK (`@earendil-works/pi-coding-agent`) the default
-agent backend because it eliminated the per-pass `opencode` process fork. That
-decision, and the mandatory indexer gate of ADR-0011, rest on a structural
-limitation discovered afterwards:
+The pipeline's earlier default was the in-process Pi SDK
+(`@earendil-works/pi-coding-agent`), chosen because it eliminated the per-pass
+`opencode` process fork. That choice, and the mandatory indexer gate of
+ADR-0011, rest on a structural limitation:
 
 * **Pi has no MCP support by design.** `pi-mcp-adapter` registers its MCP tools
   only in the interactive/print Pi host — never inside an embedded headless SDK
@@ -55,7 +55,7 @@ cost of the legacy `opencode-cli` backend.
 
 ## Decision
 
-### 1. opencode SDK is the default backend; Pi is demoted to backup
+### 1. opencode SDK is the default backend; Pi is the backup
 
 `AgentBackend` becomes `'opencode' | 'pi' | 'opencode-cli'`, and `--backend`
 defaults to `opencode`. `OpencodeSdkRunner` (new,
@@ -206,8 +206,8 @@ idempotent, closes the server, and removes the run-scoped config directory
 
 ## Related
 
-* [ADR-0010 Agent-Agnostic SDK Architecture](./0010-agent-agnostic-sdk-architecture.md) — adapter architecture retained; default backend superseded by this ADR
-* [ADR-0011 Mandatory Indexer Gate](./0011-mandatory-indexer-gate.md) — G1 "only `pi`" superseded; gate now owns the opencode server
+* [ADR-0010 Agent-Agnostic SDK Architecture](./0010-agent-agnostic-sdk-architecture.md) — adapter architecture retained; the default backend is defined here
+* [ADR-0011 Mandatory Indexer Gate](./0011-mandatory-indexer-gate.md) — G1 supports the opencode default; the gate owns the opencode server
 * [ADR-0009 Configurable Per-Agent Models](./0009-configurable-per-agent-models.md)
 * [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) — all server/OS work stays in infrastructure behind DI
 * `@opencode-ai/sdk` 1.18.30, `opencode` 1.18.29, `codebase-memory-mcp` 0.10.8

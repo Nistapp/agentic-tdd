@@ -1,11 +1,9 @@
-# 0004. Human-in-the-Loop Gate After Pass 0 Only
+# 0004. Human-in-the-Loop Gates After Pass 0 and Pass 2
 
 * **Status:** Accepted
 * **Date:** 2026-06-01 (estimated)
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
-
-> [!WARNING] Title vs. shipped behaviour
-> The title records the original decision (a single gate after Pass 0). The **shipped code implements two gates** — after Pass 0 (Design) and after Pass 2 (Test Generation). This ADR documents the shipped behaviour as authoritative; the title should be amended (see [Placeholders — H-2](#placeholders--open-items)).
 
 ---
 
@@ -26,8 +24,8 @@ A human check at exactly these two points is the **cheapest, highest-leverage sa
 |---|---|
 | **No gates** (fully autonomous run) | Rejected — unsafe for a tool whose value proposition is human oversight; a hallucinated design would be committed and built upon. |
 | **Gate after every pass** | Rejected — destroys the autonomy/token-cost benefit; passes 1, 3–7 are already test-gated or low-risk. |
-| **Single gate after Pass 0 only** (original decision) | Chosen initially; **extended to Pass 2** once test-generation quality warranted a second human check. |
-| **Two gates: after Pass 0 and after Pass 2** | **Current shipped decision** — documents the implementation and the `--skip-hitl` escape hatch for CI. |
+| **Single gate after Pass 0 only** | Rejected — test-generation quality warranted a second human check before the Green Phase. |
+| **Two gates: after Pass 0 and after Pass 2** | **Chosen** — documents the implementation and the `--skip-hitl` escape hatch for CI. |
 
 ---
 
@@ -66,7 +64,6 @@ The pipeline fires a **HITL (Human-in-the-Loop) gate** at two checkpoints — af
 ### Negative / Trade-offs
 
 * **Manual latency** — each gate pauses the run for a human; blocks fully-autonomous CI runs without an explicit `--skip-hitl` flag.
-* **Decision/title drift** — the original decision (gate after Pass 0 only) was extended in the implementation to two gates; the ADR title is stale relative to shipped behaviour (see H-2).
 * **Destructive rewind** — `HITL_REWIND` performs `git reset --hard <prevCommit>` + `git clean -fd` ([`rewindToPassStart`](../../../src/core/machines/pipeline.machine.ts#L852-L870)); this is only safe because per-pass atomic commits provide an exact rewind target ([ADR-0003](./0003-atomic-commits-per-pass.md)).
 * **Default auto-approve** — `onHitl` defaults to `() => Promise.resolve('APPROVE')`; a host that forgets to inject a real handler silently approves every gate.
 
@@ -77,6 +74,5 @@ The pipeline fires a **HITL (Human-in-the-Loop) gate** at two checkpoints — af
 | # | Topic | What is missing |
 |---|---|---|
 | H-1 | Prototype gate behaviour | Whether the predecessor prototype (`pipeline_v3_1.py`, `ai-factory-setup` repo) gated Pass 0 only or Pass 0 + 2 is not verifiable from this repository. |
-| H-2 | **Title staleness** | ADR title "After Pass 0 Only" contradicts the shipped two-gate implementation. **Recommendation:** rename to `0004-hitl-gates-design-and-tests.md` (updating the [ADR index](../README.md) and all cross-references in the same change set, per STYLE_GUIDE § 3.1) or supersede this ADR. |
-| H-3 | Decision date & deciders | Date is estimated (2026-06-01); no decider GitHub handles are recorded. |
-| H-4 | Dead constant | `HITL_GATE_PASSES` ([`types.ts#L77-L80`](../../../src/core/types.ts#L77-L80)) is declared but **not consumed at runtime** — the machine hard-codes the pass-0/pass-2 gate wiring. Refactor candidate: drive the gate states from the set. |
+| H-2 | Decision date & deciders | Date is estimated (2026-06-01); no decider GitHub handles are recorded. |
+| H-3 | Dead constant | `HITL_GATE_PASSES` ([`types.ts#L77-L80`](../../../src/core/types.ts#L77-L80)) is declared but **not consumed at runtime** — the machine hard-codes the pass-0/pass-2 gate wiring. Refactor candidate: drive the gate states from the set. |

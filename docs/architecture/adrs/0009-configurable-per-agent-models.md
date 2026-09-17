@@ -2,6 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-08-17
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
 
 ---
@@ -97,7 +98,7 @@ Passes 0–2 (`pass-0-design-agent` … `pass-2-test-generation-agent`) → `ope
 
 * [5. Agent Prompt System — Routing Strategy § 3](../user-overview/05-agent-prompt-system.md#3-routing-strategy) · [3. The 8-Pass Pipeline — Pass Reference Table](../user-overview/03-8-pass-pipeline.md)
 * [`src/cli/model-config.ts`](../../../src/cli/model-config.ts) · [`config.default.json`](../../../config.default.json) · [`src/core/types.ts`](../../../src/core/types.ts)
-* [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) (config stays in the CLI/DI layer) · [ADR-0006 Static Prefix](./0006-context-control-optimisation.md) (P-3 now shipped)
+* [ADR-0001 Pure Core Engine](./0001-pure-core-engine.md) (config stays in the CLI/DI layer)
 
 ---
 

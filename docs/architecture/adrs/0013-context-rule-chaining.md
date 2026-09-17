@@ -2,6 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-09-12
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
 
 ---
@@ -14,7 +15,7 @@ An audit of the hand-off from Pass 2 onward found that the table under-delivered
 
 1. **Prompt/bucket mismatch** — Pass 2 and Pass 3 prompts instructed the agent to read the Pass 1 contracts from `contextFiles.implementation`, but Pass 1 output is categorised as `contextFiles.contracts`, leaving `implementation` empty. Pass 1 itself pointed at an always-empty bucket.
 2. **Additive passes dropped their history.** Passes 5 (Observability) and 6 (Security) inherited implementation files from **Refactor only** (`files.implementation: [Refactor]`). Refactor edits a *subset* of Pass 3's output, so any file created/edited in Pass 3 but untouched by Refactor vanished from `contextFiles`. If Refactor was skipped or made no changes, Pass 5/6 received an entirely empty implementation set, `targetSymbols`, and `fileChanges`.
-3. **No Observability → Security chain.** Security's `targetSymbols`/`fileChanges` derived from Refactor only, so it lacked the precise descriptors for the log statements it is required to audit (recorded as open item O-1 in [ADR-0008](./0008-observability-before-security.md)).
+3. **No Observability → Security chain.** Security's `targetSymbols`/`fileChanges` derived from Refactor only, so it lacked the precise descriptors for the log statements it is required to audit ([ADR-0008](./0008-observability-before-security.md)).
 4. **Documentation missed Pass 1 contracts.** Pass 7 is the only pass that treats `targetSymbols` as a hard scope boundary, but it sourced symbols only from Passes 3–6. Pure type/interface declarations introduced in Pass 1 — the public API surface — could only be documented if a later hunk happened to enclose them.
 
 ### Alternatives considered
@@ -23,7 +24,7 @@ An audit of the hand-off from Pass 2 onward found that the table under-delivered
 |---|---|
 | **Keep "N receives N−1 only"** | Rejected — additive passes degrade when their immediate predecessor is partial or skipped, and Security cannot review Observability's changes precisely. |
 | **Chain the full implementation history** (chosen) | Pass each additive pass the cumulative union of its upstream implementation passes. A skipped or partial predecessor can no longer blank out context, and each specialist sees the complete instrumented surface. |
-| **Have agents discover everything via the indexer** | Rejected as the sole mechanism — the curated payload exists to avoid full-repo rescanning and token bloat ([ADR-0006](./0006-context-control-optimisation.md)); the indexer remains the supplement, not the replacement. |
+| **Have agents discover everything via the indexer** | Rejected as the sole mechanism — the curated payload exists to avoid full-repo rescanning and token bloat; the indexer remains the supplement, not the replacement. |
 
 ---
 
@@ -52,7 +53,7 @@ Additional decisions in the same change set:
 ### Positive
 
 * **Resilient to partial/skipped predecessors** — Pass 5/6 keep Pass 3 context even when Refactor makes no changes.
-* **Security reviews the full instrumented surface** — Pass 6 now carries Observability's `targetSymbols`/`fileChanges`, resolving ADR-0008 O-1.
+* **Security reviews the full instrumented surface** — Pass 6 carries Observability's `targetSymbols`/`fileChanges`, so it audits the log statements it is required to review.
 * **Public API is documented** — Pass 7 can document the Pass 1 contract symbols that form the frozen API surface.
 * **Prompt and payload agree** — agents are told to read the bucket that actually holds the data.
 
@@ -67,5 +68,5 @@ Additional decisions in the same change set:
 ## Related
 
 * [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md) · [6. Context Engineering — User View](../user-overview/06-context-and-token-savings.md)
-* [ADR-0007 AST-Grep Resolver](./0007-ast-grep-symbol-resolver.md) · [ADR-0008 Observability Before Security](./0008-observability-before-security.md) (O-1 resolved)
+* [ADR-0007 AST-Grep Resolver](./0007-ast-grep-symbol-resolver.md) · [ADR-0008 Observability Before Security](./0008-observability-before-security.md)
 * `src/core/context-builder.ts`, `src/core/context-provider.ts`, `src/core/runners/shared.ts`

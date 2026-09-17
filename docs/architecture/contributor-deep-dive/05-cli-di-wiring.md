@@ -187,7 +187,7 @@ sequenceDiagram
 8. **Completion** — on `pipeline_complete` the session ends and the state file is deleted.
 
 > [!NOTE]
-> Step 6 implements the main cost lever: **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). Static Prefix ([ADR-0006](../adrs/0006-context-control-optimisation.md)) is **deprecated / low priority** pending research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). See [3. Context Engineering](03-context-engineering.md).
+> Step 6 implements the main cost lever: **Context Compaction** (error logs deleted on pass success, [ADR-0005](../adrs/0005-context-compaction.md)). See [3. Context Engineering](03-context-engineering.md).
 
 ---
 
@@ -218,4 +218,4 @@ sequenceDiagram
 - [2. High-Level Architecture (User)](../user-overview/02-high-level-architecture.md)
 - [1. Core Engine Internals](01-core-engine-internals.md) — how the orchestrator consumes injected services
 - [4. Infrastructure Adapters](04-infrastructure-adapters.md) — per-adapter deep dives
-- ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)
+- ADRs: [0001 Pure Core Engine](../adrs/0001-pure-core-engine.md) · [0005 Context Compaction](../adrs/0005-context-compaction.md)

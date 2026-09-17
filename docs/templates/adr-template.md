@@ -1,8 +1,15 @@
 # [NNNN]. [Short Imperative Title]
 
-* **Status:** Proposed | Accepted | Deprecated | Superseded by [NNNN](./NNNN-title.md)
+* **Status:** Accepted
 * **Date:** YYYY-MM-DD
+* **Last reviewed:** YYYY-MM-DD
 * **Deciders:** [@github-handle]
+
+> [!IMPORTANT]
+> ADRs are living, current-state documents. Revise this file **in place** when
+> the decision changes; delete it when it no longer describes the shipped
+> codebase. Never add a `Superseded`/`Deprecated` status or a tombstone stub —
+> git is the archive. See [STYLE_GUIDE §7](../STYLE_GUIDE.md#7-architectural-decision-record-adr-lifecycle).
 
 ---
 
@@ -26,22 +33,3 @@
 
 ### Negative / Trade-offs
 * [Known trade-off or additional operational complexity]
-
----
-
-## Tombstone Template (For Superseded ADRs Only)
-
-If this ADR is superseded in the future, replace the body above with this tombstone:
-
-```markdown
-# NNNN. [SUPERSEDED] [Title]
-
-* **Status:** Superseded by [ADR-XXXX](./XXXX-title.md)
-* **Superseded Date:** YYYY-MM-DD
-* **Reason:** [1-sentence explanation of why the architectural decision changed]
-
-> [!NOTE]
-> This record is kept as a permanent tombstone for navigation and audit trail stability.
-> Full historical content can be viewed via git history:
-> `git log --follow docs/architecture/adrs/NNNN-title.md`
-```

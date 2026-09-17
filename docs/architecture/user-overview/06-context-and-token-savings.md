@@ -143,9 +143,6 @@ When context is accurate, costs fall *mechanically*:
 | **Context Compaction** | Per-pass error logs deleted on success | See [ADR-0005](../adrs/0005-context-compaction.md) & [3. § 5](../contributor-deep-dive/03-context-engineering.md#5-context-compaction-adr-0005) |
 | **SKIP protocol** | `assess-first` lets a pass declare a no-op (`SKIP:N:reason`) | No wasted tokens on already-satisfied passes ([`src/core/skip-parser.ts`](../../../src/core/skip-parser.ts)) |
 
-> [!NOTE] Static Prefix caching is deprecated
-> An earlier cost lever — **Static Prefix** (ordering stable files first to maximise provider KV-cache hits, [ADR-0006](../adrs/0006-context-control-optimisation.md)) — is **deprecated / low priority**. Each pass can now be configured with its own LLM, and whether prefix engineering still helps is under research — see [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). The savings above do **not** depend on it.
-
 Each of these individually saves tokens; together, with accuracy as the driver, they compound. But note the framing: **we never optimised for tokens first** — we optimised for the agent seeing exactly what it needs, and the waste simply disappeared.
 
 > [!TIP]
@@ -190,7 +187,6 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 |---|---|---|
 | C-1 | Benchmark numbers | Own token-savings figures for agentic-tdd; today we cite external studies only. |
 | C-2 | LiteLLM status | Verify whether `infra/docker-compose.yml` + `litellm_config.yaml` SSO/budget features are shipped or aspirational. |
-| C-3 | Static Prefix caching (deprecated) | Whether prefix engineering still helps given per-pass LLM config is under research — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53). Re-evaluate before investing. |
 
 ---
 
@@ -199,5 +195,5 @@ For enterprise budget control, an optional LiteLLM proxy (`infra/docker-compose.
 - Previous: [5. Agent Prompt System & Routing](05-agent-prompt-system.md)
 - Next: [7. Security Model & Sandboxing](07-security-model.md)
 - Deep dives: [3. Context Engineering](../contributor-deep-dive/03-context-engineering.md) · [2. Prompt Engineering](../contributor-deep-dive/02-prompt-engineering.md)
-- ADRs: [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md) · [0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md)
+- ADRs: [0005 Context Compaction](../adrs/0005-context-compaction.md) · [0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
 - Related: [1. Why This Exists § 2.4](01-why-this-exists.md#24-reducing-the-non-determinism-of-genai) · [8. Engineering Concepts](08-engineering-concepts.md)

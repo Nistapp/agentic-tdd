@@ -10,13 +10,12 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [0001](adrs/0001-pure-core-engine.md) | Pure Core Engine — No Infrastructure Imports in `src/core/` | Accepted | 2026-06-01 |
 | [0002](adrs/0002-xstate-machines.md) | XState Machines Over Ad-hoc Loops | Accepted | 2026-08-01 |
 | [0003](adrs/0003-atomic-commits-per-pass.md) | Atomic Git Commits Per Pass (Not Squashed) | Accepted | 2026-06-01 |
-| [0004](adrs/0004-hitl-gate-after-pass-0.md) | HITL Gate After Pass 0 Only | Accepted | 2026-06-01 |
+| [0004](adrs/0004-hitl-gate-after-pass-0.md) | HITL Gates After Pass 0 and Pass 2 | Accepted | 2026-06-01 |
 | [0005](adrs/0005-context-compaction.md) | Context Compaction — Delete Error Logs on Pass Success | Accepted | 2026-07-01 |
-| [0006](adrs/0006-context-control-optimisation.md) | Static Prefix Ordering for Prompt Cache Hits | Deprecated (low priority — [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) | 2026-07-01 |
 | [0007](adrs/0007-ast-grep-symbol-resolver.md) | `@ast-grep/napi` for In-Process Symbol Resolution | Accepted | 2026-08-08 |
 | [0008](adrs/0008-observability-before-security.md) | Swap Pass Order — Observability Before Security | Accepted | 2026-08-01 |
 | [0009](adrs/0009-configurable-per-agent-models.md) | Configurable Per-Agent Models via `config.json` | Accepted | 2026-08-17 |
-| [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture (Pi Default) | Accepted | 2026-09-04 |
+| [0010](adrs/0010-agent-agnostic-sdk-architecture.md) | Agent-Agnostic SDK Architecture | Accepted | 2026-09-04 |
 | [0011](adrs/0011-mandatory-indexer-gate.md) | codebase-memory Indexer Is a Mandatory Harness Prerequisite | Accepted | 2026-09-09 |
 | [0012](adrs/0012-opencode-sdk-default-backend.md) | opencode SDK Is the Default Agent Backend | Accepted | 2026-09-10 |
 | [0013](adrs/0013-context-rule-chaining.md) | Chain Cumulative Context Across Additive Passes | Accepted | 2026-09-12 |
@@ -62,5 +61,8 @@ Architectural Decision Records (ADRs) for `agentic-tdd`.
 | [9. ADRs & Roadmap](contributor-deep-dive/09-adrs-roadmap.md) | Published (ADR index/status, roadmap from retired `roadmap.md`, open debates; open items R-2–R-3) |
 
 > [!TIP]
-> When adding a new ADR, assign the next sequence number and add a row to
-> the index table above before merging.
+> ADRs are living, current-state documents. Revise an existing ADR **in place**
+> when a decision changes and delete it when it becomes irrelevant; assign the
+> next number (`highest-ever + 1`, never reused) only for a brand-new decision.
+> Add a row to the index table above when an ADR is added, revised, or deleted.
+> See [STYLE_GUIDE §7](../STYLE_GUIDE.md#7-architectural-decision-record-adr-lifecycle).

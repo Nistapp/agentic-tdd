@@ -2,7 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-09-09
-* **Supersedes:** the earlier "optional accelerator" stance (Layer 1, H1–H3)
+* **Last reviewed:** 2026-09-17
 
 ---
 
@@ -35,11 +35,10 @@ session entry point (start, resume-paused, resume-fast-forward) and **before any
 pass dispatches**, the harness runs a gate (`ensureIndexerAccess`, wired in
 `src/cli/session.ts`, composed in `src/infrastructure/indexer-gate.ts`):
 
-1. **G1 — backend gate:** only `--backend pi` is supported. `opencode-cli` is a
-   fatal exit until a checker exists for it.
-   > **Superseded by [ADR-0012](./0012-opencode-sdk-default-backend.md):** the
-   > default backend is now `opencode` (SDK server) and the gate owns its server;
-   > `pi` is the backup. `opencode-cli` remains a fatal exit.
+1. **G1 — backend gate:** the default `opencode` (SDK server) backend is supported
+   and the gate owns its server; `pi` is the backup
+   ([ADR-0012](./0012-opencode-sdk-default-backend.md)). `opencode-cli` is a fatal
+   exit until a checker exists for it.
 2. **G2 — static checks** (`src/infrastructure/indexer-probe.ts`): resolve the
    binary via `which`/`where` with **no hardcoded fallback** (missing binary is a
    fatal with install instructions); verify it is executable; verify the

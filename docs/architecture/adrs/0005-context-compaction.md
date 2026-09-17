@@ -2,6 +2,7 @@
 
 * **Status:** Accepted
 * **Date:** 2026-07-01 (estimated)
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
 
 ---
@@ -17,7 +18,7 @@ If a resolved error log is left on disk after a pass succeeds, it leaks into **e
 * **Token waste** — the stale log is re-serialised into each downstream agent prompt, burning tokens on failure output that is no longer relevant.
 * **Stale noise / accuracy drift** — Pass 4's agent sees Pass 3's resolved failures and may "fix" phantom problems or hedge its behaviour around them, degrading the determinism the pipeline exists to provide.
 
-The two "context control" levers were **Static Prefix** (cache-hit file ordering) and **Context Compaction**. Static Prefix has since been deprecated pending research ([ADR-0006](./0006-context-control-optimisation.md), [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)); **Context Compaction is the surviving, shipped token/accuracy lever**.
+Resolved error logs are a direct source of that pollution. Deleting them at the source is **Context Compaction** — the pipeline's shipped token/accuracy lever.
 
 ### Alternatives considered
 
@@ -61,7 +62,7 @@ if (await fs.exists(errorLogPath)) {
 ### Positive
 
 * **No stale-failure pollution** — later passes never inherit resolved failure output; each pass starts from the committed state plus its own target symbols.
-* **Token savings** — the resolved error log is not re-serialised into any subsequent agent prompt (this is the pipeline's primary shipped token/context lever since [ADR-0006](./0006-context-control-optimisation.md) was deprecated).
+* **Token savings** — the resolved error log is not re-serialised into any subsequent agent prompt (the pipeline's primary shipped token/context lever).
 * **Log present exactly while relevant** — the file exists precisely during the retry loop that needs it, then disappears on success.
 * **Crash-safe cleanliness** — the `run()`-start deletion ([`orchestrator.ts#L80-L86`](../../../src/core/orchestrator.ts#L80-L86)) guarantees an interrupted run never leaks a stale log into the next run.
 

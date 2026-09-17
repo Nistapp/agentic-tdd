@@ -12,7 +12,7 @@ Every piece of documentation written in this repository must uphold these five f
 2. **Zero Specification Drift:** Code and architecture specs (`.mmd` Mermaid diagrams, `.gherkin` specs) must remain synchronized. When logic changes, documentation and specifications MUST update in the same change set.
 3. **Empirical Grounding:** Never document aspirational or planned features as existing facts. If a feature is deferred or planned, it MUST carry an explicit notice banner (e.g., `> [!NOTE] This feature is planned...`).
 4. **Symbol & Link Anchoring:** Always link code references directly to source files using explicit line ranges (e.g. `[orchestrator.ts#L37-L61](../src/core/orchestrator.ts#L37-L61)`).
-5. **Permanent ADR History:** Architectural Decision Records use immutable sequence numbers (`NNNN-title.md`). Superseded decisions are never deleted; they are converted into tombstone stubs pointing to the replacement ADR.
+5. **Living ADRs (Current-State Only):** Architectural Decision Records use stable sequence numbers (`NNNN-title.md`) and MUST describe only the shipped, current codebase. When a decision changes, revise or replace the ADR body **in place**; when an ADR becomes irrelevant, delete it. Git is the archive — never keep tombstone, superseded, or deprecated ADR stubs.
 
 ---
 
@@ -111,7 +111,7 @@ When drafting new documentation, agents and humans **MUST** copy and extend the 
 | **Architecture / Component Doc** | [`docs/templates/architecture-doc-template.md`](./templates/architecture-doc-template.md) | High-level component overviews, C4 context, data flow, & code maps |
 | **How-To Recipe** | [`docs/templates/how-to-template.md`](./templates/how-to-template.md) | Task-oriented guides with steps, commands, and troubleshooting |
 | **Pass Reference** | [`docs/templates/pass-reference-template.md`](./templates/pass-reference-template.md) | Detailed specifications for individual agentic pipeline passes |
-| **ADR (Decision Record)** | [`docs/templates/adr-template.md`](./templates/adr-template.md) | Formal architectural decisions & tombstone format |
+| **ADR (Decision Record)** | [`docs/templates/adr-template.md`](./templates/adr-template.md) | Formal architectural decisions (living, current-state only) |
 
 ---
 
@@ -146,7 +146,7 @@ AI coding assistants (Antigravity, Claude Code, Gemini CLI, etc.) **MUST** adher
 ### 6.1 Verification First
 1. **Query-first (codebase-memory-mcp):** If a codebase-memory-mcp index exists for this repo, agents **MUST** consult it (`search_graph`, `get_code_snippet`, `get_architecture`) before grepping or reading whole files, to verify symbol signatures and file locations against the current codebase state. Only fall back to `grep`/`read` when the graph cannot answer the question.
 2. Check existing files in `docs/` to update rather than duplicate documentation.
-3. Check `docs/architecture/adrs/` for the next available sequence number before drafting a new ADR.
+3. Check `docs/architecture/adrs/` for the highest sequence number ever used. A new ADR takes `highest-ever + 1`; a deleted ADR's number is retired and MUST NOT be reused. If the decision already has an ADR, edit it in place instead of creating a new one.
 
 ### 6.2 Accuracy & Status Tagging
 - Never state aspirational or planned capabilities as working code.
@@ -156,7 +156,7 @@ AI coding assistants (Antigravity, Claude Code, Gemini CLI, etc.) **MUST** adher
 When code changes occur:
 1. Run `detect_changes` on `codebase-memory-mcp`.
 2. Update all affected documentation pages and code link line anchors.
-3. Update the ADR index in `docs/architecture/README.md` whenever ADR statuses change.
+3. Update the ADR index in `docs/architecture/README.md` and the ADR table in [9. ADRs & Roadmap](architecture/contributor-deep-dive/09-adrs-roadmap.md) whenever an ADR is added, revised, or deleted.
 4. When `AGENTS.md` or `docs/architecture/` change, update the affected pages and the index in `docs/architecture/README.md` in the same change set.
 
 ---
@@ -168,8 +168,9 @@ New ADRs are created in `docs/architecture/adrs/` using [`docs/templates/adr-tem
 ```markdown
 # NNNN. Short Title
 
-* **Status:** Proposed | Accepted | Deprecated | Superseded by [NNNN](./NNNN-title.md)
+* **Status:** Accepted
 * **Date:** YYYY-MM-DD
+* **Last reviewed:** YYYY-MM-DD
 * **Deciders:** [@github-handle]
 
 ## Context
@@ -186,21 +187,43 @@ New ADRs are created in `docs/architecture/adrs/` using [`docs/templates/adr-tem
 * [Trade-off 1]
 ```
 
-### 7.1 Tombstone Policy for Superseded ADRs
-Sequence numbers are permanent. When an ADR is superseded: 
-1. Create the new ADR file (e.g. `0009-new-approach.md`). (TODO - Research this more and come up with a better approach. We can probably preserve/edit the existing file since it is versioned. We can just add stubs to olderversion atsd the bottom.)
-2. Replace the body of the older ADR with a **tombstone stub** pointing to the new ADR and git history:
+> [!IMPORTANT]
+> **ADRs are living, current-state documents.** An ADR MUST describe only the
+> shipped, current codebase. There is no `Deprecated`, `Superseded`, or
+> `Rejected` status — a merged ADR is always `Accepted` (`Proposed` is permitted
+> in-flight but MUST NOT be merged). Stale instructions in an ADR pollute agent
+> context, so staleness is treated as a defect, not a historical record.
 
-```markdown
-# NNNN. [SUPERSEDED] Old Title
+### 7.1 Revision, Deletion & Numbering
 
-* **Status:** Superseded by [ADR-XXXX](./XXXX-new-approach.md)
-* **Reason:** [1-sentence rationale for the change]
+Sequence numbers are **stable identifiers, not immutable content**. Git is the
+historical archive; the in-tree ADR set MUST stay free of historical stubs.
 
-> [!NOTE]
-> This record is kept as a permanent tombstone for navigation stability.
-> Full history: `git log --follow docs/architecture/adrs/NNNN-old-title.md`
-```
+**Revise in place.** When a decision changes, overwrite the existing ADR body —
+keep the file and its number — so it describes the new decision. Fold the
+reversal into the ADR's own *Alternatives considered* table so the rejected
+direction keeps its rationale inside the accepted record. Use
+`git log --follow docs/architecture/adrs/NNNN-title.md` to recover older wording.
+Do NOT create a second "superseding" ADR and do NOT leave a tombstone stub.
+
+**Delete when irrelevant.** When an ADR no longer describes anything in the
+current codebase, delete the file. Feature-level deprecation belongs in the
+glossary or roadmap, never as a lingering ADR.
+
+**Deletion is not silent across the docs tree.** Deleting an ADR REQUIRES
+updating every inbound reference — link paths and `ADR-NNNN` citations — plus
+both index tables, in the **same change set** (invariant #2, Zero Specification
+Drift).
+
+**New numbers are for new decisions.** If a decision is unrelated to any
+existing ADR, create a new numbered file with `highest-ever + 1`. A number whose
+ADR was deleted is **retired forever and MUST NOT be reused**, so a number always
+maps to exactly one decision in git history.
+
+**The `codebase-memory` `manage_adr` blob is not the ADR system.** It is a
+separate single-document project-memory store; `docs/architecture/adrs/` remains
+the single source of truth. Agents query the numbered ADRs as ordinary markdown
+via `search_code`, `search_graph`, or `read`.
 
 ---
 
@@ -211,7 +234,6 @@ Project domain terms MUST be capitalized consistently according to [`docs/archit
 | Term | Canonical Form | Usage Rule |
 |---|---|---|
 | Human-in-the-Loop | **HITL** | Use abbreviation after first mention |
-| Static Prefix | **Static Prefix** | Always capitalized; deprecated/low-priority pending research ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) |
 | Context Compaction | **Context Compaction** | Always capitalized |
 | Agent Trampling | **Agent Trampling** | Always capitalized |
 | pass | **pass** / **Pass N** | Lowercase when generic ("each pass"), capitalized when specific ("Pass 3") |

@@ -1,14 +1,11 @@
-# 0010. Agent-Agnostic SDK Architecture (Pi Default)
+# 0010. Agent-Agnostic SDK Architecture
 
 * **Status:** Accepted
 * **Date:** 2026-09-04
-* **Last updated:** 2026-09-05 (post-spike verification; amended after v3 design review — per-pass thinking map, MCP copy-or-merge template, environment decision, platform hardening)
+* **Last reviewed:** 2026-09-17
 * **Deciders:** @kcramakrishna
 
-> **Default-backend note:** [ADR-0012](./0012-opencode-sdk-default-backend.md)
-> supersedes only the *default backend* decision below. The adapter architecture,
-> `IAgentRunner` contract, per-pass session isolation and prompt handling are
-> retained; `PiSdkRunner` remains as the backup backend.
+> **Default backend:** the opencode SDK is the default ([ADR-0012](./0012-opencode-sdk-default-backend.md)); `PiSdkRunner` is the backup (`--backend pi`) and `OpenCodeCliRunner` is legacy. The adapter architecture, `IAgentRunner` contract, per-pass session isolation and prompt handling defined here are current.
 
 ---
 
@@ -49,7 +46,7 @@ The Pi SDK (`@earendil-works/pi-coding-agent` v0.85.0) was verified in a headles
 
 ## Decision
 
-We will refactor the agent runner architecture to be **agent-agnostic** via the SDK Adapter pattern, and make **Pi (`@earendil-works/pi-coding-agent`) the default backend**.
+We will refactor the agent runner architecture to be **agent-agnostic** via the SDK Adapter pattern, with the **opencode SDK as the default backend** ([ADR-0012](./0012-opencode-sdk-default-backend.md)) and Pi as an in-process backup.
 
 ### 1. Adapter Architecture
 The existing `IAgentRunner` interface remains the universal contract. A `createAgentRunner(backend, deps)` factory instantiates the correct runner adapter based on the `--backend` CLI flag.
@@ -62,12 +59,12 @@ export interface IAgentRunner {
 ```
 
 Adapters in `src/infrastructure/agent-runners/`:
-- **`PiSdkRunner`**: The new default, using the in-process Pi SDK.
-- **`OpenCodeCliRunner`**: Renamed from the current `OpenCodeAgentRunner`, kept for legacy fallback via `--backend opencode-cli`.
-- `OpenCodeSdkRunner` / `GooseSdkRunner`: (Future, deferred).
+- **`OpencodeSdkRunner`**: The default, using the opencode SDK server ([ADR-0012](./0012-opencode-sdk-default-backend.md)).
+- **`PiSdkRunner`**: The in-process Pi SDK backup (`--backend pi`).
+- **`OpenCodeCliRunner`**: Legacy shell-out (`--backend opencode-cli`).
 
-### 2. Pi as the Default Backend
-Pi is the hardcoded default. An optional `--backend <pi|opencode-cli>` CLI flag provides the fallback. Backend selection lives in the CLI/DI layer (consistent with ADR-0001), flowing through `ContainerOptions` → `createPipelineServices` → `createAgentRunner`. **No changes** to `model-config.ts`, `config.default.json`, or `PipelineConfig`.
+### 2. Backend Selection
+The **opencode SDK** backend is the default; `--backend <opencode|pi|opencode-cli>` selects `OpencodeSdkRunner` (default), `PiSdkRunner` (backup) or the legacy `OpenCodeCliRunner`. Backend selection lives in the CLI/DI layer (consistent with ADR-0001), flowing through `ContainerOptions` → `createPipelineServices` → `createAgentRunner`. **No changes** to `model-config.ts`, `config.default.json`, or `PipelineConfig`.
 
 ### 3. Session Strategy: Per-Pass Isolation
 We retain the current **session-per-pass** isolation model: each `execute()` call creates a fresh `SessionManager.inMemory()` session. This ensures context boundaries remain strict, prevents token pollution across passes, and maintains the current architectural guarantees of the 8-pass pipeline.

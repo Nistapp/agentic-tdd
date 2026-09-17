@@ -102,10 +102,12 @@ Conditionally attaches `--file` paths ([`src/core/runners/shared.ts#L31-L68`](..
 
 ---
 
-## 4. Static Prefix (ADR-0006)
+## 4. Deterministic Payload Ordering
 
-> [!NOTE] Deprecated / low priority
-> Static Prefix ordering (placing **stable files first** — contracts/specs — to maximise provider-level KV **cache hits** across passes) is **deprecated** pending research. Each pass can now be configured with its own LLM, and whether prefix engineering still helps is unclear. See [discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53) and [ADR-0006](../adrs/0006-context-control-optimisation.md). Do not invest further in cache-hit ordering until that question is settled.
+`CONTEXT_RULES` and `StateContextProvider.build` assemble each pass's payload **deterministically**: `buildContextFiles` emits a stable `contracts → tests → implementation` order and `buildTargetPasses` merges upstream passes in a fixed sequence ([`context-builder.ts`](../../../src/core/context-builder.ts)). Determinism keeps the payload reproducible across retries and test runs.
+
+> [!NOTE] Provider cache-hit ordering is not a design goal
+> An earlier optimisation ordered stable files first to maximise provider KV-cache hits (the "Static Prefix"). It is **not pursued**: each pass may be configured with its own model ([ADR-0009](../adrs/0009-configurable-per-agent-models.md)), so a prefix built for one pass need not hit in the next. Whether prefix engineering still helps remains an open question ([discussion #53](https://github.com/Nistapp/agentic-tdd/discussions/53)) — not a recorded decision.
 
 ## 5. Context Compaction (ADR-0005)
 
@@ -141,4 +143,4 @@ See [2. Prompt Engineering §3](02-prompt-engineering.md#3-the-directive-catalog
 ## Related
 
 - [6. Context Engineering — Code Indexing & Token Savings (User view)](../user-overview/06-context-and-token-savings.md)
-- [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0006 Static Prefix (deprecated)](../adrs/0006-context-control-optimisation.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md)
+- [ADR-0005 Context Compaction](../adrs/0005-context-compaction.md) · [ADR-0007 AST-Grep Resolver](../adrs/0007-ast-grep-symbol-resolver.md) · [ADR-0009 Configurable Per-Agent Models](../adrs/0009-configurable-per-agent-models.md)
