@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-verify:
-    name: Build, Lint, and Test (${{ matrix.os }})
+    name: Build, Check, and Verify (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,11 +27,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Lint Code
-        run: npm run lint
-
-      - name: Run Tests
-        run: npm test
+      - name: Check (format, typecheck, tests)
+        run: npm run check
 
       - name: Verify Build
         run: npm run build:full
