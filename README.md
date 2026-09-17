@@ -227,11 +227,19 @@ Contributors and power users can clone and build from source instead:
 git clone https://github.com/Nistapp/agentic-tdd.git
 cd agentic-tdd
 npm install
-npm run build
 
-# Optionally expose `agentic-tdd` on your PATH
-npm link
+# Clean build + install the local build onto your PATH
+npm run local-install
 ```
+
+`npm run local-install` runs a clean build, packs the built artifact (`dist/`), and installs
+it globally with `npm install -g <tarball>` — so the `agentic-tdd` on your `PATH` is your
+local build. This is a regular install (a copy, not a symlink), so it replaces any
+npm-registry copy in the same slot and needs no `npm uninstall -g` step first. To switch
+back to the published version, run `npm install -g agentic-tdd` — whichever you run last wins.
+
+Prefer a live symlink into the repo instead? `npm run build && npm link` still works for
+contributors; switch back with `npm unlink -g agentic-tdd`.
 
 > **Tip:** run the pipeline from the root of the repository you're developing in — session state, logs, and config overrides live in a git-ignored `.agentic-tdd/` directory there, and `.env` is read from the current working directory.
 
@@ -309,10 +317,10 @@ See the Contributor Deep Dive — [Prompt Engineering & Agent Files](docs/archit
 To remove the CLI:
 
 ```bash
-# If installed via npm (recommended install path)
+# npm registry install or `npm run local-install` (both are regular installs)
 npm uninstall -g agentic-tdd
 
-# If built from source and linked with npm link
+# If you used `npm link` instead
 npm unlink -g agentic-tdd
 ```
 

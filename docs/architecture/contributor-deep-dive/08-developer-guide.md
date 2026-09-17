@@ -47,17 +47,15 @@ cd agentic-tdd
 # 1. Install dependencies
 npm install
 
-# 2. Build the TypeScript sources + copy prompt agents to dist/agents
-npm run build
+# 2. Clean build + install the local build globally (npm pack → npm install -g <tarball>)
+#    `npm run build` builds without installing; `npm link` gives a symlink dev loop.
+npm run local-install
 
-# 3. (Optional) expose the CLI on PATH
-npm link
-
-# 4. Configure the API key — NEVER commit .env
+# 3. Configure the API key — NEVER commit .env
 cp .env.example .env
 #   edit .env → OPENROUTER_API_KEY=sk-or-...  (or DEEPSEEK_API_KEY=sk-...)
 
-# 5. (Backup backend only) One-time per-machine Pi prerequisite
+# 4. (Backup backend only) One-time per-machine Pi prerequisite
 pi install npm:pi-mcp-adapter
 ```
 
