@@ -35,6 +35,7 @@
     "lint": "npm run typecheck",
     "git:clean:dry": "node dist/utils/git-branch-janitor.js",
     "git:clean": "node dist/utils/git-branch-janitor.js --apply",
+    "security": "npm audit --audit-level=high",
     "prepublishOnly": "npm run check && npm run build:full"
   },
   "keywords": [
