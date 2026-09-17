@@ -1,6 +1,10 @@
 import { createActor, waitFor } from 'xstate';
 
-import { pipelineMachineConfig, createPipelineMachine, getInitialStateForPass } from '../../src/core/machines/pipeline.machine.js';
+import {
+  pipelineMachineConfig,
+  createPipelineMachine,
+  getInitialStateForPass,
+} from '../../src/core/machines/pipeline.machine.js';
 import { PipelinePass } from '../../src/core/types.js';
 import type {
   PipelineContext,
@@ -474,14 +478,12 @@ describe('Pipeline Machine', () => {
           ],
         },
       ] as DiffLineChange[]);
-      (m.fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(
-        async (path: string) => {
-          if (path === 'src/foo.ts') {
-            return 'export function foo() {\n  const x = 1;\n  return x;\n}';
-          }
-          return '%% Module: my_module\n%% This is a long enough module design mock string \n';
-        },
-      );
+      (m.fs.readFile as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+        if (path === 'src/foo.ts') {
+          return 'export function foo() {\n  const x = 1;\n  return x;\n}';
+        }
+        return '%% Module: my_module\n%% This is a long enough module design mock string \n';
+      });
       const symbolResolver: ISymbolResolver = {
         mapRangesToSymbols: () => ['foo'],
       };
@@ -904,10 +906,7 @@ describe('Pipeline Machine', () => {
     it('pipelineMachineConfig uses only string refs in invoke.src', () => {
       type InvokeDef = { src: unknown };
 
-      function collectInvokeSources(node: {
-        invoke?: InvokeDef[];
-        states?: Record<string, unknown>;
-      }): unknown[] {
+      function collectInvokeSources(node: { invoke?: InvokeDef[]; states?: Record<string, unknown> }): unknown[] {
         const sources: unknown[] = (node.invoke ?? []).map((i) => i.src);
         for (const child of Object.values(node.states ?? {})) {
           sources.push(...collectInvokeSources(child as { invoke?: InvokeDef[]; states?: Record<string, unknown> }));

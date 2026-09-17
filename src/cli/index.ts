@@ -11,12 +11,7 @@ import { TerminalRenderer, PIPELINE_VERSION } from './terminal-renderer.js';
 import { validateAndResolveOptions, validateBackend } from './validators.js';
 import { loggers } from '../utils/logger.js';
 import { closeActiveServer } from './run-with-server.js';
-import {
-  abortSession,
-  resumeSession,
-  startNewSession,
-  getActiveOrchestrator,
-} from './session.js';
+import { abortSession, resumeSession, startNewSession, getActiveOrchestrator } from './session.js';
 
 process.on('uncaughtException', (err) => {
   loggers.cli.fatal({ err }, 'Uncaught exception');
@@ -35,9 +30,7 @@ process.on('SIGINT', async () => {
   sigintCount++;
 
   if (sigintCount === 1) {
-    console.log(
-      '\n  Gracefully pausing after the current pass completes. Press Ctrl+C again to force exit.\n',
-    );
+    console.log('\n  Gracefully pausing after the current pass completes. Press Ctrl+C again to force exit.\n');
 
     sigintTimer = setTimeout(() => {
       sigintCount = 0;
@@ -81,7 +74,11 @@ program
   .option('--no-context-enrich', 'Force files-only context mode (skip method-level enrichment)')
   .option('--model <model>', 'Override the model for every agent (provider/model)')
   .option('--config <path>', 'Path to an alternate config.json (overrides .agentic-tdd/config.json)')
-  .option('--backend <backend>', 'Agent backend: opencode (SDK server, default) | pi (in-process SDK, backup) | opencode-cli (legacy shell-out)', 'opencode')
+  .option(
+    '--backend <backend>',
+    'Agent backend: opencode (SDK server, default) | pi (in-process SDK, backup) | opencode-cli (legacy shell-out)',
+    'opencode',
+  )
   .action(async (options: Record<string, unknown>) => {
     const renderer = new TerminalRenderer();
     loadDotEnv({ path: `${cwd()}/.env`, override: false });
@@ -96,17 +93,14 @@ program
     if (!process.env.OPENROUTER_API_KEY && !process.env.DEEPSEEK_API_KEY) {
       renderer.fatal(
         'No model provider API key is set.\n' +
-        '  Add OPENROUTER_API_KEY (default openrouter models) or DEEPSEEK_API_KEY (deepseek-direct models) to your .env file.',
+          '  Add OPENROUTER_API_KEY (default openrouter models) or DEEPSEEK_API_KEY (deepseek-direct models) to your .env file.',
       );
     }
 
     const fs = new NodeFileSystem();
     const git = new GitService();
     const noContextEnrich = Boolean(options.noContextEnrich);
-    const backend = validateBackend(
-      typeof options.backend === 'string' ? options.backend : undefined,
-      renderer,
-    );
+    const backend = validateBackend(typeof options.backend === 'string' ? options.backend : undefined, renderer);
 
     if (resume || abort) {
       let stateStore: JsonStateStore;
@@ -114,7 +108,8 @@ program
         const featureName = basename(String(options.featureDescFile), extname(String(options.featureDescFile)));
         stateStore = new JsonStateStore(fs, featureName);
       } else {
-        stateStore = await JsonStateStore.findActive(fs) ??
+        stateStore =
+          (await JsonStateStore.findActive(fs)) ??
           renderer.fatal('No active TDD session found. Nothing to resume or abort.');
       }
 
@@ -131,17 +126,7 @@ program
       const model = typeof options.model === 'string' ? options.model : undefined;
       const configPath = typeof options.config === 'string' ? options.config : undefined;
 
-      await resumeSession(
-        stateStore,
-        fs,
-        git,
-        renderer,
-        PIPELINE_VERSION,
-        noContextEnrich,
-        model,
-        configPath,
-        backend,
-      );
+      await resumeSession(stateStore, fs, git, renderer, PIPELINE_VERSION, noContextEnrich, model, configPath, backend);
       return;
     }
 

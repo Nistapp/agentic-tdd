@@ -2,17 +2,8 @@ import { createRequire } from 'node:module';
 import boxen from 'boxen';
 import { cwd } from 'node:process';
 
-import {
-  PipelinePass,
-  PASS_LABELS,
-  SELF_CORRECTION_PASSES,
-  GIT_COMMIT_PASSES,
-} from '../core/types.js';
-import type {
-  PipelineContext,
-  FileChanges,
-  TargetSymbols,
-} from '../core/types.js';
+import { PipelinePass, PASS_LABELS, SELF_CORRECTION_PASSES, GIT_COMMIT_PASSES } from '../core/types.js';
+import type { PipelineContext, FileChanges, TargetSymbols } from '../core/types.js';
 
 const require = createRequire(import.meta.url);
 export const PIPELINE_VERSION: string = (require('../../package.json') as { version: string }).version;
@@ -28,8 +19,8 @@ export interface TerminalWriter {
 }
 
 export const consoleWriter: TerminalWriter = {
-  log:   (msg) => console.log(msg),
-  warn:  (msg) => console.warn(msg),
+  log: (msg) => console.log(msg),
+  warn: (msg) => console.warn(msg),
   error: (msg) => console.error(msg),
 };
 
@@ -48,14 +39,14 @@ export class TerminalRenderer {
 
   banner(ctx: PipelineContext): void {
     const testStr = ctx.testCmd.join(' ');
-    const hitl    = ctx.skipHitl ? 'disabled (--skip-hitl)' : 'enabled';
+    const hitl = ctx.skipHitl ? 'disabled (--skip-hitl)' : 'enabled';
 
     const title = `agentic-tdd  \u2022  v${PIPELINE_VERSION} Pipeline  \u2022  8-Pass State Machine`;
     this.#w.log(
       boxen(title, {
-        width:       this.#boxWidth,
+        width: this.#boxWidth,
         borderStyle: 'single',
-        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+        padding: { left: 1, right: 1, top: 0, bottom: 0 },
       }),
     );
 
@@ -75,8 +66,8 @@ export class TerminalRenderer {
     for (const pass of passes) {
       const label = PASS_LABELS[pass] ?? '';
       let gate = '  <- HITL gate';
-      if (SELF_CORRECTION_PASSES.has(pass))      gate = '  <- self-correction + git commit';
-      else if (GIT_COMMIT_PASSES.has(pass))      gate = '  <- git commit';
+      if (SELF_CORRECTION_PASSES.has(pass)) gate = '  <- self-correction + git commit';
+      else if (GIT_COMMIT_PASSES.has(pass)) gate = '  <- git commit';
       this.#w.log(`    ${pass}  ${label.padEnd(36)}${gate}`);
     }
     this.#w.log('');
@@ -98,9 +89,9 @@ export class TerminalRenderer {
     const body = ['\u26A0  WARNING', '', ...lines].join('\n');
     this.#w.warn(
       boxen(body, {
-        width:       this.#boxWidth,
+        width: this.#boxWidth,
         borderStyle: 'single',
-        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+        padding: { left: 1, right: 1, top: 0, bottom: 0 },
       }),
     );
   }
@@ -137,15 +128,10 @@ export class TerminalRenderer {
    * files). This is the human-readable summary of `targetSymbols` +
    * `fileChanges` for the current pass.
    */
-  logCapturedContext(
-    fileChanges?: FileChanges,
-    targetSymbols?: TargetSymbols,
-  ): void {
+  logCapturedContext(fileChanges?: FileChanges, targetSymbols?: TargetSymbols): void {
     const changes = fileChanges ?? {};
     const fileNames = Object.keys(changes);
-    const symbolOnlyFiles = Object.keys(targetSymbols ?? {}).filter(
-      (f) => !(f in changes),
-    );
+    const symbolOnlyFiles = Object.keys(targetSymbols ?? {}).filter((f) => !(f in changes));
     if (fileNames.length === 0 && symbolOnlyFiles.length === 0) return;
 
     this.#w.log(`  Change metadata captured:`);
@@ -154,13 +140,8 @@ export class TerminalRenderer {
       const status = rec.kind === 'new-file' ? 'A' : 'M';
       this.#w.log(`    [${status}] ${file}`);
       for (const hunk of rec.hunks) {
-        const sym =
-          hunk.symbols.length > 0
-            ? hunk.symbols.join(', ')
-            : '(top-level)';
-        this.#w.log(
-          `      ${sym.padEnd(44)}  L${hunk.range.start}-${hunk.range.end} (${hunk.kind})`,
-        );
+        const sym = hunk.symbols.length > 0 ? hunk.symbols.join(', ') : '(top-level)';
+        this.#w.log(`      ${sym.padEnd(44)}  L${hunk.range.start}-${hunk.range.end} (${hunk.kind})`);
       }
     }
     for (const file of symbolOnlyFiles) {
@@ -196,9 +177,9 @@ export class TerminalRenderer {
     const body = ['\u23F8  PAUSE', '', msg].join('\n');
     this.#w.log(
       boxen(body, {
-        width:       this.#boxWidth,
+        width: this.#boxWidth,
         borderStyle: 'single',
-        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+        padding: { left: 1, right: 1, top: 0, bottom: 0 },
       }),
     );
   }
@@ -207,9 +188,9 @@ export class TerminalRenderer {
     const body = ['\u25B6  RESUME', '', msg].join('\n');
     this.#w.log(
       boxen(body, {
-        width:       this.#boxWidth,
+        width: this.#boxWidth,
         borderStyle: 'single',
-        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+        padding: { left: 1, right: 1, top: 0, bottom: 0 },
       }),
     );
   }
@@ -224,9 +205,9 @@ export class TerminalRenderer {
     ].join('\n');
     this.#w.log(
       boxen(body, {
-        width:       this.#boxWidth,
+        width: this.#boxWidth,
         borderStyle: 'single',
-        padding:     { left: 1, right: 1, top: 0, bottom: 0 },
+        padding: { left: 1, right: 1, top: 0, bottom: 0 },
       }),
     );
   }

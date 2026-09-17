@@ -8,8 +8,11 @@ export function getAgentContextPayload(
   meta: Record<string, unknown> = {},
 ): string {
   const currentPass = ctx.currentPass;
-  const contextFiles = built?.files
-    ?? (currentPass !== undefined ? buildContextFiles(ctx, currentPass) : { contracts: [], tests: [], implementation: [] });
+  const contextFiles =
+    built?.files ??
+    (currentPass !== undefined
+      ? buildContextFiles(ctx, currentPass)
+      : { contracts: [], tests: [], implementation: [] });
 
   const payload = {
     featureName: ctx.featureName,
@@ -55,7 +58,10 @@ export async function buildArtefacts(
       if (logger) logger.debug('buildArtefacts: specFileAbsPath does not exist — not attaching as --file');
     }
   } else if (ctx.featureDescription) {
-    if (logger) logger.debug('buildArtefacts: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file');
+    if (logger)
+      logger.debug(
+        'buildArtefacts: featureDescription present but specFileAbsPath is not set — spec will NOT be attached as --file',
+      );
   }
   if (errorLog) {
     artefacts.errorLog = errorLog;

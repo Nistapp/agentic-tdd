@@ -1,12 +1,11 @@
 import { createActor, waitFor } from 'xstate';
 
-import { selfCorrectionMachineConfig, createSelfCorrectionMachine } from '../../src/core/machines/self-correction.machine.js';
+import {
+  selfCorrectionMachineConfig,
+  createSelfCorrectionMachine,
+} from '../../src/core/machines/self-correction.machine.js';
 import { PipelinePass, PASS_LABELS } from '../../src/core/types.js';
-import type {
-  PipelineContext,
-  AgenticEvent,
-  AgentRunRequest,
-} from '../../src/core/types.js';
+import type { PipelineContext, AgenticEvent, AgentRunRequest } from '../../src/core/types.js';
 import type {
   IGitService,
   IFileSystem,
@@ -570,9 +569,7 @@ describe('SelfCorrection Machine', () => {
   describe('Agent execution error', () => {
     it('throws when agent rejects (AD-12 fix)', async () => {
       const m = makeMocks();
-      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('Agent crashed'),
-      );
+      (m.agentRunner.execute as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Agent crashed'));
       const machine = createSelfCorrectionMachine({
         agentRunner: m.agentRunner,
         cmd: m.cmd,
@@ -629,10 +626,7 @@ describe('SelfCorrection Machine', () => {
     it('selfCorrectionMachineConfig uses only string refs in invoke.src', () => {
       type InvokeDef = { src: unknown };
 
-      function collectInvokeSources(node: {
-        invoke?: InvokeDef[];
-        states?: Record<string, unknown>;
-      }): unknown[] {
+      function collectInvokeSources(node: { invoke?: InvokeDef[]; states?: Record<string, unknown> }): unknown[] {
         const sources: unknown[] = (node.invoke ?? []).map((i) => i.src);
         for (const child of Object.values(node.states ?? {})) {
           sources.push(...collectInvokeSources(child as { invoke?: InvokeDef[]; states?: Record<string, unknown> }));
@@ -654,9 +648,9 @@ describe('SelfCorrection Machine', () => {
   describe('Assess-First Skip Logic (T4, T5)', () => {
     it('Agent returns SKIP on first attempt -> exits via skipped state (T4)', async () => {
       const m = makeMocks();
-      
+
       m.agentRunner.execute = vi.fn().mockResolvedValue({ output: 'SKIP:3:No core changes' });
-      
+
       const machine = createSelfCorrectionMachine({
         agentRunner: m.agentRunner,
         cmd: m.cmd,
@@ -667,30 +661,30 @@ describe('SelfCorrection Machine', () => {
         contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
-      
+
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
       await waitFor(actor, (s) => s.status === 'done');
-      
+
       // Should exit via 'skipped'
       const snapshot = actor.getPersistedSnapshot();
       expect(snapshot.value).toBe('skipped');
-      
+
       // Tests should not have run
       expect(m.cmd.runTests).not.toHaveBeenCalled();
-      
+
       // History should reflect skipped status
       expect(ctx.history[PipelinePass.CoreImplementation]?.status).toBe('skipped');
       expect(ctx.history[PipelinePass.CoreImplementation]?.skipReason).toBe('No core changes');
     });
-    
+
     it('Agent does not skip -> enters normal test-retry loop (T5)', async () => {
       const m = makeMocks();
-      
+
       m.agentRunner.execute = vi.fn().mockResolvedValue({ output: 'Normal output without skip' });
       m.cmd.runTests = vi.fn().mockResolvedValue({ passed: true, output: '' });
-      
+
       const machine = createSelfCorrectionMachine({
         agentRunner: m.agentRunner,
         cmd: m.cmd,
@@ -701,16 +695,16 @@ describe('SelfCorrection Machine', () => {
         contextProvider: m.contextProvider,
       });
       const ctx = makeContext();
-      
+
       const actor = createActor(machine, { input: { ctx, pass: PipelinePass.CoreImplementation } });
       actor.start();
 
       await waitFor(actor, (s) => s.status === 'done');
-      
+
       // Should exit via 'done' normally
       const snapshot = actor.getPersistedSnapshot();
       expect(snapshot.value).toBe('done');
-      
+
       // Tests should have run
       expect(m.cmd.runTests).toHaveBeenCalledTimes(1);
     });

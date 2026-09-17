@@ -114,9 +114,9 @@ describe('sanitizeLogPayload', () => {
 
     expect((result.a as string).length).toBe(5000);
     expect(((result.b as Record<string, unknown>).c as unknown[])[0]).toBe('y'.repeat(3000));
-    expect(
-      (((result.b as Record<string, unknown>).c as unknown[])[1] as Record<string, unknown>).d,
-    ).toBe('z'.repeat(2000));
+    expect((((result.b as Record<string, unknown>).c as unknown[])[1] as Record<string, unknown>).d).toBe(
+      'z'.repeat(2000),
+    );
   });
 
   // -- non-string values pass through --

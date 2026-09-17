@@ -75,7 +75,11 @@ export type BootstrapOutcome =
   | { kind: 'fresh'; project: string }
   | { kind: 'indexed'; project: string }
   | { kind: 'already_indexed'; project: string }
-  | { kind: 'failed'; reason: 'missing_project' | 'reindex_failed' | 'cli_failed' | 'timeout' | 'parse_failed'; message: string };
+  | {
+      kind: 'failed';
+      reason: 'missing_project' | 'reindex_failed' | 'cli_failed' | 'timeout' | 'parse_failed';
+      message: string;
+    };
 
 // ---------------------------------------------------------------------------
 // Parsing helpers (pure, exported for unit tests)
@@ -198,7 +202,14 @@ export class IndexerCli {
   }
 
   async indexStatus(project: string, timeoutMs?: number): Promise<IndexStatusInfo> {
-    const { structured } = await this.#run('index_status', [['project', project], ['verbose', true]], timeoutMs);
+    const { structured } = await this.#run(
+      'index_status',
+      [
+        ['project', project],
+        ['verbose', true],
+      ],
+      timeoutMs,
+    );
     const status = typeof structured['status'] === 'string' ? structured['status'] : undefined;
     const git = structured['git'];
     let headSha: string | undefined;
@@ -213,7 +224,10 @@ export class IndexerCli {
   async indexRepository(repoPath: string, mode = 'full', timeoutMs?: number): Promise<void> {
     const { structured, error } = await this.#run(
       'index_repository',
-      [['repo-path', repoPath], ['mode', mode]],
+      [
+        ['repo-path', repoPath],
+        ['mode', mode],
+      ],
       timeoutMs,
     );
     if (error !== undefined) {
@@ -252,9 +266,7 @@ export async function resolveIndexerBinary(
   const lookupCmd = isWindows ? 'where' : 'which';
   const lookupArgs = [isWindows ? BINARY_NAME_WINDOWS : BINARY_NAME_POSIX];
 
-  const runner = exec ?? ((cmd: string, args: string[]) =>
-    execFileAsync(cmd, args).then((r) => r.stdout)
-  );
+  const runner = exec ?? ((cmd: string, args: string[]) => execFileAsync(cmd, args).then((r) => r.stdout));
 
   try {
     const stdout = await runner(lookupCmd, lookupArgs);

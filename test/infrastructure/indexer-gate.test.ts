@@ -204,9 +204,7 @@ describe('ensureIndexerAccess', () => {
     const git = stubGit({ getCurrentCommitSha: vi.fn().mockRejectedValue(new Error('not a repo')) });
     const result = await ensureIndexerAccess({ ...baseDeps, git });
     expect(result.ok).toBe(true);
-    expect(clientMocks.ensureIndexed).toHaveBeenCalledWith(
-      expect.objectContaining({ currentHeadSha: undefined }),
-    );
+    expect(clientMocks.ensureIndexed).toHaveBeenCalledWith(expect.objectContaining({ currentHeadSha: undefined }));
   });
 });
 

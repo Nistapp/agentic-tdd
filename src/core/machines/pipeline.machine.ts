@@ -14,11 +14,7 @@ import type {
   FileChangeRecord,
   Range,
 } from '../types.js';
-import {
-  PASS_LABELS,
-  GIT_COMMIT_PASSES,
-  PipelinePass,
-} from '../types.js';
+import { PASS_LABELS, GIT_COMMIT_PASSES, PipelinePass } from '../types.js';
 import type {
   IAgentRunner,
   ICommandRunner,
@@ -35,10 +31,7 @@ import { buildArtefacts } from '../runners/shared.js';
 import { sanitizeLogPayload } from '../log-sanitizer.js';
 import { parseSkipSignal } from '../skip-parser.js';
 
-import {
-  createSelfCorrectionMachine,
-  type SelfCorrectionMachineInput,
-} from './self-correction.machine.js';
+import { createSelfCorrectionMachine, type SelfCorrectionMachineInput } from './self-correction.machine.js';
 
 // ---------------------------------------------------------------------------
 // Emit helper (closed over IEventBus)
@@ -119,11 +112,11 @@ export const pipelineMachineConfig: any = setup({
     context: {} as PipelineMachineContext,
   },
   actors: {
-    runPass0:            notWired('runPass0'),
-    runSimplePass:       notWired('runSimplePass'),
-    prepareHitl:         notWired('prepareHitl'),
-    rewindToPassStart:   notWired('rewindToPassStart'),
-    doAtomicCommit:      notWired('doAtomicCommit'),
+    runPass0: notWired('runPass0'),
+    runSimplePass: notWired('runSimplePass'),
+    prepareHitl: notWired('prepareHitl'),
+    rewindToPassStart: notWired('rewindToPassStart'),
+    doAtomicCommit: notWired('doAtomicCommit'),
     selfCorrectionPass3: notWired('selfCorrectionPass3'),
     selfCorrectionPass4: notWired('selfCorrectionPass4'),
     selfCorrectionPass5: notWired('selfCorrectionPass5'),
@@ -131,7 +124,7 @@ export const pipelineMachineConfig: any = setup({
     selfCorrectionPass7: notWired('selfCorrectionPass7'),
   },
   actions: {
-    emitPipelineStarted:  () => {},
+    emitPipelineStarted: () => {},
     emitPipelineCompleted: () => {},
     emitPipelineError: () => {},
     emitHitlRequired: () => {},
@@ -207,20 +200,14 @@ export const pipelineMachineConfig: any = setup({
         input: ({ context }: { context: PipelineMachineContext }) => ({
           ctx: context.ctx,
         }),
-        onDone: [
-          { guard: 'skipHitl', target: 'committing' },
-          { target: 'preparing_hitl_pass_0' },
-        ],
+        onDone: [{ guard: 'skipHitl', target: 'committing' }, { target: 'preparing_hitl_pass_0' }],
         onError: {
           target: 'pipeline_failed',
           actions: [
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -250,10 +237,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -283,10 +267,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -314,10 +295,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -338,20 +316,14 @@ export const pipelineMachineConfig: any = setup({
         input: ({ context }: { context: PipelineMachineContext }) => ({
           ctx: context.ctx,
         }),
-        onDone: [
-          { guard: 'skipHitl', target: 'committing' },
-          { target: 'preparing_hitl_pass_2' },
-        ],
+        onDone: [{ guard: 'skipHitl', target: 'committing' }, { target: 'preparing_hitl_pass_2' }],
         onError: {
           target: 'pipeline_failed',
           actions: [
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -381,10 +353,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -414,10 +383,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -435,11 +401,7 @@ export const pipelineMachineConfig: any = setup({
       }),
       invoke: {
         src: 'selfCorrectionPass3',
-        input: ({
-          context,
-        }: {
-          context: PipelineMachineContext;
-        }): SelfCorrectionMachineInput => ({
+        input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
           ctx: context.ctx,
           pass: 3,
         }),
@@ -450,10 +412,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -471,11 +430,7 @@ export const pipelineMachineConfig: any = setup({
       }),
       invoke: {
         src: 'selfCorrectionPass4',
-        input: ({
-          context,
-        }: {
-          context: PipelineMachineContext;
-        }): SelfCorrectionMachineInput => ({
+        input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
           ctx: context.ctx,
           pass: 4,
         }),
@@ -486,10 +441,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -507,11 +459,7 @@ export const pipelineMachineConfig: any = setup({
       }),
       invoke: {
         src: 'selfCorrectionPass5',
-        input: ({
-          context,
-        }: {
-          context: PipelineMachineContext;
-        }): SelfCorrectionMachineInput => ({
+        input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
           ctx: context.ctx,
           pass: 5,
         }),
@@ -522,10 +470,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -543,11 +488,7 @@ export const pipelineMachineConfig: any = setup({
       }),
       invoke: {
         src: 'selfCorrectionPass6',
-        input: ({
-          context,
-        }: {
-          context: PipelineMachineContext;
-        }): SelfCorrectionMachineInput => ({
+        input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
           ctx: context.ctx,
           pass: 6,
         }),
@@ -558,10 +499,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -579,11 +517,7 @@ export const pipelineMachineConfig: any = setup({
       }),
       invoke: {
         src: 'selfCorrectionPass7',
-        input: ({
-          context,
-        }: {
-          context: PipelineMachineContext;
-        }): SelfCorrectionMachineInput => ({
+        input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
           ctx: context.ctx,
           pass: 7,
         }),
@@ -594,10 +528,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -618,10 +549,7 @@ export const pipelineMachineConfig: any = setup({
             {
               type: 'emitPipelineError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -687,17 +615,7 @@ export function createPipelineMachine(services: {
   symbolResolver?: ISymbolResolver;
   contextProvider: IContextProvider;
 }) {
-  const {
-    agentRunner,
-    cmd,
-    fs,
-    git,
-    events,
-    logger,
-    stateStore,
-    symbolResolver,
-    contextProvider,
-  } = services;
+  const { agentRunner, cmd, fs, git, events, logger, stateStore, symbolResolver, contextProvider } = services;
   const emit = makeEmit(events);
 
   function resolveFromRef(ctx: PipelineContext, pass: PipelinePass): string {
@@ -716,9 +634,7 @@ export function createPipelineMachine(services: {
   function extractAnchor(source: string, range: Range): string | undefined {
     const start = Math.max(range.start - 1, 0);
     const slice = source.split('\n').slice(start, start + 5);
-    const trimmed = slice
-      .map((l) => l.replace(/\s+$/g, ''))
-      .filter((l) => l.length > 0);
+    const trimmed = slice.map((l) => l.replace(/\s+$/g, '')).filter((l) => l.length > 0);
     return trimmed.length > 0 ? trimmed.join('\n') : undefined;
   }
 
@@ -753,111 +669,97 @@ export function createPipelineMachine(services: {
     },
 
     actors: {
-      runPass0: fromPromise<void, { ctx: PipelineContext }>(
-        async ({ input }) => {
-          const { ctx } = input;
+      runPass0: fromPromise<void, { ctx: PipelineContext }>(async ({ input }) => {
+        const { ctx } = input;
 
-          await fs.writeFile(ctx.designMmdPath, '');
-          await fs.writeFile(ctx.specGherkinPath, '');
+        await fs.writeFile(ctx.designMmdPath, '');
+        await fs.writeFile(ctx.specGherkinPath, '');
 
-          ctx.currentPass = 0;
-          ctx.currentAttempt = 1;
-          emit('PASS_STARTED', 'Starting Pass 0', ctx);
+        ctx.currentPass = 0;
+        ctx.currentAttempt = 1;
+        emit('PASS_STARTED', 'Starting Pass 0', ctx);
 
-          logger.info('Entering Pass 0 [Attempt 1]');
-          const built = contextProvider.build(ctx, ctx.currentPass);
-          const prompt = getAgentContextPayload(ctx, built);
-          logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
-            'Dispatching prompt to Opencode',
-          );
+        logger.info('Entering Pass 0 [Attempt 1]');
+        const built = contextProvider.build(ctx, ctx.currentPass);
+        const prompt = getAgentContextPayload(ctx, built);
+        logger.debug(
+          { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
+          'Dispatching prompt to Opencode',
+        );
 
-          const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
-          const request: AgentRunRequest = {
-            pass: 0,
-            prompt,
-            artefacts,
-            runId: ctx.runId,
-          };
-          await agentRunner.execute(request);
+        const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
+        const request: AgentRunRequest = {
+          pass: 0,
+          prompt,
+          artefacts,
+          runId: ctx.runId,
+        };
+        await agentRunner.execute(request);
 
-          const mmdContent = (await fs.readFile(ctx.designMmdPath)).trim();
-          const gherkinContent = (await fs.readFile(ctx.specGherkinPath)).trim();
-          if (mmdContent.length < 30) {
-            throw new Error(
-              'Design agent failed to produce a valid Mermaid design diagram (content length < 30).',
-            );
-          }
-          if (gherkinContent.length < 30) {
-            throw new Error(
-              'Spec agent failed to produce a valid Gherkin specification (content length < 30).',
-            );
-          }
+        const mmdContent = (await fs.readFile(ctx.designMmdPath)).trim();
+        const gherkinContent = (await fs.readFile(ctx.specGherkinPath)).trim();
+        if (mmdContent.length < 30) {
+          throw new Error('Design agent failed to produce a valid Mermaid design diagram (content length < 30).');
+        }
+        if (gherkinContent.length < 30) {
+          throw new Error('Spec agent failed to produce a valid Gherkin specification (content length < 30).');
+        }
 
-          emit('PASS_COMPLETED', 'Completed Pass 0', ctx);
-        },
-      ),
-
-      runSimplePass: fromPromise<FileChange[], { ctx: PipelineContext }>(
-        async ({ input }) => {
-          const { ctx } = input;
-          const pass = ctx.currentPass!;
-
-          emit('PASS_STARTED', `Starting Pass ${pass}`, ctx);
-
-          logger.info(`Entering Pass ${pass} [Attempt 1]`);
-          const built = contextProvider.build(ctx, pass);
-          const prompt = getAgentContextPayload(ctx, built);
-          logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
-            'Dispatching prompt to Opencode',
-          );
-
-          const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
-          const request: AgentRunRequest = {
-            pass,
-            prompt,
-            artefacts,
-            runId: ctx.runId,
-          };
-          const runResult = await agentRunner.execute(request);
-
-          const skip = parseSkipSignal(runResult.output);
-          if (skip) {
-            logger.info(`Agent returned skip signal for Pass ${pass}: ${skip.reason}`);
-            recordPassOutcome(ctx, pass, 'skipped');
-            const historyEntry = ctx.history[pass];
-            if (historyEntry) {
-              historyEntry.skipReason = skip.reason;
-            }
-            emit('PASS_COMPLETED', `Completed Pass ${pass} (Skipped)`, ctx, { files: [] });
-            return [];
-          }
-
-          const changes = await git.getPendingChanges();
-          const payload: PassCompletedPayload = { files: changes };
-          emit('PASS_COMPLETED', `Completed Pass ${pass}`, ctx, payload);
-          return changes;
-        },
-      ),
-
-      prepareHitl: fromPromise<
-        { pass: PipelinePass; files: FileChange[] },
-        { pass: PipelinePass }
-      >(async ({ input }) => {
-        const files = await git.getPendingChanges();
-        return { pass: input.pass, files };
+        emit('PASS_COMPLETED', 'Completed Pass 0', ctx);
       }),
 
-      rewindToPassStart: fromPromise<
-        void,
-        { ctx: PipelineContext; pass: PipelinePass }
-      >(async ({ input }) => {
+      runSimplePass: fromPromise<FileChange[], { ctx: PipelineContext }>(async ({ input }) => {
+        const { ctx } = input;
+        const pass = ctx.currentPass!;
+
+        emit('PASS_STARTED', `Starting Pass ${pass}`, ctx);
+
+        logger.info(`Entering Pass ${pass} [Attempt 1]`);
+        const built = contextProvider.build(ctx, pass);
+        const prompt = getAgentContextPayload(ctx, built);
+        logger.debug(
+          { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
+          'Dispatching prompt to Opencode',
+        );
+
+        const artefacts = await buildArtefacts(ctx, fs, built, undefined, logger);
+        const request: AgentRunRequest = {
+          pass,
+          prompt,
+          artefacts,
+          runId: ctx.runId,
+        };
+        const runResult = await agentRunner.execute(request);
+
+        const skip = parseSkipSignal(runResult.output);
+        if (skip) {
+          logger.info(`Agent returned skip signal for Pass ${pass}: ${skip.reason}`);
+          recordPassOutcome(ctx, pass, 'skipped');
+          const historyEntry = ctx.history[pass];
+          if (historyEntry) {
+            historyEntry.skipReason = skip.reason;
+          }
+          emit('PASS_COMPLETED', `Completed Pass ${pass} (Skipped)`, ctx, { files: [] });
+          return [];
+        }
+
+        const changes = await git.getPendingChanges();
+        const payload: PassCompletedPayload = { files: changes };
+        emit('PASS_COMPLETED', `Completed Pass ${pass}`, ctx, payload);
+        return changes;
+      }),
+
+      prepareHitl: fromPromise<{ pass: PipelinePass; files: FileChange[] }, { pass: PipelinePass }>(
+        async ({ input }) => {
+          const files = await git.getPendingChanges();
+          return { pass: input.pass, files };
+        },
+      ),
+
+      rewindToPassStart: fromPromise<void, { ctx: PipelineContext; pass: PipelinePass }>(async ({ input }) => {
         const { ctx, pass } = input;
         const targetSha: string | undefined =
-          pass === 0
-            ? ctx.originalBaseSha
-            : ctx.history[(pass - 1) as PipelinePass]?.commitHash;
+          pass === 0 ? ctx.originalBaseSha : ctx.history[(pass - 1) as PipelinePass]?.commitHash;
         if (!targetSha) {
           throw new Error(
             `Cannot rewind Pass ${pass}: no previous commit SHA available. ` +
@@ -868,148 +770,136 @@ export function createPipelineMachine(services: {
         await git.resetWorkingTree();
       }),
 
-      doAtomicCommit: fromPromise<void, { ctx: PipelineContext }>(
-        async ({ input }) => {
-          const { ctx } = input;
-          const pass = ctx.currentPass!;
-          if (!GIT_COMMIT_PASSES.has(pass)) return;
+      doAtomicCommit: fromPromise<void, { ctx: PipelineContext }>(async ({ input }) => {
+        const { ctx } = input;
+        const pass = ctx.currentPass!;
+        if (!GIT_COMMIT_PASSES.has(pass)) return;
 
-          const historyEntry = ctx.history[pass];
-          if (historyEntry?.status === 'skipped') {
-            emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Skipped)`, ctx, {
-              files: [],
-              targetSymbols: {},
-              fileChanges: {},
-              attempts: ctx.currentAttempt,
-            } satisfies PassCompletedPayload);
-            return;
-          }
-
-          const fromRef = resolveFromRef(ctx, pass);
-          const files = await git.getPendingChanges();
-          const filesTouched = files.map((c) => c.file);
-
-          if (files.length === 0) {
-            logger.warn(`Pass ${pass} produced no changes without a skip signal; recording as implicit skip`);
-            recordPassOutcome(ctx, pass, 'skipped');
-            if (ctx.history[pass]) {
-              ctx.history[pass]!.skipReason = 'Implicit skip (no files changed)';
-            }
-            emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Implicit Skip)`, ctx, {
-              files: [],
-              targetSymbols: {},
-              fileChanges: {},
-              attempts: ctx.currentAttempt,
-            } satisfies PassCompletedPayload);
-            if (stateStore) {
-              await stateStore.save(ctx);
-            }
-            return;
-          }
-
-          recordPassOutcome(ctx, pass, 'completed', { filesTouched });
-
-          const stagePaths: string[] = ['.'];
-          if (stateStore) {
-            stagePaths.push(stateStore.path);
-          }
-
-          const commitResult = await git.commit(
-            stagePaths,
-            `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]} - ${ctx.featureName}`,
-          );
-
-          const headHash = await git.getCurrentCommitSha();
-          const entry = ctx.history[pass];
-          if (entry) {
-            entry.commitHash = headHash;
-          }
-
-          if (
-            pass === PipelinePass.Documentation &&
-            (commitResult.kind === 'committed' || commitResult.kind === 'add_warning')
-          ) {
-            const tagName = `Completed-${ctx.featureName.replace(/[^a-zA-Z0-9._/-]/g, '-')}`;
-            await git.tag(tagName);
-          }
-
-          // Always persist defined (possibly empty) descriptors so the state
-          // file distinguishes "WRITER ran, nothing targeted" from "not run".
-          let targetSymbols: TargetSymbols = {};
-          let fileChanges: FileChanges = {};
-
-          if (symbolResolver) {
-            try {
-              const toRef = headHash;
-              const diffChanges = await git.getDiffLineRanges(fromRef, toRef);
-              const pendingByFile = new Map(
-                files.map((c) => [c.file, c.status] as const),
-              );
-
-              for (const change of diffChanges) {
-                const fileKind: FileChangeRecord['kind'] =
-                  pendingByFile.get(change.file) === 'A'
-                    ? 'new-file'
-                    : 'edited-file';
-                const record: FileChangeRecord = {
-                  commitHash: headHash,
-                  kind: fileKind,
-                  hunks: [],
-                };
-
-                if (change.hunks.length > 0) {
-                  try {
-                    const source = await fs.readFile(change.file);
-                    for (const hunk of change.hunks) {
-                      const symbols = symbolResolver.mapRangesToSymbols(
-                        change.file,
-                        source,
-                        [hunk.range],
-                      );
-                      record.hunks.push({
-                        ...hunk,
-                        symbols,
-                        anchor: extractAnchor(source, hunk.range),
-                      });
-                      if (symbols.length > 0) {
-                        const existing = targetSymbols[change.file] ?? [];
-                        targetSymbols[change.file] = [
-                          ...new Set([...existing, ...symbols]),
-                        ].sort();
-                      }
-                    }
-                  } catch {
-                    // File read failed — non-fatal degradation
-                  }
-                }
-
-                if (record.hunks.length > 0) {
-                  fileChanges[change.file] = record;
-                }
-              }
-            } catch {
-              // Symbol resolution failed — non-fatal degradation (AD-9)
-            }
-          }
-
-          const finalHistoryEntry = ctx.history[pass];
-          if (finalHistoryEntry) {
-            finalHistoryEntry.targetSymbols = targetSymbols;
-            finalHistoryEntry.fileChanges = fileChanges;
-          }
-
-          emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass}`, ctx, {
-            files,
-            targetSymbols,
-            fileChanges,
+        const historyEntry = ctx.history[pass];
+        if (historyEntry?.status === 'skipped') {
+          emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Skipped)`, ctx, {
+            files: [],
+            targetSymbols: {},
+            fileChanges: {},
             attempts: ctx.currentAttempt,
           } satisfies PassCompletedPayload);
+          return;
+        }
 
+        const fromRef = resolveFromRef(ctx, pass);
+        const files = await git.getPendingChanges();
+        const filesTouched = files.map((c) => c.file);
+
+        if (files.length === 0) {
+          logger.warn(`Pass ${pass} produced no changes without a skip signal; recording as implicit skip`);
+          recordPassOutcome(ctx, pass, 'skipped');
+          if (ctx.history[pass]) {
+            ctx.history[pass]!.skipReason = 'Implicit skip (no files changed)';
+          }
+          emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass} (Implicit Skip)`, ctx, {
+            files: [],
+            targetSymbols: {},
+            fileChanges: {},
+            attempts: ctx.currentAttempt,
+          } satisfies PassCompletedPayload);
           if (stateStore) {
             await stateStore.save(ctx);
           }
-        },
-      ),
+          return;
+        }
+
+        recordPassOutcome(ctx, pass, 'completed', { filesTouched });
+
+        const stagePaths: string[] = ['.'];
+        if (stateStore) {
+          stagePaths.push(stateStore.path);
+        }
+
+        const commitResult = await git.commit(
+          stagePaths,
+          `chore(ai): completed Pass ${pass} -- ${PASS_LABELS[pass]} - ${ctx.featureName}`,
+        );
+
+        const headHash = await git.getCurrentCommitSha();
+        const entry = ctx.history[pass];
+        if (entry) {
+          entry.commitHash = headHash;
+        }
+
+        if (
+          pass === PipelinePass.Documentation &&
+          (commitResult.kind === 'committed' || commitResult.kind === 'add_warning')
+        ) {
+          const tagName = `Completed-${ctx.featureName.replace(/[^a-zA-Z0-9._/-]/g, '-')}`;
+          await git.tag(tagName);
+        }
+
+        // Always persist defined (possibly empty) descriptors so the state
+        // file distinguishes "WRITER ran, nothing targeted" from "not run".
+        let targetSymbols: TargetSymbols = {};
+        let fileChanges: FileChanges = {};
+
+        if (symbolResolver) {
+          try {
+            const toRef = headHash;
+            const diffChanges = await git.getDiffLineRanges(fromRef, toRef);
+            const pendingByFile = new Map(files.map((c) => [c.file, c.status] as const));
+
+            for (const change of diffChanges) {
+              const fileKind: FileChangeRecord['kind'] =
+                pendingByFile.get(change.file) === 'A' ? 'new-file' : 'edited-file';
+              const record: FileChangeRecord = {
+                commitHash: headHash,
+                kind: fileKind,
+                hunks: [],
+              };
+
+              if (change.hunks.length > 0) {
+                try {
+                  const source = await fs.readFile(change.file);
+                  for (const hunk of change.hunks) {
+                    const symbols = symbolResolver.mapRangesToSymbols(change.file, source, [hunk.range]);
+                    record.hunks.push({
+                      ...hunk,
+                      symbols,
+                      anchor: extractAnchor(source, hunk.range),
+                    });
+                    if (symbols.length > 0) {
+                      const existing = targetSymbols[change.file] ?? [];
+                      targetSymbols[change.file] = [...new Set([...existing, ...symbols])].sort();
+                    }
+                  }
+                } catch {
+                  // File read failed — non-fatal degradation
+                }
+              }
+
+              if (record.hunks.length > 0) {
+                fileChanges[change.file] = record;
+              }
+            }
+          } catch {
+            // Symbol resolution failed — non-fatal degradation (AD-9)
+          }
+        }
+
+        const finalHistoryEntry = ctx.history[pass];
+        if (finalHistoryEntry) {
+          finalHistoryEntry.targetSymbols = targetSymbols;
+          finalHistoryEntry.fileChanges = fileChanges;
+        }
+
+        emit('COMMIT_CAPTURED', `Captured change metadata for Pass ${pass}`, ctx, {
+          files,
+          targetSymbols,
+          fileChanges,
+          attempts: ctx.currentAttempt,
+        } satisfies PassCompletedPayload);
+
+        if (stateStore) {
+          await stateStore.save(ctx);
+        }
+      }),
 
       selfCorrectionPass3: createSelfCorrectionMachine({
         agentRunner,
@@ -1063,34 +953,15 @@ export function createPipelineMachine(services: {
     },
 
     actions: {
-      emitPipelineStarted: ({
-        context,
-      }: {
-        context: PipelineMachineContext;
-      }) => {
-        emit(
-          'PIPELINE_STARTED',
-          `Starting pipeline v${context.ctx.pipelineVersion}`,
-          context.ctx,
-        );
+      emitPipelineStarted: ({ context }: { context: PipelineMachineContext }) => {
+        emit('PIPELINE_STARTED', `Starting pipeline v${context.ctx.pipelineVersion}`, context.ctx);
       },
 
-      emitPipelineCompleted: ({
-        context,
-      }: {
-        context: PipelineMachineContext;
-      }) => {
-        emit(
-          'PIPELINE_COMPLETED',
-          'All 8 passes completed successfully.',
-          context.ctx,
-        );
+      emitPipelineCompleted: ({ context }: { context: PipelineMachineContext }) => {
+        emit('PIPELINE_COMPLETED', 'All 8 passes completed successfully.', context.ctx);
       },
 
-      emitPipelineError: (
-        { context }: { context: PipelineMachineContext },
-        params: { error: string },
-      ) => {
+      emitPipelineError: ({ context }: { context: PipelineMachineContext }, params: { error: string }) => {
         emit('ERROR', params.error, context.ctx);
       },
 
@@ -1098,93 +969,56 @@ export function createPipelineMachine(services: {
         { context }: { context: PipelineMachineContext },
         params: { pass: PipelinePass; files: FileChange[] },
       ) => {
-        emit(
-          'HITL_REQUIRED',
-          `Review generated artefacts for Pass ${params.pass} before proceeding.`,
-          context.ctx,
-          { files: params.files } satisfies HitlPayload,
-        );
+        emit('HITL_REQUIRED', `Review generated artefacts for Pass ${params.pass} before proceeding.`, context.ctx, {
+          files: params.files,
+        } satisfies HitlPayload);
       },
 
-      emitPipelinePaused: ({
-        context,
-      }: {
-        context: PipelineMachineContext;
-      }) => {
-        emit(
-          'PIPELINE_PAUSED',
-          'Pipeline paused at inter-pass boundary. Run with --resume to continue.',
-          context.ctx,
-        );
+      emitPipelinePaused: ({ context }: { context: PipelineMachineContext }) => {
+        emit('PIPELINE_PAUSED', 'Pipeline paused at inter-pass boundary. Run with --resume to continue.', context.ctx);
       },
 
-      emitPipelineResumed: ({
-        context,
-      }: {
-        context: PipelineMachineContext;
-      }) => {
-        emit(
-          'PIPELINE_RESUMED',
-          'Pipeline resumed from paused state.',
-          context.ctx,
-        );
+      emitPipelineResumed: ({ context }: { context: PipelineMachineContext }) => {
+        emit('PIPELINE_RESUMED', 'Pipeline resumed from paused state.', context.ctx);
       },
     },
 
     guards: {
-      atPass0: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 0,
+      atPass0: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 0,
 
-      atPass1: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 1,
+      atPass1: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 1,
 
-      atPass2: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 2,
+      atPass2: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 2,
 
-      atPass3: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 3,
+      atPass3: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 3,
 
-      atPass4: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 4,
+      atPass4: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 4,
 
-      atPass5: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 5,
+      atPass5: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 5,
 
-      atPass6: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 6,
+      atPass6: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 6,
 
-      atPass7: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 7,
+      atPass7: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 7,
 
-      skipHitl: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.skipHitl,
+      skipHitl: ({ context }: { context: PipelineMachineContext }) => context.ctx.skipHitl,
 
-      isPauseRequested: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.pauseRequested === true,
+      isPauseRequested: ({ context }: { context: PipelineMachineContext }) => context.ctx.pauseRequested === true,
 
-      afterPass0: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 0,
+      afterPass0: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 0,
 
-      afterPass1: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 1,
+      afterPass1: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 1,
 
-      afterPass2: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 2,
+      afterPass2: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 2,
 
-      afterPass3: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 3,
+      afterPass3: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 3,
 
-      afterPass4: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 4,
+      afterPass4: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 4,
 
-      afterPass5: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 5,
+      afterPass5: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 5,
 
-      afterPass6: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 6,
+      afterPass6: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 6,
 
-      afterPass7: ({ context }: { context: PipelineMachineContext }) =>
-        context.ctx.currentPass === 7,
+      afterPass7: ({ context }: { context: PipelineMachineContext }) => context.ctx.currentPass === 7,
     },
   }).createMachine({
     id: 'pipeline',
@@ -1234,20 +1068,14 @@ export function createPipelineMachine(services: {
           input: ({ context }: { context: PipelineMachineContext }) => ({
             ctx: context.ctx,
           }),
-          onDone: [
-            { guard: 'skipHitl', target: 'committing' },
-            { target: 'preparing_hitl_pass_0' },
-          ],
+          onDone: [{ guard: 'skipHitl', target: 'committing' }, { target: 'preparing_hitl_pass_0' }],
           onError: {
             target: 'pipeline_failed',
             actions: [
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1277,10 +1105,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1310,10 +1135,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1341,10 +1163,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1365,20 +1184,14 @@ export function createPipelineMachine(services: {
           input: ({ context }: { context: PipelineMachineContext }) => ({
             ctx: context.ctx,
           }),
-          onDone: [
-            { guard: 'skipHitl', target: 'committing' },
-            { target: 'preparing_hitl_pass_2' },
-          ],
+          onDone: [{ guard: 'skipHitl', target: 'committing' }, { target: 'preparing_hitl_pass_2' }],
           onError: {
             target: 'pipeline_failed',
             actions: [
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1408,10 +1221,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1441,10 +1251,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1462,11 +1269,7 @@ export function createPipelineMachine(services: {
         }),
         invoke: {
           src: 'selfCorrectionPass3',
-          input: ({
-            context,
-          }: {
-            context: PipelineMachineContext;
-          }): SelfCorrectionMachineInput => ({
+          input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
             ctx: context.ctx,
             pass: 3,
           }),
@@ -1477,10 +1280,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1498,11 +1298,7 @@ export function createPipelineMachine(services: {
         }),
         invoke: {
           src: 'selfCorrectionPass4',
-          input: ({
-            context,
-          }: {
-            context: PipelineMachineContext;
-          }): SelfCorrectionMachineInput => ({
+          input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
             ctx: context.ctx,
             pass: 4,
           }),
@@ -1513,10 +1309,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1534,11 +1327,7 @@ export function createPipelineMachine(services: {
         }),
         invoke: {
           src: 'selfCorrectionPass5',
-          input: ({
-            context,
-          }: {
-            context: PipelineMachineContext;
-          }): SelfCorrectionMachineInput => ({
+          input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
             ctx: context.ctx,
             pass: 5,
           }),
@@ -1549,10 +1338,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1570,11 +1356,7 @@ export function createPipelineMachine(services: {
         }),
         invoke: {
           src: 'selfCorrectionPass6',
-          input: ({
-            context,
-          }: {
-            context: PipelineMachineContext;
-          }): SelfCorrectionMachineInput => ({
+          input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
             ctx: context.ctx,
             pass: 6,
           }),
@@ -1585,10 +1367,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1606,11 +1385,7 @@ export function createPipelineMachine(services: {
         }),
         invoke: {
           src: 'selfCorrectionPass7',
-          input: ({
-            context,
-          }: {
-            context: PipelineMachineContext;
-          }): SelfCorrectionMachineInput => ({
+          input: ({ context }: { context: PipelineMachineContext }): SelfCorrectionMachineInput => ({
             ctx: context.ctx,
             pass: 7,
           }),
@@ -1621,10 +1396,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -1645,10 +1417,7 @@ export function createPipelineMachine(services: {
               {
                 type: 'emitPipelineError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],

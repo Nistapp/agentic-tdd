@@ -21,11 +21,7 @@ import type { IAgentServerHandle, IFileSystem, IGitService, ILogger } from '../c
 import { AGENT_NAMES } from '../core/types.js';
 import type { IndexerStatus } from '../core/types.js';
 import { PACKAGE_AGENTS_DIR, getStateDir } from '../utils/paths.js';
-import {
-  ensureIndexed,
-  type BootstrapOutcome,
-  type ProcessRunner,
-} from './indexer-client.js';
+import { ensureIndexed, type BootstrapOutcome, type ProcessRunner } from './indexer-client.js';
 import { ensureCbmIgnore } from './indexer-ignore.js';
 import {
   defaultIsExecutable,
@@ -47,16 +43,10 @@ import {
   type GeneratedOpencodeConfig,
   type OpencodeAgentSource,
 } from './opencode-config.js';
-import {
-  OpencodeServerError,
-  startOpencodeServer,
-  type EnvScope,
-  type OpencodeBoot,
-} from './opencode-server.js';
+import { OpencodeServerError, startOpencodeServer, type EnvScope, type OpencodeBoot } from './opencode-server.js';
 
 export type IndexerGateResult =
-  | { ok: true; server?: IAgentServerHandle; indexerStatus: IndexerStatus }
-  | { ok: false; message: string };
+  { ok: true; server?: IAgentServerHandle; indexerStatus: IndexerStatus } | { ok: false; message: string };
 
 export interface IndexerGateDeps {
   fs: IFileSystem;
@@ -142,8 +132,7 @@ export async function ensureIndexerAccess(deps: IndexerGateDeps): Promise<Indexe
   if (backend !== 'opencode' && backend !== 'pi') {
     return {
       ok: false,
-      message:
-        `unknown backend '${backend}' — supported backends are opencode (default), pi and opencode-cli.`,
+      message: `unknown backend '${backend}' — supported backends are opencode (default), pi and opencode-cli.`,
     };
   }
 
@@ -238,10 +227,7 @@ async function ensureOpencodeAccess(deps: IndexerGateDeps, workDir: string): Pro
     return bootstrap;
   }
 
-  deps.logger.info(
-    { workDir, project: bootstrap.project, baseUrl: server.baseUrl },
-    'Indexer gate passed (opencode)',
-  );
+  deps.logger.info({ workDir, project: bootstrap.project, baseUrl: server.baseUrl }, 'Indexer gate passed (opencode)');
   return {
     ok: true,
     server,
@@ -333,15 +319,9 @@ async function ensurePiAccess(deps: IndexerGateDeps, workDir: string): Promise<I
 // G6 — mandatory index bootstrap (shared by both backends)
 // ---------------------------------------------------------------------------
 
-type BootstrapResult =
-  | { ok: true; project: string }
-  | { ok: false; message: string };
+type BootstrapResult = { ok: true; project: string } | { ok: false; message: string };
 
-async function runBootstrap(
-  deps: IndexerGateDeps,
-  binaryPath: string,
-  workDir: string,
-): Promise<BootstrapResult> {
+async function runBootstrap(deps: IndexerGateDeps, binaryPath: string, workDir: string): Promise<BootstrapResult> {
   // Guarantee the target repo excludes transient scratch/run state from the
   // index. A changed ignore file forces a reindex so new exclusions apply.
   const ignore = await ensureCbmIgnore({ fs: deps.fs, workDir, logger: deps.logger });

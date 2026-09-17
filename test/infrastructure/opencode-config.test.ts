@@ -34,9 +34,13 @@ describe('canonical indexer tool names', () => {
 
 describe('mapPermission', () => {
   it('maps the four core allow keys, expanding glob to list', () => {
-    expect(
-      mapPermission({ read: 'allow', edit: 'allow', glob: 'allow', grep: 'allow' }),
-    ).toEqual({ read: 'allow', edit: 'allow', glob: 'allow', list: 'allow', grep: 'allow' });
+    expect(mapPermission({ read: 'allow', edit: 'allow', glob: 'allow', grep: 'allow' })).toEqual({
+      read: 'allow',
+      edit: 'allow',
+      glob: 'allow',
+      list: 'allow',
+      grep: 'allow',
+    });
   });
 
   it('preserves explicit deny entries', () => {

@@ -55,9 +55,7 @@ function testCallLabel(node: SgNode): string | null {
 
   const args = node.field('arguments');
   if (args) {
-    const first = args.children().find(
-      (a) => String(a.kind()) === 'string' || String(a.kind()) === 'template_string',
-    );
+    const first = args.children().find((a) => String(a.kind()) === 'string' || String(a.kind()) === 'template_string');
     if (first) {
       const inner = first.text().replace(/^['"`]|['"`]$/g, '');
       return `${base}('${inner}')`;
@@ -208,10 +206,7 @@ function findEnclosingSymbol(root: SgNode, line0: number): SgNode | null {
   function walk(node: SgNode): void {
     const r = node.range();
     if (r.start.line <= line0 && r.end.line >= line0) {
-      if (
-        ENCLOSING_KINDS.has(String(node.kind())) ||
-        isTestCall(node)
-      ) {
+      if (ENCLOSING_KINDS.has(String(node.kind())) || isTestCall(node)) {
         deepest = node;
       }
       for (const child of node.children()) {

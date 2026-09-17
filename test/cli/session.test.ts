@@ -119,12 +119,10 @@ describe('startNewSession branch creation', () => {
     });
     gate.ensureIndexerAccess.mockClear();
     gate.ensureIndexerAccess.mockResolvedValue({ ok: true, indexerStatus: OK_INDEXER_STATUS });
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
-      (code?: number | string | null | undefined) => {
-        if (code === 0) return undefined as never;
-        throw new Error('process.exit called');
-      },
-    );
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code?: number | string | null | undefined) => {
+      if (code === 0) return undefined as never;
+      throw new Error('process.exit called');
+    });
   });
 
   afterEach(() => {
@@ -155,12 +153,7 @@ describe('startNewSession branch creation', () => {
 
     await startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0');
 
-    expect(createFeatureBranch).toHaveBeenCalledWith(
-      'PAY-404',
-      null,
-      false,
-      expect.any(Function),
-    );
+    expect(createFeatureBranch).toHaveBeenCalledWith('PAY-404', null, false, expect.any(Function));
   });
 
   it('passes baseBranch override to createFeatureBranch', async () => {
@@ -174,12 +167,7 @@ describe('startNewSession branch creation', () => {
 
     await startNewSession(optsWithBase, stateStore, fs, git, renderer, '0.1.0');
 
-    expect(createFeatureBranch).toHaveBeenCalledWith(
-      'PAY-404',
-      'develop',
-      false,
-      expect.any(Function),
-    );
+    expect(createFeatureBranch).toHaveBeenCalledWith('PAY-404', 'develop', false, expect.any(Function));
   });
 
   it('passes skipHitl to createFeatureBranch', async () => {
@@ -193,12 +181,7 @@ describe('startNewSession branch creation', () => {
 
     await startNewSession(optsSkipHitl, stateStore, fs, git, renderer, '0.1.0');
 
-    expect(createFeatureBranch).toHaveBeenCalledWith(
-      'PAY-404',
-      null,
-      true,
-      expect.any(Function),
-    );
+    expect(createFeatureBranch).toHaveBeenCalledWith('PAY-404', null, true, expect.any(Function));
   });
 
   it('calls renderer.fatal on abort_dirty and does not proceed', async () => {
@@ -212,9 +195,9 @@ describe('startNewSession branch creation', () => {
     const renderer = new TerminalRenderer(consoleWriter);
     const fatalSpy = vi.spyOn(renderer, 'fatal');
 
-    await expect(
-      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
-    ).rejects.toThrow('process.exit called');
+    await expect(startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0')).rejects.toThrow(
+      'process.exit called',
+    );
 
     expect(fatalSpy).toHaveBeenCalledWith('Working directory has uncommitted changes.');
     expect(git.getCurrentCommitSha).not.toHaveBeenCalled();
@@ -231,9 +214,9 @@ describe('startNewSession branch creation', () => {
     const renderer = new TerminalRenderer(consoleWriter);
     const fatalSpy = vi.spyOn(renderer, 'fatal');
 
-    await expect(
-      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
-    ).rejects.toThrow('process.exit called');
+    await expect(startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0')).rejects.toThrow(
+      'process.exit called',
+    );
 
     expect(fatalSpy).toHaveBeenCalledWith('Refusing to branch from main.');
     expect(git.getCurrentCommitSha).not.toHaveBeenCalled();
@@ -250,9 +233,9 @@ describe('startNewSession branch creation', () => {
     const renderer = new TerminalRenderer(consoleWriter);
     const fatalSpy = vi.spyOn(renderer, 'fatal');
 
-    await expect(
-      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
-    ).rejects.toThrow('process.exit called');
+    await expect(startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0')).rejects.toThrow(
+      'process.exit called',
+    );
 
     expect(fatalSpy).toHaveBeenCalledWith('User declined to check out existing branch "feat/pay-404".');
     expect(git.getCurrentCommitSha).not.toHaveBeenCalled();
@@ -274,9 +257,7 @@ describe('startNewSession branch creation', () => {
 
     await startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0');
 
-    expect(gitInfoSpy).toHaveBeenCalledWith(
-      'Switched to branch feat/pay-404 [created]',
-    );
+    expect(gitInfoSpy).toHaveBeenCalledWith('Switched to branch feat/pay-404 [created]');
   });
 });
 
@@ -294,12 +275,10 @@ describe('mandatory indexer gate at session entry points', () => {
     });
     gate.ensureIndexerAccess.mockClear();
     gate.ensureIndexerAccess.mockResolvedValue({ ok: true, indexerStatus: OK_INDEXER_STATUS });
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
-      (code?: number | string | null | undefined) => {
-        if (code === 0) return undefined as never;
-        throw new Error('process.exit called');
-      },
-    );
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code?: number | string | null | undefined) => {
+      if (code === 0) return undefined as never;
+      throw new Error('process.exit called');
+    });
   });
 
   afterEach(() => {
@@ -324,13 +303,11 @@ describe('mandatory indexer gate at session entry points', () => {
     const renderer = makeRenderer();
     const fatalSpy = vi.spyOn(renderer, 'fatal');
 
-    await expect(
-      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
-    ).rejects.toThrow('process.exit called');
-
-    expect(fatalSpy).toHaveBeenCalledWith(
-      '[binary_missing] codebase-memory-mcp is not on PATH. Install it.',
+    await expect(startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0')).rejects.toThrow(
+      'process.exit called',
     );
+
+    expect(fatalSpy).toHaveBeenCalledWith('[binary_missing] codebase-memory-mcp is not on PATH. Install it.');
     expect(di.createPipelineServices).not.toHaveBeenCalled();
   });
 
@@ -447,12 +424,10 @@ describe('server teardown at session entry points', () => {
       orchestrator: { run: vi.fn().mockResolvedValue(undefined) },
     });
     gate.ensureIndexerAccess.mockClear();
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
-      (code?: number | string | null | undefined) => {
-        if (code === 0) return undefined as never;
-        throw new Error('process.exit called');
-      },
-    );
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code?: number | string | null | undefined) => {
+      if (code === 0) return undefined as never;
+      throw new Error('process.exit called');
+    });
   });
 
   afterEach(() => {
@@ -471,9 +446,7 @@ describe('server teardown at session entry points', () => {
 
     await startNewSession(validOptions, stateStore, fs, git, new TerminalRenderer(consoleWriter), '0.1.0');
 
-    expect(di.createPipelineServices).toHaveBeenCalledWith(
-      expect.objectContaining({ agentServer: handle }),
-    );
+    expect(di.createPipelineServices).toHaveBeenCalledWith(expect.objectContaining({ agentServer: handle }));
     expect(handle.close).toHaveBeenCalledTimes(1);
     const closeOrder = handle.close.mock.invocationCallOrder[0]!;
     const exitOrder = exitSpy.mock.invocationCallOrder[0]!;
@@ -495,9 +468,9 @@ describe('server teardown at session entry points', () => {
     const renderer = new TerminalRenderer(consoleWriter);
     const fatalSpy = vi.spyOn(renderer, 'fatal');
 
-    await expect(
-      startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0'),
-    ).rejects.toThrow('process.exit called');
+    await expect(startNewSession(validOptions, stateStore, fs, git, renderer, '0.1.0')).rejects.toThrow(
+      'process.exit called',
+    );
 
     expect(handle.close).toHaveBeenCalledTimes(1);
     expect(fatalSpy).toHaveBeenCalledWith('pass exploded');

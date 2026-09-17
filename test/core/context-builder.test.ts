@@ -96,11 +96,7 @@ describe('buildContextFiles', () => {
     const result = buildContextFiles(ctx, PipelinePass.Security);
     expect(result.tests).toEqual([]);
     expect(result.contracts).toEqual([]);
-    expect(result.implementation).toEqual([
-      'src/models/user.ts',
-      'src/utils/helper.ts',
-      'src/logging.ts',
-    ]);
+    expect(result.implementation).toEqual(['src/models/user.ts', 'src/utils/helper.ts', 'src/logging.ts']);
   });
 
   it('still returns CoreImplementation files for Pass 5 when Refactor is absent (skipped)', () => {
@@ -133,12 +129,7 @@ describe('buildContextFiles', () => {
     });
     const result = buildContextFiles(ctx, PipelinePass.Documentation);
     expect(result.implementation).toEqual(
-      expect.arrayContaining([
-        'src/models/user.ts',
-        'src/utils/helper.ts',
-        'src/middleware/auth.ts',
-        'src/logger.ts',
-      ]),
+      expect.arrayContaining(['src/models/user.ts', 'src/utils/helper.ts', 'src/middleware/auth.ts', 'src/logger.ts']),
     );
     expect(result.tests).toEqual([]);
     expect(result.contracts).toEqual([]);
@@ -194,9 +185,7 @@ describe('buildTargetPasses', () => {
   });
 
   it('returns CoreImplementation for Pass 4 (Refactor)', () => {
-    expect(buildTargetPasses(PipelinePass.Refactor)).toEqual([
-      PipelinePass.CoreImplementation,
-    ]);
+    expect(buildTargetPasses(PipelinePass.Refactor)).toEqual([PipelinePass.CoreImplementation]);
   });
 
   it('returns CoreImplementation and Refactor for Pass 5 (Observability)', () => {
@@ -226,9 +215,7 @@ describe('buildTargetPasses', () => {
 });
 
 describe('CONTEXT_RULES structural integrity', () => {
-  const ALL_PASSES = Object.values(PipelinePass).filter(
-    (v): v is PipelinePass => typeof v === 'number',
-  );
+  const ALL_PASSES = Object.values(PipelinePass).filter((v): v is PipelinePass => typeof v === 'number');
 
   it('covers every PipelinePass enum member', () => {
     for (const pass of ALL_PASSES) {
@@ -239,11 +226,7 @@ describe('CONTEXT_RULES structural integrity', () => {
   it('all referenced source passes are valid enum values (files)', () => {
     for (const pass of ALL_PASSES) {
       const rule = CONTEXT_RULES[pass]!;
-      for (const p of [
-        ...rule.files.contracts,
-        ...rule.files.tests,
-        ...rule.files.implementation,
-      ]) {
+      for (const p of [...rule.files.contracts, ...rule.files.tests, ...rule.files.implementation]) {
         expect(ALL_PASSES, `Pass ${pass} references invalid source pass ${p}`).toContain(p);
       }
     }
@@ -252,15 +235,8 @@ describe('CONTEXT_RULES structural integrity', () => {
   it('all referenced target passes are valid enum values (target)', () => {
     for (const pass of ALL_PASSES) {
       const rule = CONTEXT_RULES[pass]!;
-      for (const p of [
-        ...rule.target.contracts,
-        ...rule.target.tests,
-        ...rule.target.implementation,
-      ]) {
-        expect(
-          ALL_PASSES,
-          `Pass ${pass} references invalid target pass ${p}`,
-        ).toContain(p);
+      for (const p of [...rule.target.contracts, ...rule.target.tests, ...rule.target.implementation]) {
+        expect(ALL_PASSES, `Pass ${pass} references invalid target pass ${p}`).toContain(p);
       }
     }
   });
@@ -268,16 +244,9 @@ describe('CONTEXT_RULES structural integrity', () => {
   it('has no circular dependencies in files rules', () => {
     for (const pass of ALL_PASSES) {
       const rule = CONTEXT_RULES[pass]!;
-      const allSources = [
-        ...rule.files.contracts,
-        ...rule.files.tests,
-        ...rule.files.implementation,
-      ];
+      const allSources = [...rule.files.contracts, ...rule.files.tests, ...rule.files.implementation];
       for (const source of allSources) {
-        expect(
-          source,
-          `Circular: Pass ${pass} references itself as source`,
-        ).not.toBe(pass);
+        expect(source, `Circular: Pass ${pass} references itself as source`).not.toBe(pass);
       }
     }
   });
@@ -291,11 +260,7 @@ describe('CONTEXT_RULES structural integrity', () => {
     expect(docRule.files.tests).toEqual([]);
     expect(docRule.files.contracts).toEqual([PipelinePass.Contracts]);
 
-    const targetPasses = [
-      ...docRule.target.contracts,
-      ...docRule.target.tests,
-      ...docRule.target.implementation,
-    ];
+    const targetPasses = [...docRule.target.contracts, ...docRule.target.tests, ...docRule.target.implementation];
     expect(targetPasses).toEqual([
       PipelinePass.Contracts,
       PipelinePass.CoreImplementation,

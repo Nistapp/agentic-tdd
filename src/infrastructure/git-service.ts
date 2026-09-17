@@ -101,13 +101,7 @@ export class GitService implements IGitService {
     const cached = this.#diffCache.get(key);
     if (cached) return cached;
 
-    const { stdout } = await execa('git', [
-      'diff',
-      '--unified=0',
-      fromRef,
-      toRef,
-      '--',
-    ]);
+    const { stdout } = await execa('git', ['diff', '--unified=0', fromRef, toRef, '--']);
 
     const result = parseDiffUnified0(stdout);
     this.#diffCache.set(key, result);
@@ -131,7 +125,7 @@ export class GitService implements IGitService {
     try {
       const result = await execa('git', ['status', '--porcelain']);
       const lines = result.stdout.trim().split('\n').filter(Boolean);
-      return lines.map(line => {
+      return lines.map((line) => {
         const status = line.slice(0, 2).trim();
         const file = line.slice(3).trim();
         return { status, file };
@@ -180,12 +174,7 @@ export class GitService implements IGitService {
 
   async getLastCompletedPass(): Promise<number | null> {
     try {
-      const result = await execa('git', [
-        'log',
-        '--oneline',
-        '--grep=chore(ai): completed Pass ',
-        '-n', '20',
-      ]);
+      const result = await execa('git', ['log', '--oneline', '--grep=chore(ai): completed Pass ', '-n', '20']);
       const lines = result.stdout.trim().split('\n').filter(Boolean);
       let highest = null;
       for (const line of lines) {
@@ -228,9 +217,7 @@ export class GitService implements IGitService {
       return { kind: 'abort_dirty', message: 'Working directory has uncommitted changes. Aborting.' };
     }
 
-    const resolvedBase = baseBranchOverride !== null
-      ? baseBranchOverride
-      : await this.getCurrentBranch();
+    const resolvedBase = baseBranchOverride !== null ? baseBranchOverride : await this.getCurrentBranch();
 
     if (baseBranchOverride === null) {
       if (resolvedBase === 'main' || resolvedBase === 'master') {
@@ -263,9 +250,7 @@ export class GitService implements IGitService {
 
     await this.#ensureBranchIsSynced(sanitized);
 
-    return exists
-      ? { kind: 'checked_out', branch: sanitized }
-      : { kind: 'created', branch: sanitized };
+    return exists ? { kind: 'checked_out', branch: sanitized } : { kind: 'created', branch: sanitized };
   }
 
   #branchExistsLocal(branchName: string): Promise<boolean> {

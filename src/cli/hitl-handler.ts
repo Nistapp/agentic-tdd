@@ -5,10 +5,7 @@ import type { PipelineContext, FileChange, HitlAction } from '../core/types.js';
 import { PipelinePass } from '../core/types.js';
 import type { HitlHandler } from '../core/orchestrator.js';
 
-export type ReadlineFactory = (opts: {
-  input: NodeJS.ReadableStream;
-  output: NodeJS.WritableStream;
-}) => Interface;
+export type ReadlineFactory = (opts: { input: NodeJS.ReadableStream; output: NodeJS.WritableStream }) => Interface;
 
 export function createHitlHandler(
   ctx: PipelineContext,
@@ -25,29 +22,23 @@ export function createHitlHandler(
   };
 }
 
-async function promptHitl(
-  createRl: ReadlineFactory,
-  write: (msg: string) => void,
-): Promise<HitlAction> {
+async function promptHitl(createRl: ReadlineFactory, write: (msg: string) => void): Promise<HitlAction> {
   const rl = createRl({ input: process.stdin, output: process.stdout });
   const result = await new Promise<HitlAction>((resolve) => {
     function ask() {
-      rl.question(
-        '  Press Enter to approve, type \'r\' to rewind, or \'x\' to reject (abort)...  ',
-        (answer: string) => {
-          const trimmed = answer.trim().toLowerCase();
-          if (trimmed === '') {
-            resolve('APPROVE');
-          } else if (trimmed === 'r') {
-            resolve('REWIND');
-          } else if (trimmed === 'x') {
-            resolve('REJECT');
-          } else {
-            write('  Unrecognised input — please try again.');
-            ask();
-          }
-        },
-      );
+      rl.question("  Press Enter to approve, type 'r' to rewind, or 'x' to reject (abort)...  ", (answer: string) => {
+        const trimmed = answer.trim().toLowerCase();
+        if (trimmed === '') {
+          resolve('APPROVE');
+        } else if (trimmed === 'r') {
+          resolve('REWIND');
+        } else if (trimmed === 'x') {
+          resolve('REJECT');
+        } else {
+          write('  Unrecognised input — please try again.');
+          ask();
+        }
+      });
     }
     ask();
   });
@@ -65,7 +56,7 @@ async function renderDesignHitl(
   const gh = ctx.specGherkinPath;
   const max = W - 10;
 
-  const fmt = (p: string) => p.length > max ? '...' + p.slice(-(max - 3)) : p;
+  const fmt = (p: string) => (p.length > max ? '...' + p.slice(-(max - 3)) : p);
 
   write('');
   write('\u250C' + '\u2500'.repeat(W) + '\u2510');
@@ -75,7 +66,7 @@ async function renderDesignHitl(
   write(`\u2502  1. Mermaid diagram  ->  ${fmt(mmd).padEnd(max)}\u2502`);
   write(`\u2502  2. Gherkin spec     ->  ${fmt(gh).padEnd(max)}\u2502`);
   write('\u2502' + ' '.repeat(W) + '\u2502');
-  write('\u2502  Tip: VS Code + \'Mermaid Preview\' extension to render .mmd    \u2502');
+  write("\u2502  Tip: VS Code + 'Mermaid Preview' extension to render .mmd    \u2502");
   write('\u2502  Press Ctrl+C to abort -- no code will be written.             \u2502');
   write('\u2514' + '\u2500'.repeat(W) + '\u2518');
   write('');
@@ -110,7 +101,7 @@ async function renderTestGenerationHitl(
   if (files.length > 0) {
     write('\u2502  Generated Test Files:                                         \u2502');
     for (const f of files) {
-      const display = f.file.length > (W - 8) ? '...' + f.file.slice(-(W - 11)) : f.file;
+      const display = f.file.length > W - 8 ? '...' + f.file.slice(-(W - 11)) : f.file;
       write(`\u2502    - ${display.padEnd(W - 6)}\u2502`);
     }
   } else {

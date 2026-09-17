@@ -9,9 +9,7 @@ import type {
   TestRunResult,
   PassCompletedPayload,
 } from '../types.js';
-import {
-  PASS_LABELS,
-} from '../types.js';
+import { PASS_LABELS } from '../types.js';
 import type {
   IAgentRunner,
   ICommandRunner,
@@ -85,17 +83,16 @@ export const selfCorrectionMachineConfig: any = setup({
     context: {} as SelfCorrectionMachineContext,
   },
   actors: {
-    dispatchAgent:       notWired('dispatchAgent'),
-    runTests:            notWired('runTests'),
-    writeErrorLog:       notWired('writeErrorLog'),
+    dispatchAgent: notWired('dispatchAgent'),
+    runTests: notWired('runTests'),
+    writeErrorLog: notWired('writeErrorLog'),
     cleanupAfterSuccess: notWired('cleanupAfterSuccess'),
   },
   actions: {
     emitAgentError: () => {},
     emitTestsExhausted: () => {},
     incrementAttempt: assign({
-      attempt: ({ context }: { context: SelfCorrectionMachineContext }) =>
-        context.attempt + 1,
+      attempt: ({ context }: { context: SelfCorrectionMachineContext }) => context.attempt + 1,
     }),
     storeTestResult: assign({
       _testResult: ({ event }: { event: unknown }) => {
@@ -107,13 +104,12 @@ export const selfCorrectionMachineConfig: any = setup({
       _lastOutput: ({ event }: { event: unknown }) => {
         const doneEvent = event as { output: { output: string } };
         return doneEvent.output.output;
-      }
+      },
     }),
     recordSkipAndEmit: () => {},
   },
   guards: {
-    testsPassed: ({ context }: { context: SelfCorrectionMachineContext }) =>
-      context._testResult?.passed === true,
+    testsPassed: ({ context }: { context: SelfCorrectionMachineContext }) => context._testResult?.passed === true,
 
     canRetry: ({ context }: { context: SelfCorrectionMachineContext }) =>
       context.attempt < context.ctx.maxCorrectionRetries + 1,
@@ -134,11 +130,7 @@ export const selfCorrectionMachineConfig: any = setup({
     dispatching_agent: {
       invoke: {
         src: 'dispatchAgent',
-        input: ({
-          context,
-        }: {
-          context: SelfCorrectionMachineContext;
-        }) => ({
+        input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
           ctx: context.ctx,
           pass: context.ctx.currentPass!,
           attempt: context.attempt,
@@ -153,10 +145,7 @@ export const selfCorrectionMachineConfig: any = setup({
             {
               type: 'emitAgentError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -179,11 +168,7 @@ export const selfCorrectionMachineConfig: any = setup({
     running_tests: {
       invoke: {
         src: 'runTests',
-        input: ({
-          context,
-        }: {
-          context: SelfCorrectionMachineContext;
-        }) => ({
+        input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
           testCmd: context.ctx.testCmd,
           pass: context.ctx.currentPass!,
           attempt: context.attempt,
@@ -200,10 +185,7 @@ export const selfCorrectionMachineConfig: any = setup({
             {
               type: 'emitAgentError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -231,11 +213,7 @@ export const selfCorrectionMachineConfig: any = setup({
     writing_error_log: {
       invoke: {
         src: 'writeErrorLog',
-        input: ({
-          context,
-        }: {
-          context: SelfCorrectionMachineContext;
-        }) => ({
+        input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
           errorLogPath: context.ctx.errorLogPath,
           output: context._testResult?.output ?? '',
         }),
@@ -249,10 +227,7 @@ export const selfCorrectionMachineConfig: any = setup({
             {
               type: 'emitAgentError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -263,11 +238,7 @@ export const selfCorrectionMachineConfig: any = setup({
     success: {
       invoke: {
         src: 'cleanupAfterSuccess',
-        input: ({
-          context,
-        }: {
-          context: SelfCorrectionMachineContext;
-        }) => ({
+        input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
           ctx: context.ctx,
           errorLogPath: context.ctx.errorLogPath,
           attempt: context.attempt,
@@ -279,10 +250,7 @@ export const selfCorrectionMachineConfig: any = setup({
             {
               type: 'emitAgentError',
               params: ({ event }: { event: { error: unknown } }) => ({
-                error:
-                  event.error instanceof Error
-                    ? event.error.message
-                    : String(event.error),
+                error: event.error instanceof Error ? event.error.message : String(event.error),
               }),
             },
           ],
@@ -299,9 +267,7 @@ export const selfCorrectionMachineConfig: any = setup({
         const pass = context.ctx.currentPass;
         const label = pass !== undefined ? PASS_LABELS[pass] : 'Unknown';
         const attempt = context.attempt;
-        throw new Error(
-          `Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`,
-        );
+        throw new Error(`Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`);
       },
     },
 
@@ -334,129 +300,115 @@ export function createSelfCorrectionMachine(services: {
       context: {} as SelfCorrectionMachineContext,
     },
     actors: {
-      dispatchAgent: fromPromise<{ output: string }, {
-        ctx: PipelineContext;
-        pass: PipelinePass;
-        attempt: number;
-      }>(async ({ input }) => {
-          const { ctx, pass, attempt } = input;
-          const isFirstAttempt = attempt === 1;
+      dispatchAgent: fromPromise<
+        { output: string },
+        {
+          ctx: PipelineContext;
+          pass: PipelinePass;
+          attempt: number;
+        }
+      >(async ({ input }) => {
+        const { ctx, pass, attempt } = input;
+        const isFirstAttempt = attempt === 1;
 
-          if (isFirstAttempt) {
-            emit('PASS_STARTED', `Starting Pass ${pass}`, ctx);
-          } else {
-            emit(
-              'SELF_CORRECTION_ATTEMPTED',
-              `Self-correction cycle ${attempt - 1}/${ctx.maxCorrectionRetries} — error log written to ${ctx.errorLogPath}`,
-              ctx,
-              { attempt: attempt - 1, maxRetries: ctx.maxCorrectionRetries },
-            );
-          }
-
-          const built = contextProvider.build(ctx, pass);
-
-          const prompt = isFirstAttempt
-            ? getAgentContextPayload(ctx, built)
-            : getAgentContextPayload(ctx, built, { attemptNumber: attempt });
-
-          const artefacts = isFirstAttempt
-            ? await buildArtefacts(ctx, fs, built)
-            : await buildArtefacts(ctx, fs, built, ctx.errorLogPath);
-
-          logger.info(`Entering Pass ${pass} [Attempt ${attempt}]`);
-          logger.debug(
-            { payload: { prompt: sanitizeLogPayload(prompt, logger.level) } },
-            'Dispatching prompt to agent',
-          );
-
-          const request: AgentRunRequest = {
-            pass,
-            prompt,
-            artefacts,
-            runId: ctx.runId,
-          };
-          const runResult = await agentRunner.execute(request);
-          return { output: runResult.output };
-        },
-      ),
-
-      runTests: fromPromise<TestRunResult, {
-        testCmd: string[];
-        pass: PipelinePass;
-        attempt: number;
-        maxRetries: number;
-        ctx: PipelineContext;
-      }>(async ({ input }) => {
-          const { testCmd, pass, attempt, maxRetries, ctx } = input;
-          const totalAttempts = maxRetries + 1;
-
+        if (isFirstAttempt) {
+          emit('PASS_STARTED', `Starting Pass ${pass}`, ctx);
+        } else {
           emit(
-            'TEST_RUN_STARTED',
-            `Running tests — attempt ${attempt}/${totalAttempts}`,
+            'SELF_CORRECTION_ATTEMPTED',
+            `Self-correction cycle ${attempt - 1}/${ctx.maxCorrectionRetries} — error log written to ${ctx.errorLogPath}`,
             ctx,
+            { attempt: attempt - 1, maxRetries: ctx.maxCorrectionRetries },
           );
+        }
 
-          const result = await cmd.runTests(testCmd);
+        const built = contextProvider.build(ctx, pass);
 
-          if (result.passed) {
-            emit(
-              'TEST_RUN_COMPLETED',
-              `Tests passed on attempt ${attempt}/${totalAttempts}`,
-              ctx,
-            );
-          } else {
-            emit(
-              'TEST_RUN_FAILED',
-              `Tests failed (attempt ${attempt}/${totalAttempts}) — ${result.output.slice(0, 200)}`,
-              ctx,
-              { output: result.output },
-            );
-          }
+        const prompt = isFirstAttempt
+          ? getAgentContextPayload(ctx, built)
+          : getAgentContextPayload(ctx, built, { attemptNumber: attempt });
 
-          return result;
-        },
-      ),
+        const artefacts = isFirstAttempt
+          ? await buildArtefacts(ctx, fs, built)
+          : await buildArtefacts(ctx, fs, built, ctx.errorLogPath);
 
-      writeErrorLog: fromPromise<void, { errorLogPath: string; output: string }>(
-        async ({ input }) => {
-          await fs.writeFile(input.errorLogPath, input.output);
-        },
-      ),
+        logger.info(`Entering Pass ${pass} [Attempt ${attempt}]`);
+        logger.debug({ payload: { prompt: sanitizeLogPayload(prompt, logger.level) } }, 'Dispatching prompt to agent');
 
-      cleanupAfterSuccess: fromPromise<void, {
-        ctx: PipelineContext;
-        errorLogPath: string;
-        attempt: number;
-      }>(async ({ input }) => {
-          const { ctx, errorLogPath, attempt } = input;
+        const request: AgentRunRequest = {
+          pass,
+          prompt,
+          artefacts,
+          runId: ctx.runId,
+        };
+        const runResult = await agentRunner.execute(request);
+        return { output: runResult.output };
+      }),
 
-          if (await fs.exists(errorLogPath)) {
-            await fs.deleteFile(errorLogPath);
-          }
+      runTests: fromPromise<
+        TestRunResult,
+        {
+          testCmd: string[];
+          pass: PipelinePass;
+          attempt: number;
+          maxRetries: number;
+          ctx: PipelineContext;
+        }
+      >(async ({ input }) => {
+        const { testCmd, pass, attempt, maxRetries, ctx } = input;
+        const totalAttempts = maxRetries + 1;
 
-          const changes = await git.getPendingChanges();
-          const payload: PassCompletedPayload = {
-            files: changes,
-            attempts: attempt,
-          };
-          emit('PASS_COMPLETED', `Completed Pass ${ctx.currentPass}`, ctx, payload);
-        },
-      ),
+        emit('TEST_RUN_STARTED', `Running tests — attempt ${attempt}/${totalAttempts}`, ctx);
+
+        const result = await cmd.runTests(testCmd);
+
+        if (result.passed) {
+          emit('TEST_RUN_COMPLETED', `Tests passed on attempt ${attempt}/${totalAttempts}`, ctx);
+        } else {
+          emit(
+            'TEST_RUN_FAILED',
+            `Tests failed (attempt ${attempt}/${totalAttempts}) — ${result.output.slice(0, 200)}`,
+            ctx,
+            { output: result.output },
+          );
+        }
+
+        return result;
+      }),
+
+      writeErrorLog: fromPromise<void, { errorLogPath: string; output: string }>(async ({ input }) => {
+        await fs.writeFile(input.errorLogPath, input.output);
+      }),
+
+      cleanupAfterSuccess: fromPromise<
+        void,
+        {
+          ctx: PipelineContext;
+          errorLogPath: string;
+          attempt: number;
+        }
+      >(async ({ input }) => {
+        const { ctx, errorLogPath, attempt } = input;
+
+        if (await fs.exists(errorLogPath)) {
+          await fs.deleteFile(errorLogPath);
+        }
+
+        const changes = await git.getPendingChanges();
+        const payload: PassCompletedPayload = {
+          files: changes,
+          attempts: attempt,
+        };
+        emit('PASS_COMPLETED', `Completed Pass ${ctx.currentPass}`, ctx, payload);
+      }),
     },
 
     actions: {
-      emitAgentError: (
-        { context }: { context: SelfCorrectionMachineContext },
-        params: { error: string },
-      ) => {
+      emitAgentError: ({ context }: { context: SelfCorrectionMachineContext }, params: { error: string }) => {
         emit('ERROR', params.error || 'Agent execution failed', context.ctx);
       },
 
-      emitTestsExhausted: ({
-        context,
-      }: {
-        context: SelfCorrectionMachineContext;
-      }) => {
+      emitTestsExhausted: ({ context }: { context: SelfCorrectionMachineContext }) => {
         const { ctx, attempt } = context;
         const totalAttempts = ctx.maxCorrectionRetries + 1;
         emit(
@@ -467,16 +419,11 @@ export function createSelfCorrectionMachine(services: {
       },
 
       incrementAttempt: assign({
-        attempt: ({ context }: { context: SelfCorrectionMachineContext }) =>
-          context.attempt + 1,
+        attempt: ({ context }: { context: SelfCorrectionMachineContext }) => context.attempt + 1,
       }),
 
       storeTestResult: assign({
-        _testResult: ({
-          event,
-        }: {
-          event: unknown;
-        }) => {
+        _testResult: ({ event }: { event: unknown }) => {
           const doneEvent = event as { output: TestRunResult };
           return doneEvent.output;
         },
@@ -486,7 +433,7 @@ export function createSelfCorrectionMachine(services: {
         _lastOutput: ({ event }: { event: unknown }) => {
           const doneEvent = event as { output: { output: string } };
           return doneEvent.output.output;
-        }
+        },
       }),
 
       recordSkipAndEmit: ({ context }: { context: SelfCorrectionMachineContext }) => {
@@ -503,8 +450,7 @@ export function createSelfCorrectionMachine(services: {
     },
 
     guards: {
-      testsPassed: ({ context }: { context: SelfCorrectionMachineContext }) =>
-        context._testResult?.passed === true,
+      testsPassed: ({ context }: { context: SelfCorrectionMachineContext }) => context._testResult?.passed === true,
 
       canRetry: ({ context }: { context: SelfCorrectionMachineContext }) =>
         context.attempt < context.ctx.maxCorrectionRetries + 1,
@@ -525,11 +471,7 @@ export function createSelfCorrectionMachine(services: {
       dispatching_agent: {
         invoke: {
           src: 'dispatchAgent',
-          input: ({
-            context,
-          }: {
-            context: SelfCorrectionMachineContext;
-          }) => ({
+          input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
             ctx: context.ctx,
             pass: context.ctx.currentPass!,
             attempt: context.attempt,
@@ -544,10 +486,7 @@ export function createSelfCorrectionMachine(services: {
               {
                 type: 'emitAgentError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -570,11 +509,7 @@ export function createSelfCorrectionMachine(services: {
       running_tests: {
         invoke: {
           src: 'runTests',
-          input: ({
-            context,
-          }: {
-            context: SelfCorrectionMachineContext;
-          }) => ({
+          input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
             testCmd: context.ctx.testCmd,
             pass: context.ctx.currentPass!,
             attempt: context.attempt,
@@ -591,10 +526,7 @@ export function createSelfCorrectionMachine(services: {
               {
                 type: 'emitAgentError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -622,11 +554,7 @@ export function createSelfCorrectionMachine(services: {
       writing_error_log: {
         invoke: {
           src: 'writeErrorLog',
-          input: ({
-            context,
-          }: {
-            context: SelfCorrectionMachineContext;
-          }) => ({
+          input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
             errorLogPath: context.ctx.errorLogPath,
             output: context._testResult?.output ?? '',
           }),
@@ -640,10 +568,7 @@ export function createSelfCorrectionMachine(services: {
               {
                 type: 'emitAgentError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -654,11 +579,7 @@ export function createSelfCorrectionMachine(services: {
       success: {
         invoke: {
           src: 'cleanupAfterSuccess',
-          input: ({
-            context,
-          }: {
-            context: SelfCorrectionMachineContext;
-          }) => ({
+          input: ({ context }: { context: SelfCorrectionMachineContext }) => ({
             ctx: context.ctx,
             errorLogPath: context.ctx.errorLogPath,
             attempt: context.attempt,
@@ -670,10 +591,7 @@ export function createSelfCorrectionMachine(services: {
               {
                 type: 'emitAgentError',
                 params: ({ event }: { event: { error: unknown } }) => ({
-                  error:
-                    event.error instanceof Error
-                      ? event.error.message
-                      : String(event.error),
+                  error: event.error instanceof Error ? event.error.message : String(event.error),
                 }),
               },
             ],
@@ -690,9 +608,7 @@ export function createSelfCorrectionMachine(services: {
           const pass = context.ctx.currentPass;
           const label = pass !== undefined ? PASS_LABELS[pass] : 'Unknown';
           const attempt = context.attempt;
-          throw new Error(
-            `Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`,
-          );
+          throw new Error(`Pass ${pass} (${label}) FAILED after ${attempt} attempt(s).`);
         },
       },
 

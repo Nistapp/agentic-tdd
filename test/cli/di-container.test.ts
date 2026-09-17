@@ -33,25 +33,25 @@ function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
 }
 
 const mockFs: IFileSystem = {
-  exists:     vi.fn<() => Promise<boolean>>(() => Promise.resolve(false)),
-  readFile:   vi.fn<() => Promise<string>>(() => Promise.resolve('')),
-  writeFile:  vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  mkdir:      vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  exists: vi.fn<() => Promise<boolean>>(() => Promise.resolve(false)),
+  readFile: vi.fn<() => Promise<string>>(() => Promise.resolve('')),
+  writeFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  mkdir: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   deleteFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   renameFile: vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  readdir:    vi.fn<() => Promise<string[]>>(() => Promise.resolve([])),
+  readdir: vi.fn<() => Promise<string[]>>(() => Promise.resolve([])),
 };
 
 const mockGit: IGitService = {
-  commit:              vi.fn<() => Promise<{ kind: string }>>(() => Promise.resolve({ kind: 'nothing_to_commit' })),
-  getPendingChanges:   vi.fn<() => Promise<readonly { status: string; file: string }[]>>(() => Promise.resolve([])),
-  getCurrentBranch:    vi.fn<() => Promise<string>>(() => Promise.resolve('main')),
-  isDirty:             vi.fn<() => Promise<boolean>>(() => Promise.resolve(false)),
+  commit: vi.fn<() => Promise<{ kind: string }>>(() => Promise.resolve({ kind: 'nothing_to_commit' })),
+  getPendingChanges: vi.fn<() => Promise<readonly { status: string; file: string }[]>>(() => Promise.resolve([])),
+  getCurrentBranch: vi.fn<() => Promise<string>>(() => Promise.resolve('main')),
+  isDirty: vi.fn<() => Promise<boolean>>(() => Promise.resolve(false)),
   getCurrentCommitSha: vi.fn<() => Promise<string>>(() => Promise.resolve('abc123')),
   getLastCompletedPass: vi.fn<() => Promise<number | null>>(() => Promise.resolve(null)),
-  resetWorkingTree:    vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  abortToSha:          vi.fn<() => Promise<void>>(() => Promise.resolve()),
-  tag:                 vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  resetWorkingTree: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  abortToSha: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+  tag: vi.fn<() => Promise<void>>(() => Promise.resolve()),
 };
 
 describe('createPipelineServices', () => {
@@ -100,9 +100,9 @@ describe('createPipelineServices', () => {
   it('defaults to the opencode backend and requires a server handle', () => {
     const renderer = new TerminalRenderer();
     const ctx = makeCtx();
-    expect(() =>
-      createPipelineServices({ ctx, fs: mockFs, git: mockGit, renderer, version: '1.0.0' }),
-    ).toThrow('agentServer is required for opencode backend');
+    expect(() => createPipelineServices({ ctx, fs: mockFs, git: mockGit, renderer, version: '1.0.0' })).toThrow(
+      'agentServer is required for opencode backend',
+    );
   });
 
   it('still constructs the pi backup backend without a server handle', () => {

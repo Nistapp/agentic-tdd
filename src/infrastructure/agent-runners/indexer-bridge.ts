@@ -14,11 +14,7 @@
 
 import { Type } from 'typebox';
 
-import {
-  execaProcessRunner,
-  getResolvedIndexerBinary,
-  type ProcessRunner,
-} from '../indexer-client.js';
+import { execaProcessRunner, getResolvedIndexerBinary, type ProcessRunner } from '../indexer-client.js';
 
 const MCP_SERVER_PREFIX = 'mcp__codebase-memory__';
 
@@ -84,7 +80,7 @@ async function invokeIndexerCli(
   if (!binary) {
     throw new Error(
       `codebase-memory-mcp binary not found on PATH — cannot run indexer tool '${mcpToolName}'. ` +
-      'Install it (mandatory harness prerequisite) before running the pipeline.',
+        'Install it (mandatory harness prerequisite) before running the pipeline.',
     );
   }
 
@@ -94,7 +90,7 @@ async function invokeIndexerCli(
   if (result.exitCode !== 0) {
     throw new Error(
       `codebase-memory-mcp ${mcpToolName} exited with code ${result.exitCode}: ` +
-      `${(result.stderr || result.stdout).slice(0, 400)}`,
+        `${(result.stderr || result.stdout).slice(0, 400)}`,
     );
   }
 
@@ -117,9 +113,11 @@ async function invokeIndexerCli(
   const textPayload = parsed['content'];
   if (Array.isArray(textPayload)) {
     const text = textPayload
-      .map((b) => (b !== null && typeof b === 'object' && typeof (b as { text?: unknown }).text === 'string'
-        ? (b as { text: string }).text
-        : undefined))
+      .map((b) =>
+        b !== null && typeof b === 'object' && typeof (b as { text?: unknown }).text === 'string'
+          ? (b as { text: string }).text
+          : undefined,
+      )
       .filter((t): t is string => typeof t === 'string')
       .join('\n');
     if (text.trim() !== '') return text;
@@ -133,7 +131,10 @@ async function invokeIndexerCli(
  * stray prefix noise.
  */
 export function parseLastJson(stdout: string): Record<string, unknown> | undefined {
-  const lines = stdout.split('\n').map((l) => l.trim()).filter((l) => l !== '');
+  const lines = stdout
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l !== '');
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
     if (line === undefined) continue;

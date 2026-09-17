@@ -12,14 +12,22 @@ interface StubWriter extends TerminalWriter {
 }
 
 function makeWriter(): StubWriter {
-  const logs: string[]   = [];
-  const warns: string[]  = [];
+  const logs: string[] = [];
+  const warns: string[] = [];
   const errors: string[] = [];
   return {
-    log:   (m) => { logs.push(m); },
-    warn:  (m) => { warns.push(m); },
-    error: (m) => { errors.push(m); },
-    logs, warns, errors,
+    log: (m) => {
+      logs.push(m);
+    },
+    warn: (m) => {
+      warns.push(m);
+    },
+    error: (m) => {
+      errors.push(m);
+    },
+    logs,
+    warns,
+    errors,
   };
 }
 
@@ -27,21 +35,21 @@ function makeWriter(): StubWriter {
 
 function makeCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
   return {
-    featureName:          'auth',
-    testCmd:              ['npm', 'test'],
-    skipHitl:             false,
+    featureName: 'auth',
+    testCmd: ['npm', 'test'],
+    skipHitl: false,
     maxCorrectionRetries: 3,
-    pipelineVersion:      '1.0.0',
-    sourceType:           'file',
-    logLevel:             'INFO',
-    specFileAbsPath:      '/workspace/specs/auth.md',
-    featureDescription:   '',
-    baseBranch:           undefined,
-    originalBaseSha:      '',
-    artefactDir:          '/workspace/specs',
-    designMmdPath:        '/workspace/specs/auth.mmd',
-    specGherkinPath:      '/workspace/specs/auth.gherkin',
-    errorLogPath:         '/workspace/.agentic-tdd/error-auth.log',
+    pipelineVersion: '1.0.0',
+    sourceType: 'file',
+    logLevel: 'INFO',
+    specFileAbsPath: '/workspace/specs/auth.md',
+    featureDescription: '',
+    baseBranch: undefined,
+    originalBaseSha: '',
+    artefactDir: '/workspace/specs',
+    designMmdPath: '/workspace/specs/auth.mmd',
+    specGherkinPath: '/workspace/specs/auth.gherkin',
+    errorLogPath: '/workspace/.agentic-tdd/error-auth.log',
     ...overrides,
   } as PipelineContext;
 }
@@ -66,7 +74,7 @@ describe('TerminalRenderer', () => {
     it('ruler length equals boxWidth (custom 40)', () => {
       const w = makeWriter();
       new TerminalRenderer(w, 40).passHeader('X');
-      const rulers = w.logs.filter(l => /^━+$/.test(l));
+      const rulers = w.logs.filter((l) => /^━+$/.test(l));
       expect(rulers).toHaveLength(2);
       expect(rulers[0]).toHaveLength(40);
       expect(rulers[1]).toHaveLength(40);
@@ -187,9 +195,9 @@ describe('TerminalRenderer', () => {
     let exitSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      exitSpy = vi.spyOn(process, 'exit').mockImplementation(
-        (_code?: number | string | null | undefined) => { throw new Error('process.exit called'); },
-      );
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation((_code?: number | string | null | undefined) => {
+        throw new Error('process.exit called');
+      });
     });
 
     afterEach(() => exitSpy.mockRestore());
@@ -204,7 +212,11 @@ describe('TerminalRenderer', () => {
     it('writes [FATAL] prefix to w.error', () => {
       const w = makeWriter();
       const r = new TerminalRenderer(w);
-      try { r.fatal('something went wrong'); } catch { /* swallowed */ }
+      try {
+        r.fatal('something went wrong');
+      } catch {
+        /* swallowed */
+      }
       expect(w.errors.join('')).toContain('[FATAL]');
       expect(w.errors.join('')).toContain('something went wrong');
     });

@@ -13,36 +13,36 @@
 // ---------------------------------------------------------------------------
 
 export enum PipelinePass {
-  Design             = 0,
-  Contracts          = 1,
-  TestGeneration     = 2,
+  Design = 0,
+  Contracts = 1,
+  TestGeneration = 2,
   CoreImplementation = 3,
-  Refactor           = 4,
-  Observability      = 5,
-  Security           = 6,
-  Documentation      = 7,
+  Refactor = 4,
+  Observability = 5,
+  Security = 6,
+  Documentation = 7,
 }
 
 export const AGENT_NAMES: Record<PipelinePass, string> = {
-  [PipelinePass.Design]:             'pass-0-design-agent',
-  [PipelinePass.Contracts]:          'pass-1-contracts-agent',
-  [PipelinePass.TestGeneration]:     'pass-2-test-generation-agent',
+  [PipelinePass.Design]: 'pass-0-design-agent',
+  [PipelinePass.Contracts]: 'pass-1-contracts-agent',
+  [PipelinePass.TestGeneration]: 'pass-2-test-generation-agent',
   [PipelinePass.CoreImplementation]: 'pass-3-core-implementation-agent',
-  [PipelinePass.Refactor]:           'pass-4-refactor-agent',
-  [PipelinePass.Observability]:      'pass-5-observability-agent',
-  [PipelinePass.Security]:           'pass-6-security-agent',
-  [PipelinePass.Documentation]:      'pass-7-documentation-agent',
+  [PipelinePass.Refactor]: 'pass-4-refactor-agent',
+  [PipelinePass.Observability]: 'pass-5-observability-agent',
+  [PipelinePass.Security]: 'pass-6-security-agent',
+  [PipelinePass.Documentation]: 'pass-7-documentation-agent',
 };
 
 export const PASS_LABELS: Record<PipelinePass, string> = {
-  [PipelinePass.Design]:             'Design & Architecture',
-  [PipelinePass.Contracts]:          'Contracts & Types',
-  [PipelinePass.TestGeneration]:     'Test Generation (Red Phase)',
+  [PipelinePass.Design]: 'Design & Architecture',
+  [PipelinePass.Contracts]: 'Contracts & Types',
+  [PipelinePass.TestGeneration]: 'Test Generation (Red Phase)',
   [PipelinePass.CoreImplementation]: 'Core Implementation (Green Phase)',
-  [PipelinePass.Refactor]:           'Refactor & Optimise',
-  [PipelinePass.Observability]:      'Observability & Logging',
-  [PipelinePass.Security]:           'Security Hardening',
-  [PipelinePass.Documentation]:      'Documentation',
+  [PipelinePass.Refactor]: 'Refactor & Optimise',
+  [PipelinePass.Observability]: 'Observability & Logging',
+  [PipelinePass.Security]: 'Security Hardening',
+  [PipelinePass.Documentation]: 'Documentation',
 };
 
 // ---------------------------------------------------------------------------
@@ -74,10 +74,7 @@ export const GIT_COMMIT_PASSES = new Set<PipelinePass>([
 export const DEFAULT_MAX_CORRECTION_RETRIES = 3;
 
 /** Passes that trigger a human-in-the-loop gate for manual review. */
-export const HITL_GATE_PASSES = new Set<PipelinePass>([
-  PipelinePass.Design,
-  PipelinePass.TestGeneration,
-]);
+export const HITL_GATE_PASSES = new Set<PipelinePass>([PipelinePass.Design, PipelinePass.TestGeneration]);
 
 // ---------------------------------------------------------------------------
 // Input source type — matches Python --source-type flag
@@ -515,12 +512,7 @@ export class AgentRunError extends Error {
   readonly kind: 'agent_failed' | 'timeout' | 'no_api_key' | 'no_model';
   readonly pass: PipelinePass;
 
-  constructor(
-    kind: AgentRunError['kind'],
-    pass: PipelinePass,
-    message: string,
-    options?: { cause?: unknown },
-  ) {
+  constructor(kind: AgentRunError['kind'], pass: PipelinePass, message: string, options?: { cause?: unknown }) {
     super(message, options);
     this.name = 'AgentRunError';
     this.kind = kind;

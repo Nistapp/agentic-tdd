@@ -104,17 +104,12 @@ export function computeArtefactPaths(featureName: string): ArtefactPaths {
   };
 }
 
-export async function abortSession(
-  stateStore: IStateStore,
-  git: IGitService,
-): Promise<never> {
+export async function abortSession(stateStore: IStateStore, git: IGitService): Promise<never> {
   const ctx = await stateStore.load();
 
   if (ctx.originalBaseSha) {
     await git.abortToSha(ctx.originalBaseSha);
-    console.log(
-      `\n  Abort: rewound Git tree to original SHA ${ctx.originalBaseSha.slice(0, 8)}.\n`,
-    );
+    console.log(`\n  Abort: rewound Git tree to original SHA ${ctx.originalBaseSha.slice(0, 8)}.\n`);
   } else {
     await git.resetWorkingTree();
     console.log('\n  Abort: reset working tree to HEAD.\n');
@@ -314,9 +309,7 @@ export async function startNewSession(
   await fs.mkdir(paths.artefactDir);
 
   console.log(`\n  Feature: ${options.featureName}`);
-  console.log(
-    '  Agents will create/modify necessary files to implement the feature.\n',
-  );
+  console.log('  Agents will create/modify necessary files to implement the feature.\n');
 
   const ctx: PipelineContext = {
     featureName: options.featureName,
@@ -335,9 +328,7 @@ export async function startNewSession(
   };
 
   await stateStore.save(ctx);
-  console.log(
-    `  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${stateStore.path}.\n`,
-  );
+  console.log(`  [git]  Saved baseline SHA ${originalBaseSha.slice(0, 8)} to ${stateStore.path}.\n`);
 
   renderer.banner(ctx);
 

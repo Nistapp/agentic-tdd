@@ -79,8 +79,17 @@ export function createPipelineServices(opts: ContainerOptions): PipelineServices
   const symbolResolver = noContextEnrich ? undefined : new AstGrepSymbolResolver();
 
   const orchestrator = new PipelineOrchestrator(
-    git, fs, cmdRunner, agentRunner, events,
-    new PinoLoggerAdapter(loggers.core), pipelineConfig, contextProvider, symbolResolver, stateStore, hitlHandler,
+    git,
+    fs,
+    cmdRunner,
+    agentRunner,
+    events,
+    new PinoLoggerAdapter(loggers.core),
+    pipelineConfig,
+    contextProvider,
+    symbolResolver,
+    stateStore,
+    hitlHandler,
   );
 
   return { orchestrator };

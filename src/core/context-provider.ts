@@ -1,10 +1,5 @@
 import { PipelinePass } from './types.js';
-import type {
-  PipelineContext,
-  BuiltContext,
-  TargetSymbols,
-  FileChanges,
-} from './types.js';
+import type { PipelineContext, BuiltContext, TargetSymbols, FileChanges } from './types.js';
 import type { IContextProvider } from './interfaces.js';
 import { buildContextFiles, buildTargetPasses } from './context-builder.js';
 

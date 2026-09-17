@@ -153,10 +153,7 @@ describe('attachTerminalListener', () => {
       events.trigger('COMMIT_CAPTURED', {
         payload: { fileChanges, targetSymbols },
       });
-      expect((renderer as any).logCapturedContext).toHaveBeenCalledWith(
-        fileChanges,
-        targetSymbols,
-      );
+      expect((renderer as any).logCapturedContext).toHaveBeenCalledWith(fileChanges, targetSymbols);
     });
 
     it('does not throw when payload lacks fileChanges', () => {

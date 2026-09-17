@@ -2,9 +2,7 @@
   "schemaVersion": "0.2.0",
   "context": {
     "featureName": "Prompt-4",
-    "testCmd": [
-      "pytest"
-    ],
+    "testCmd": ["pytest"],
     "skipHitl": false,
     "maxCorrectionRetries": 3,
     "pipelineVersion": "0.1.0-Beta",
@@ -16,10 +14,7 @@
     "history": {
       "0": {
         "status": "completed",
-        "filesTouched": [
-          "specs/Prompt-4-1786353873229.gherkin",
-          "specs/Prompt-4-1786353873229.mmd"
-        ],
+        "filesTouched": ["specs/Prompt-4-1786353873229.gherkin", "specs/Prompt-4-1786353873229.mmd"],
         "attempts": 1,
         "commitHash": "cad4678327a464cfda55b183d18be9838e8192d1",
         "targetSymbols": {},
@@ -64,9 +59,7 @@
       },
       "1": {
         "status": "completed",
-        "filesTouched": [
-          "src/tictactoe/gui.py"
-        ],
+        "filesTouched": ["src/tictactoe/gui.py"],
         "attempts": 1,
         "commitHash": "b17dc50ed559e5b72d91ac0ed30dd4014fc3fc15",
         "targetSymbols": {},
@@ -94,9 +87,7 @@
       },
       "2": {
         "status": "completed",
-        "filesTouched": [
-          "src/tictactoe/gui_test.py"
-        ],
+        "filesTouched": ["src/tictactoe/gui_test.py"],
         "attempts": 1,
         "commitHash": "2c0f48ee9b090b213089a1fc73b4e2764d06fa2d",
         "targetSymbols": {},
@@ -124,10 +115,7 @@
       },
       "3": {
         "status": "completed",
-        "filesTouched": [
-          "rc/tictactoe/gui.py",
-          "artifacts/Example-state-prompt-4.json"
-        ],
+        "filesTouched": ["rc/tictactoe/gui.py", "artifacts/Example-state-prompt-4.json"],
         "attempts": 1,
         "commitHash": "44d1fce1891fbca10e1b3222622783020ec1fac4",
         "targetSymbols": {},
@@ -216,9 +204,7 @@
       },
       "4": {
         "status": "completed",
-        "filesTouched": [
-          "rc/tictactoe/gui.py"
-        ],
+        "filesTouched": ["rc/tictactoe/gui.py"],
         "attempts": 1,
         "commitHash": "2c1580f3c747c6b74a63304f988bdc7f1453239c",
         "targetSymbols": {},
@@ -345,9 +331,7 @@
       },
       "5": {
         "status": "completed",
-        "filesTouched": [
-          "rc/tictactoe/gui.py"
-        ],
+        "filesTouched": ["rc/tictactoe/gui.py"],
         "attempts": 1,
         "commitHash": "0d3ded7cec1742c3fff1835a9dad9b9e5ebf0f32",
         "targetSymbols": {},
@@ -452,9 +436,7 @@
       },
       "6": {
         "status": "completed",
-        "filesTouched": [
-          "rc/tictactoe/gui.py"
-        ],
+        "filesTouched": ["rc/tictactoe/gui.py"],
         "attempts": 1,
         "commitHash": "3263565cfb5215d9e5467c785d006d0a5c695ae1",
         "targetSymbols": {},

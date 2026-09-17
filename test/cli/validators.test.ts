@@ -11,9 +11,9 @@ describe('validateAndResolveOptions', () => {
 
   beforeEach(async () => {
     workDir = await mkdtemp(join(tmpdir(), 'agentic-tdd-val-'));
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(
-      (_code?: number | string | null | undefined) => { throw new Error('process.exit called'); },
-    );
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation((_code?: number | string | null | undefined) => {
+      throw new Error('process.exit called');
+    });
   });
 
   afterEach(async () => {
@@ -27,17 +27,15 @@ describe('validateAndResolveOptions', () => {
 
   it('fails when --feature-desc-file is missing', async () => {
     const renderer = makeRenderer();
-    await expect(
-      validateAndResolveOptions({}, renderer),
-    ).rejects.toThrow('process.exit called');
+    await expect(validateAndResolveOptions({}, renderer)).rejects.toThrow('process.exit called');
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('fails when --test-cmd is missing (new session)', async () => {
     const renderer = makeRenderer();
-    await expect(
-      validateAndResolveOptions({ featureDescFile: 'specs/foo.md' }, renderer),
-    ).rejects.toThrow('process.exit called');
+    await expect(validateAndResolveOptions({ featureDescFile: 'specs/foo.md' }, renderer)).rejects.toThrow(
+      'process.exit called',
+    );
   });
 
   it('resolves all options when feature-desc-file and test-cmd are provided', async () => {
@@ -47,13 +45,16 @@ describe('validateAndResolveOptions', () => {
     await writeFile(specPath, '# My Feature\n\nImplement a thing.', { flag: 'wx' });
 
     const renderer = makeRenderer();
-    const result = await validateAndResolveOptions({
-      featureDescFile: specPath,
-      testCmd: 'npm test',
-      skipHitl: true,
-      logLevel: 'DEBUG',
-      baseBranch: 'develop',
-    }, renderer);
+    const result = await validateAndResolveOptions(
+      {
+        featureDescFile: specPath,
+        testCmd: 'npm test',
+        skipHitl: true,
+        logLevel: 'DEBUG',
+        baseBranch: 'develop',
+      },
+      renderer,
+    );
 
     expect(result.featureName).toBe('my-feature');
     expect(result.testCmd).toEqual(['npm', 'test']);
@@ -66,10 +67,13 @@ describe('validateAndResolveOptions', () => {
   it('fails when the spec file does not exist', async () => {
     const renderer = makeRenderer();
     await expect(
-      validateAndResolveOptions({
-        featureDescFile: '/nonexistent/spec.md',
-        testCmd: 'npm test',
-      }, renderer),
+      validateAndResolveOptions(
+        {
+          featureDescFile: '/nonexistent/spec.md',
+          testCmd: 'npm test',
+        },
+        renderer,
+      ),
     ).rejects.toThrow('process.exit called');
   });
 });

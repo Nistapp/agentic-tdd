@@ -42,12 +42,8 @@ export function parseTrackedBranches(raw: string): TrackedBranch[] {
  * (`[gone]`). Protected branches and the currently checked-out branch are
  * never selected.
  */
-export function selectStaleBranches(
-  branches: readonly TrackedBranch[],
-  options: SelectStaleOptions = {},
-): string[] {
-  const protectedBranches =
-    options.protectedBranches ?? DEFAULT_PROTECTED_BRANCHES;
+export function selectStaleBranches(branches: readonly TrackedBranch[], options: SelectStaleOptions = {}): string[] {
+  const protectedBranches = options.protectedBranches ?? DEFAULT_PROTECTED_BRANCHES;
   const currentBranch = options.currentBranch ?? null;
   const protectedSet = new Set(protectedBranches);
   const stale: string[] = [];
@@ -103,17 +99,12 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   } catch (err) {
     if (!quiet) {
       console.warn(
-        `warning: git fetch --prune failed (${errorMessage(err)}); ` +
-          'proceeding with existing tracking metadata.',
+        `warning: git fetch --prune failed (${errorMessage(err)}); ` + 'proceeding with existing tracking metadata.',
       );
     }
   }
 
-  const raw = runGit([
-    'for-each-ref',
-    '--format=%(refname:short)%00%(upstream:track)',
-    'refs/heads',
-  ]);
+  const raw = runGit(['for-each-ref', '--format=%(refname:short)%00%(upstream:track)', 'refs/heads']);
   const branches = parseTrackedBranches(raw);
   const stale = selectStaleBranches(branches, {
     protectedBranches,
@@ -126,9 +117,7 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   }
 
   const suffix = stale.length === 1 ? '' : 'es';
-  console.log(
-    `${apply ? 'Deleting' : 'Would delete'} ${stale.length} stale branch${suffix}:`,
-  );
+  console.log(`${apply ? 'Deleting' : 'Would delete'} ${stale.length} stale branch${suffix}:`);
   for (const name of stale) console.log(`  - ${name}`);
 
   if (!apply) {

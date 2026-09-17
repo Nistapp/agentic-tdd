@@ -38,10 +38,7 @@ export async function closeActiveServer(): Promise<void> {
  * handlers can close it early; `finally` always closes it and clears the
  * registry.
  */
-export async function runWithServer<T>(
-  server: IAgentServerHandle | undefined,
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function runWithServer<T>(server: IAgentServerHandle | undefined, fn: () => Promise<T>): Promise<T> {
   if (server !== undefined) activeServer = server;
   try {
     return await fn();

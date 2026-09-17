@@ -14,12 +14,7 @@ export class OpenCodeCliRunner implements IAgentRunner {
   readonly #config: PipelineConfig;
   readonly #spawner: IOpencodeSpawner;
 
-  constructor(
-    fs: IFileSystem,
-    logger: ILogger,
-    config: PipelineConfig,
-    spawner: IOpencodeSpawner,
-  ) {
+  constructor(fs: IFileSystem, logger: ILogger, config: PipelineConfig, spawner: IOpencodeSpawner) {
     this.#fs = fs;
     this.#logger = logger;
     this.#config = config;

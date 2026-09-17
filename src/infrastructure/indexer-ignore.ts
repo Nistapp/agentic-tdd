@@ -23,15 +23,9 @@ export const CBM_IGNORE_FILENAME = '.cbmignore';
  * pipeline run state, and the codebase-memory ADR store blob. Trailing slashes
  * are gitignore directory syntax.
  */
-export const CBM_IGNORE_ENTRIES: readonly string[] = [
-  'artefacts/',
-  'artifacts/',
-  '.agentic-tdd/',
-  '.codebase-memory/',
-];
+export const CBM_IGNORE_ENTRIES: readonly string[] = ['artefacts/', 'artifacts/', '.agentic-tdd/', '.codebase-memory/'];
 
-const HEADER =
-  '# Managed by agentic-tdd — excludes transient scratch/run state from the codebase index.';
+const HEADER = '# Managed by agentic-tdd — excludes transient scratch/run state from the codebase index.';
 
 /** Normalise a line for comparison (trim; ignore blanks and comments). */
 function isMeaningfulLine(line: string): boolean {

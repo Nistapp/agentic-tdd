@@ -129,7 +129,7 @@ export async function defaultModelConfigPath(fs: IFileSystem): Promise<string | 
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
     resolve(here, '../../config.default.json'), // repo root (source runs)
-    resolve(here, '../config.default.json'),    // dist/ (published builds)
+    resolve(here, '../config.default.json'), // dist/ (published builds)
   ];
   for (const candidate of candidates) {
     if (await fs.exists(candidate)) {
@@ -158,9 +158,7 @@ export async function loadConfigFile(path: string, fs: IFileSystem): Promise<Mod
   try {
     parsed = JSON.parse(stripJsonComments(raw));
   } catch (err) {
-    throw new Error(
-      `Invalid JSON in model config file '${path}': ${err instanceof Error ? err.message : String(err)}`,
-    );
+    throw new Error(`Invalid JSON in model config file '${path}': ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return normalizeConfig(parsed, path);
@@ -193,9 +191,7 @@ function normalizeConfig(parsed: unknown, path: string): ModelConfig {
   const result: Partial<Record<string, string>> = {};
   for (const [agentName, value] of Object.entries(models)) {
     if (!KNOWN_AGENTS.includes(agentName)) {
-      throw new Error(
-        `Unknown agent "${agentName}" in '${path}'. Known agents: ${KNOWN_AGENTS.join(', ')}`,
-      );
+      throw new Error(`Unknown agent "${agentName}" in '${path}'. Known agents: ${KNOWN_AGENTS.join(', ')}`);
     }
     result[agentName] = validateModelString(value, agentName);
   }

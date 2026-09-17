@@ -1,34 +1,26 @@
 import { OpenCodeCliRunner } from '../../../src/infrastructure/agent-runners/opencode-cli-runner.js';
 import { PipelinePass, AGENT_NAMES } from '../../../src/core/types.js';
-import type {
-  AgentRunRequest,
-  AgentArtefacts,
-} from '../../../src/core/types.js';
-import type {
-  IFileSystem,
-  ILogger,
-  PipelineConfig,
-  IOpencodeSpawner,
-} from '../../../src/core/interfaces.js';
+import type { AgentRunRequest, AgentArtefacts } from '../../../src/core/types.js';
+import type { IFileSystem, ILogger, PipelineConfig, IOpencodeSpawner } from '../../../src/core/interfaces.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 class StubLogger implements ILogger {
   readonly calls: { method: string; args: unknown[] }[] = [];
 
   debug(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'debug', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'debug', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   info(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'info', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'info', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   warn(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'warn', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'warn', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   error(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'error', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'error', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   child(_bindings: Record<string, unknown>): ILogger {
@@ -163,9 +155,7 @@ describe('OpenCodeCliRunner', () => {
       await runner.execute(request);
 
       const args = (m.spawner.spawn as ReturnType<typeof vi.fn>).mock.calls[0][0] as string[];
-      const fileIndices = args
-        .map((a, i) => (a === '--file' ? i : -1))
-        .filter(i => i !== -1);
+      const fileIndices = args.map((a, i) => (a === '--file' ? i : -1)).filter((i) => i !== -1);
       expect(fileIndices).toHaveLength(0);
     });
 
@@ -244,9 +234,9 @@ describe('OpenCodeCliRunner', () => {
 
       await runner.execute(request);
 
-      const infoCalls = m.logger.calls.filter(c => c.method === 'debug');
-      const preFlightCall = infoCalls.find(c =>
-        c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
+      const infoCalls = m.logger.calls.filter((c) => c.method === 'debug');
+      const preFlightCall = infoCalls.find(
+        (c) => c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
       );
       expect(preFlightCall).toBeTruthy();
       const payload = preFlightCall!.args[0] as Record<string, unknown>;
@@ -263,7 +253,7 @@ describe('OpenCodeCliRunner', () => {
 
       expect(m.fs.readFile).toHaveBeenCalled();
       const readFileCalls = (m.fs.readFile as ReturnType<typeof vi.fn>).mock.calls as string[][];
-      const agentMdCall = readFileCalls.find(c => c[0].endsWith('.md'));
+      const agentMdCall = readFileCalls.find((c) => c[0].endsWith('.md'));
       expect(agentMdCall).toBeTruthy();
     });
 
@@ -273,8 +263,8 @@ describe('OpenCodeCliRunner', () => {
 
       await runner.execute(makeRequest({ pass: PipelinePass.Design }));
 
-      const preFlightCall = m.logger.calls.find(c =>
-        c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
+      const preFlightCall = m.logger.calls.find(
+        (c) => c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
       );
       expect(preFlightCall).toBeTruthy();
       const payload = preFlightCall!.args[0] as Record<string, unknown>;
@@ -288,8 +278,8 @@ describe('OpenCodeCliRunner', () => {
 
       await runner.execute(makeRequest());
 
-      const preFlightCall = m.logger.calls.find(c =>
-        c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
+      const preFlightCall = m.logger.calls.find(
+        (c) => c.args.length > 1 && typeof c.args[1] === 'string' && (c.args[1] as string).includes('Pre-flight'),
       );
       expect(preFlightCall).toBeTruthy();
       const payload = preFlightCall!.args[0] as Record<string, unknown>;
@@ -311,11 +301,11 @@ describe('OpenCodeCliRunner', () => {
       await runner.execute(request);
 
       const writeFileCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
-      const logCall = writeFileCalls.find(c => c[0].includes('pass-0-my-run-123.log'));
+      const logCall = writeFileCalls.find((c) => c[0].includes('pass-0-my-run-123.log'));
       expect(logCall).toBeTruthy();
       expect(logCall![1]).toBe('agent output');
 
-      const inputCall = writeFileCalls.find(c => c[0].endsWith('pass-0-my-run-123.input.log'));
+      const inputCall = writeFileCalls.find((c) => c[0].endsWith('pass-0-my-run-123.input.log'));
       expect(inputCall).toBeTruthy();
       const inputPayload = JSON.parse(inputCall![1]) as { pass: PipelinePass; prompt: string };
       expect(inputPayload.pass).toBe(PipelinePass.Design);

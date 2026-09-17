@@ -56,15 +56,9 @@ export interface OpencodeBootOptions {
 export type OpencodeBoot = (opts: OpencodeBootOptions) => Promise<OpencodeBootResult>;
 
 /** Applies *env* to the process for the duration of *fn* and restores it after. */
-export type EnvScope = <T>(
-  env: Record<string, string | undefined>,
-  fn: () => Promise<T>,
-) => Promise<T>;
+export type EnvScope = <T>(env: Record<string, string | undefined>, fn: () => Promise<T>) => Promise<T>;
 
-export type OpencodeServerFailureKind =
-  | 'opencode_boot_failed'
-  | 'mcp_not_connected'
-  | 'mcp_leak';
+export type OpencodeServerFailureKind = 'opencode_boot_failed' | 'mcp_not_connected' | 'mcp_leak';
 
 /** Typed failure raised by server startup (never a bare `Error`). */
 export class OpencodeServerError extends Error {
@@ -203,9 +197,7 @@ export interface StartOpencodeServerOptions {
  * idempotent handle. Throws an {@link OpencodeServerError} on any failure
  * (after closing a partially-booted server).
  */
-export async function startOpencodeServer(
-  opts: StartOpencodeServerOptions,
-): Promise<IAgentServerHandle> {
+export async function startOpencodeServer(opts: StartOpencodeServerOptions): Promise<IAgentServerHandle> {
   const logger = opts.logger.child({ module: 'opencode-server' });
   const serverName = opts.serverName ?? OPENCODE_INDEXER_SERVER_NAME;
   const boot = opts.boot ?? defaultBoot;
@@ -237,9 +229,7 @@ export async function startOpencodeServer(
 
   let booted: OpencodeBootResult;
   try {
-    booted = await envScope(env, () =>
-      boot({ hostname: '127.0.0.1', port, timeout, config: opts.config }),
-    );
+    booted = await envScope(env, () => boot({ hostname: '127.0.0.1', port, timeout, config: opts.config }));
   } catch (err) {
     await teardownRunDir(opts.fs, logger, createdRunDir, configPath, opts.runDir, writtenConfig);
     throw new OpencodeServerError('opencode_boot_failed', buildBootFailureMessage(err, port), {

@@ -17,14 +17,7 @@ const OPENCODE_HEARTBEAT_THRESHOLD_MS = 120_000;
 const OPENCODE_HARD_TIMEOUT_MS = 10 * 60_000;
 const OPENCODE_FORCE_KILL_AFTER_MS = 5_000;
 
-const OPENCODE_LOG_PATH = join(
-  homedir(),
-  '.local',
-  'share',
-  'opencode',
-  'log',
-  'opencode.log',
-);
+const OPENCODE_LOG_PATH = join(homedir(), '.local', 'share', 'opencode', 'log', 'opencode.log');
 
 function isReadableStream(stream: unknown): stream is { on(event: 'data', fn: (chunk: Buffer) => void): void } {
   return typeof (stream as any)?.on === 'function';
@@ -44,7 +37,7 @@ export class CommandRunner implements ICommandRunner, IOpencodeSpawner {
           : stdOutput;
       reqLogger().debug(
         { targetOutput: { stdout: result.stdout, stderr: result.stderr }, exitCode: result.exitCode },
-        'Command execution completed'
+        'Command execution completed',
       );
       return {
         passed: result.exitCode === 0,

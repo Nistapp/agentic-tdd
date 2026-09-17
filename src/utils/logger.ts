@@ -5,9 +5,8 @@ import { PipelinePass, AGENT_NAMES } from '../core/types.js';
 // Determine log level and whether to use pino-pretty
 const args = process.argv;
 const logLevelIndex = args.indexOf('--log-level');
-const cliLogLevel = logLevelIndex !== -1 && args.length > logLevelIndex + 1 
-  ? args[logLevelIndex + 1]?.toUpperCase() 
-  : null;
+const cliLogLevel =
+  logLevelIndex !== -1 && args.length > logLevelIndex + 1 ? args[logLevelIndex + 1]?.toUpperCase() : null;
 
 const envLogLevel = process.env.LOG_LEVEL?.toUpperCase();
 const isDebugEnv = process.env.DEBUG !== undefined;
@@ -29,7 +28,7 @@ if (isDebugActive) {
       translateTime: 'SYS:standard',
       ignore: 'pid,hostname',
     },
-};
+  };
 }
 
 const root = pino(pinoOptions);
@@ -55,7 +54,5 @@ export const loggers = {
       return root.child({ module: `agent:${agentName}` });
     }
     return root.child({ module: `agent:unknown-${pass}` });
-  }
+  },
 };
-
-

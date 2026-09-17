@@ -1,7 +1,12 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { join } from 'node:path';
 
-import { writeMcpConfig, teardownMcpConfig, resolveMcpBinary, getMcpTemplateDir } from '../../src/infrastructure/mcp-config.js';
+import {
+  writeMcpConfig,
+  teardownMcpConfig,
+  resolveMcpBinary,
+  getMcpTemplateDir,
+} from '../../src/infrastructure/mcp-config.js';
 import type { McpConfigResult } from '../../src/infrastructure/mcp-config.js';
 import type { IFileSystem, ILogger } from '../../src/core/interfaces.js';
 
@@ -18,11 +23,16 @@ const TEMPLATE_BODY = JSON.stringify({
 const RESOLVED_BIN = '/usr/bin/codebase-memory-mcp';
 const PROJ_MCP = join('/proj', '.mcp.json');
 
-const EXPECTED_COPY = JSON.stringify({
-  mcpServers: {
-    'codebase-memory': { command: RESOLVED_BIN, args: [], lifecycle: 'lazy' },
-  },
-}, null, 2) + '\n';
+const EXPECTED_COPY =
+  JSON.stringify(
+    {
+      mcpServers: {
+        'codebase-memory': { command: RESOLVED_BIN, args: [], lifecycle: 'lazy' },
+      },
+    },
+    null,
+    2,
+  ) + '\n';
 
 function makeLogger(): ILogger & { messages: string[] } {
   const messages: string[] = [];
@@ -38,10 +48,17 @@ function makeLogger(): ILogger & { messages: string[] } {
       else if (typeof _ === 'string') messages.push(`warn:${_}`);
     },
     error: vi.fn(),
-    child: vi.fn(() => ({
-      debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(),
-      child: vi.fn(), level: 'info',
-    } as unknown as ILogger)),
+    child: vi.fn(
+      () =>
+        ({
+          debug: vi.fn(),
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          child: vi.fn(),
+          level: 'info',
+        }) as unknown as ILogger,
+    ),
     level: 'info',
   };
 }
@@ -154,8 +171,9 @@ describe('writeMcpConfig', () => {
     const fs = makeFs();
     (fs.readFile as ReturnType<typeof vi.fn>).mockResolvedValue(JSON.stringify({ mcpServers: {} }));
     const logger = makeLogger();
-    await expect(writeMcpConfig(fs, logger, '/proj', '/tpl/bad.json', RESOLVED_BIN))
-      .rejects.toThrow('missing mcpServers.codebase-memory');
+    await expect(writeMcpConfig(fs, logger, '/proj', '/tpl/bad.json', RESOLVED_BIN)).rejects.toThrow(
+      'missing mcpServers.codebase-memory',
+    );
   });
 });
 
@@ -280,15 +298,24 @@ describe('writeMcpConfig — existing .mcp.json', () => {
 
 describe('teardownMcpConfig', () => {
   const RESULT_COPY: McpConfigResult = {
-    created: true, merged: false, kept: false, writtenContent: EXPECTED_COPY,
+    created: true,
+    merged: false,
+    kept: false,
+    writtenContent: EXPECTED_COPY,
   };
 
   const RESULT_KEPT: McpConfigResult = {
-    created: false, merged: false, kept: true, writtenContent: '',
+    created: false,
+    merged: false,
+    kept: true,
+    writtenContent: '',
   };
 
   const RESULT_MERGED: McpConfigResult = {
-    created: false, merged: true, kept: false, writtenContent: EXPECTED_COPY,
+    created: false,
+    merged: true,
+    kept: false,
+    writtenContent: EXPECTED_COPY,
   };
 
   it('deletes .mcp.json when harness-created and content unchanged', async () => {
@@ -319,7 +346,7 @@ describe('teardownMcpConfig', () => {
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_COPY);
 
-    expect((fs.deleteFile as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(fs.deleteFile as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
     expect(logger.messages.some((m) => m.includes('keeping'))).toBe(true);
   });
 
@@ -330,7 +357,7 @@ describe('teardownMcpConfig', () => {
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_KEPT);
 
-    expect((fs.deleteFile as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(fs.deleteFile as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('does nothing when the file was merged (not created)', async () => {
@@ -340,7 +367,7 @@ describe('teardownMcpConfig', () => {
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_MERGED);
 
-    expect((fs.deleteFile as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(fs.deleteFile as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('logs a warning and continues when the filesystem fails during teardown', async () => {
@@ -359,6 +386,6 @@ describe('teardownMcpConfig', () => {
 
     await teardownMcpConfig(fs, logger, '/proj', RESULT_COPY);
 
-    expect((fs.deleteFile as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(fs.deleteFile as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });

@@ -2,7 +2,14 @@ import { OpenCodeCliRunner } from './opencode-cli-runner.js';
 import { OpencodeSdkRunner, type OpencodeClientFactory } from './opencode-sdk-runner.js';
 import { PiSdkRunner } from './pi-sdk-runner.js';
 
-import type { IAgentRunner, IAgentServerHandle, IFileSystem, ILogger, IOpencodeSpawner, PipelineConfig } from '../../core/interfaces.js';
+import type {
+  IAgentRunner,
+  IAgentServerHandle,
+  IFileSystem,
+  ILogger,
+  IOpencodeSpawner,
+  PipelineConfig,
+} from '../../core/interfaces.js';
 
 /**
  * Agent backend selector.
@@ -30,13 +37,7 @@ export function createAgentRunner(backend: AgentBackend, deps: CreateAgentRunner
       if (!deps.agentServer) {
         throw new Error('agentServer is required for opencode backend');
       }
-      return new OpencodeSdkRunner(
-        deps.fs,
-        deps.logger,
-        deps.config,
-        deps.agentServer,
-        deps.opencodeClientFactory,
-      );
+      return new OpencodeSdkRunner(deps.fs, deps.logger, deps.config, deps.agentServer, deps.opencodeClientFactory);
     case 'pi':
       return new PiSdkRunner(deps.fs, deps.logger, deps.config);
     case 'opencode-cli':

@@ -1,7 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { createActor, waitFor, type Snapshot } from 'xstate';
 
-import type { IGitService, IFileSystem, ICommandRunner, IAgentRunner, IEventBus, ILogger, IStateStore, PipelineConfig, IContextProvider, ISymbolResolver } from './interfaces.js';
+import type {
+  IGitService,
+  IFileSystem,
+  ICommandRunner,
+  IAgentRunner,
+  IEventBus,
+  ILogger,
+  IStateStore,
+  PipelineConfig,
+  IContextProvider,
+  ISymbolResolver,
+} from './interfaces.js';
 import type { PipelineContext, FileChange, HitlAction } from './types.js';
 import { PipelinePass } from './types.js';
 
@@ -115,9 +126,7 @@ export class PipelineOrchestrator {
       'children' in snap;
 
     if (ctx.xstateSnapshot && !isValidSnapshot) {
-      this.#logger.warn(
-        'Corrupt xstateSnapshot detected — falling back to startPass-based resume.',
-      );
+      this.#logger.warn('Corrupt xstateSnapshot detected — falling back to startPass-based resume.');
       ctx.xstateSnapshot = undefined;
     }
 
@@ -130,24 +139,17 @@ export class PipelineOrchestrator {
 
     this.#actor = actor;
 
-    const isPausedSnapshot: boolean =
-      snap?.status === 'active' && snap?.value === 'paused';
+    const isPausedSnapshot: boolean = snap?.status === 'active' && snap?.value === 'paused';
 
     return new Promise<boolean>((resolve, reject) => {
-      const unsubscribeHitl = this.#events.on(
-        'HITL_REQUIRED',
-        async (event) => {
-          try {
-            const action = await this.#onHitl(
-              event.pass,
-              (event.payload?.files as FileChange[]) ?? [],
-            );
-            actor.send({ type: HITL_EVENT_MAP[action], pass: event.pass! });
-          } catch (err) {
-            reject(err instanceof Error ? err : new Error(String(err)));
-          }
-        },
-      );
+      const unsubscribeHitl = this.#events.on('HITL_REQUIRED', async (event) => {
+        try {
+          const action = await this.#onHitl(event.pass, (event.payload?.files as FileChange[]) ?? []);
+          actor.send({ type: HITL_EVENT_MAP[action], pass: event.pass! });
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
 
       actor.subscribe((snapshot) => {
         ctx.xstateSnapshot = actor.getPersistedSnapshot() as unknown as Record<string, unknown>;

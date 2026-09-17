@@ -1,6 +1,11 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { PiSdkRunner, captureEvent, buildToolsAllowlist, INDEXER_TOOLS } from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
+import {
+  PiSdkRunner,
+  captureEvent,
+  buildToolsAllowlist,
+  INDEXER_TOOLS,
+} from '../../../src/infrastructure/agent-runners/pi-sdk-runner.js';
 import { AgentRunError, AGENT_NAMES, PipelinePass } from '../../../src/core/types.js';
 import type { AgentRunRequest, AgentArtefacts } from '../../../src/core/types.js';
 import type { IFileSystem, ILogger, PipelineConfig } from '../../../src/core/interfaces.js';
@@ -82,19 +87,19 @@ class StubLogger implements ILogger {
   readonly calls: { method: string; args: unknown[] }[] = [];
 
   debug(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'debug', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'debug', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   info(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'info', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'info', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   warn(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'warn', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'warn', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   error(msgOrObj: string | object, msg?: string): void {
-    this.calls.push({ method: 'error', args: [msgOrObj, msg].filter(a => a !== undefined) });
+    this.calls.push({ method: 'error', args: [msgOrObj, msg].filter((a) => a !== undefined) });
   }
 
   child(_bindings: Record<string, unknown>): ILogger {
@@ -153,7 +158,9 @@ function makeMocks(configOverrides: Partial<PipelineConfig> = {}): Mocks {
     readdir: vi.fn().mockResolvedValue([]),
   };
 
-  const models = Object.fromEntries(Object.entries(AGENT_NAMES).map(([, name]) => [name, 'openrouter/deepseek/deepseek-v4-pro']));
+  const models = Object.fromEntries(
+    Object.entries(AGENT_NAMES).map(([, name]) => [name, 'openrouter/deepseek/deepseek-v4-pro']),
+  );
 
   const config: PipelineConfig = {
     opencodeLogPath: '/home/fake/.local/share/opencode/log/opencode.log',
@@ -171,14 +178,21 @@ function makeFakeSession(): FakeSession {
     sessionId: 'fake-session-1',
     subscribe: vi.fn((l: (event: Record<string, unknown>) => void) => {
       listener = l;
-      return () => { listener = undefined; };
+      return () => {
+        listener = undefined;
+      };
     }),
     prompt: vi.fn(async () => {
       // Emit a scripted event stream before resolving.
       listener?.({
         type: 'message_update',
         message: { role: 'assistant', content: [] },
-        assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'Hello', partial: { content: [{ type: 'text', text: 'Hello' }] } },
+        assistantMessageEvent: {
+          type: 'text_delta',
+          contentIndex: 0,
+          delta: 'Hello',
+          partial: { content: [{ type: 'text', text: 'Hello' }] },
+        },
       });
       listener?.({
         type: 'tool_execution_start',
@@ -189,7 +203,12 @@ function makeFakeSession(): FakeSession {
       listener?.({
         type: 'message_update',
         message: { role: 'assistant', content: [] },
-        assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: ' SKIP:0:no-work', partial: { content: [{ type: 'text', text: 'Hello SKIP:0:no-work' }] } },
+        assistantMessageEvent: {
+          type: 'text_delta',
+          contentIndex: 0,
+          delta: ' SKIP:0:no-work',
+          partial: { content: [{ type: 'text', text: 'Hello SKIP:0:no-work' }] },
+        },
       });
       listener?.({
         type: 'tool_execution_end',
@@ -207,7 +226,12 @@ function makeFakeSession(): FakeSession {
 function configureSessionMock(): void {
   const session = makeFakeSession();
   sdk.createSession.mockResolvedValue({ session, extensionsResult: { extensions: [], errors: [] } });
-  sdk.resolveModel.mockReturnValue({ model: { provider: 'openrouter', id: 'deepseek-v4-pro' }, thinkingLevel: 'high', warning: undefined, error: undefined });
+  sdk.resolveModel.mockReturnValue({
+    model: { provider: 'openrouter', id: 'deepseek-v4-pro' },
+    thinkingLevel: 'high',
+    warning: undefined,
+    error: undefined,
+  });
   sdk.modelRuntimeCreate.mockResolvedValue({});
   sdk.inMemory.mockReturnValue({});
   sdk.reload.mockResolvedValue(undefined);
@@ -264,7 +288,9 @@ describe('PiSdkRunner', () => {
       expect(sdk.loaderCtor).toHaveBeenCalledTimes(1);
       const loader = sdk.loaderInstances[0]!;
       const override = loader.opts.systemPromptOverride as () => string;
-      expect(override()).toBe('<agent_persona>Test persona</agent_persona>\n<directives>Emit SKIP when safe.</directives>');
+      expect(override()).toBe(
+        '<agent_persona>Test persona</agent_persona>\n<directives>Emit SKIP when safe.</directives>',
+      );
       expect(sdk.reload).toHaveBeenCalledTimes(1);
     });
 
@@ -288,7 +314,9 @@ describe('PiSdkRunner', () => {
 
       await runner.execute(makeRequest());
 
-      const createArgs = sdk.createSession.mock.calls[0]![0] as { customTools: Array<{ name: string; execute: unknown }> };
+      const createArgs = sdk.createSession.mock.calls[0]![0] as {
+        customTools: Array<{ name: string; execute: unknown }>;
+      };
       expect(createArgs.customTools).toHaveLength(INDEXER_TOOLS.length);
       const names = createArgs.customTools.map((t) => t.name);
       expect(names).toEqual(INDEXER_TOOLS);
@@ -354,7 +382,12 @@ describe('PiSdkRunner', () => {
   describe('execute() — model resolution', () => {
     it('throws AgentRunError(no_model) when resolveCliModel cannot resolve a model', async () => {
       configureSessionMock();
-      sdk.resolveModel.mockReturnValue({ model: undefined, thinkingLevel: undefined, warning: 'w', error: 'Model "x" not found' });
+      sdk.resolveModel.mockReturnValue({
+        model: undefined,
+        thinkingLevel: undefined,
+        warning: 'w',
+        error: 'Model "x" not found',
+      });
       const m = makeMocks();
       const runner = new PiSdkRunner(m.fs, m.logger, m.config);
 
@@ -380,15 +413,20 @@ describe('PiSdkRunner', () => {
     it('writes a sanitized structured log to the per-pass log dir', async () => {
       configureSessionMock();
       const m = makeMocks();
-      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => !String(path).includes('.agentic-tdd/log'));
+      (m.fs.exists as ReturnType<typeof vi.fn>).mockImplementation(
+        async (path: string) => !String(path).includes('.agentic-tdd/log'),
+      );
       const runner = new PiSdkRunner(m.fs, m.logger, m.config);
 
       await runner.execute(makeRequest({ runId: 'my-run-123' }));
 
       const writeFileCalls = (m.fs.writeFile as ReturnType<typeof vi.fn>).mock.calls as [string, string][];
-      const logCall = writeFileCalls.find(c => c[0].includes('pass-0-my-run-123.log'));
+      const logCall = writeFileCalls.find((c) => c[0].includes('pass-0-my-run-123.log'));
       expect(logCall).toBeTruthy();
-      const parsed = JSON.parse(logCall![1]) as { output: string; structured: { messages: unknown[]; toolCalls: unknown[] } };
+      const parsed = JSON.parse(logCall![1]) as {
+        output: string;
+        structured: { messages: unknown[]; toolCalls: unknown[] };
+      };
       expect(parsed.output).toContain('SKIP:0:no-work');
       expect(parsed.structured.messages).toHaveLength(2);
       expect(parsed.structured.toolCalls).toHaveLength(1);
@@ -403,7 +441,7 @@ describe('PiSdkRunner', () => {
       const result = await runner.execute(makeRequest());
 
       expect(result.output).toBe('Hello SKIP:0:no-work');
-      expect(m.logger.calls.some(c => c.method === 'warn')).toBe(true);
+      expect(m.logger.calls.some((c) => c.method === 'warn')).toBe(true);
     });
   });
 
@@ -463,7 +501,16 @@ describe('captureEvent', () => {
     const messages: { role: string; delta: string }[] = [];
     const toolCalls: unknown[] = [];
     captureEvent(
-      { type: 'message_update', message: {}, assistantMessageEvent: { type: 'text_delta', contentIndex: 0, delta: 'ab', partial: { content: [{ type: 'text', text: 'ab' }] } } } as never,
+      {
+        type: 'message_update',
+        message: {},
+        assistantMessageEvent: {
+          type: 'text_delta',
+          contentIndex: 0,
+          delta: 'ab',
+          partial: { content: [{ type: 'text', text: 'ab' }] },
+        },
+      } as never,
       deltas,
       messages as never,
       toolCalls as never,
@@ -476,11 +523,17 @@ describe('captureEvent', () => {
   it('captures usage from a done event', () => {
     let usage: { inputTokens?: number; outputTokens?: number } | undefined;
     captureEvent(
-      { type: 'message_update', message: {}, assistantMessageEvent: { type: 'done', message: { usage: { input: 11, output: 7 } } } } as never,
+      {
+        type: 'message_update',
+        message: {},
+        assistantMessageEvent: { type: 'done', message: { usage: { input: 11, output: 7 } } },
+      } as never,
       [],
       [],
       [],
-      (u) => { usage = u; },
+      (u) => {
+        usage = u;
+      },
     );
     expect(usage).toEqual({ inputTokens: 11, outputTokens: 7 });
   });
@@ -488,8 +541,20 @@ describe('captureEvent', () => {
   it('records tool_execution_start/end pairs into toolCalls', () => {
     const toolCalls: unknown[] = [];
     const noop = () => undefined;
-    captureEvent({ type: 'tool_execution_start', toolCallId: 't1', toolName: 'edit', args: { filePath: 'x' } } as never, [], [], toolCalls as never, noop);
-    captureEvent({ type: 'tool_execution_end', toolCallId: 't1', toolName: 'edit', result: 'ok', isError: false } as never, [], [], toolCalls as never, noop);
+    captureEvent(
+      { type: 'tool_execution_start', toolCallId: 't1', toolName: 'edit', args: { filePath: 'x' } } as never,
+      [],
+      [],
+      toolCalls as never,
+      noop,
+    );
+    captureEvent(
+      { type: 'tool_execution_end', toolCallId: 't1', toolName: 'edit', result: 'ok', isError: false } as never,
+      [],
+      [],
+      toolCalls as never,
+      noop,
+    );
     expect(toolCalls).toHaveLength(1);
     expect(toolCalls[0]).toMatchObject({ toolCallId: 't1', toolName: 'edit', result: 'ok', isError: false });
   });
@@ -498,7 +563,15 @@ describe('captureEvent', () => {
 describe('buildToolsAllowlist', () => {
   it('maps permission: allow intents onto Pi built-in tool names and appends INDEXER_TOOLS', () => {
     const tools = buildToolsAllowlist({
-      permission: { read: 'allow', edit: 'allow', glob: 'allow', grep: 'allow', bash: 'deny', webfetch: 'deny', task: 'deny' },
+      permission: {
+        read: 'allow',
+        edit: 'allow',
+        glob: 'allow',
+        grep: 'allow',
+        bash: 'deny',
+        webfetch: 'deny',
+        task: 'deny',
+      },
     });
     expect(tools).toEqual(['read', 'edit', 'write', 'find', 'ls', 'grep', ...INDEXER_TOOLS]);
   });

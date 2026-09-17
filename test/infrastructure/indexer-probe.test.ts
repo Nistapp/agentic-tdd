@@ -1,6 +1,12 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { runLiveIndexerProbe, runStaticIndexerChecks, resolveIndexerBinary, runOpencodeStaticChecks, runOpencodeMcpRoundTrip } from '../../src/infrastructure/indexer-probe.js';
+import {
+  runLiveIndexerProbe,
+  runStaticIndexerChecks,
+  resolveIndexerBinary,
+  runOpencodeStaticChecks,
+  runOpencodeMcpRoundTrip,
+} from '../../src/infrastructure/indexer-probe.js';
 import { INDEXER_TOOLS } from '../../src/infrastructure/agent-runners/pi-sdk-runner.js';
 import type { IFileSystem, ILogger } from '../../src/core/interfaces.js';
 import type { McpClientLike, McpSdkLike, PiSdkLike, PiSessionLike } from '../../src/infrastructure/indexer-probe.js';
@@ -353,9 +359,10 @@ describe('runLiveIndexerProbe', () => {
     const fs = makeFs({ '/agents/pass-0-design-agent.md': AGENT_MD });
     const sdk = makeSdk(session);
     vi.mocked(sdk.createAgentSession).mockImplementation(
-      () => new Promise((resolve) => {
-        setTimeout(() => resolve({ session }), 5000);
-      }),
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ session }), 5000);
+        }),
     );
 
     const result = await runLiveIndexerProbe({
@@ -419,24 +426,21 @@ describe('runOpencodeStaticChecks', () => {
   });
 });
 
-function makeMcpSdk(overrides: {
-  tools?: Array<{ name: string }>;
-  callIsError?: boolean;
-  connectError?: unknown;
-  hangConnect?: boolean;
-} = {}): { sdk: McpSdkLike; client: McpClientLike } {
+function makeMcpSdk(
+  overrides: {
+    tools?: Array<{ name: string }>;
+    callIsError?: boolean;
+    connectError?: unknown;
+    hangConnect?: boolean;
+  } = {},
+): { sdk: McpSdkLike; client: McpClientLike } {
   const client: McpClientLike = {
     connect: vi.fn(async () => {
       if (overrides.hangConnect) await new Promise((resolve) => setTimeout(resolve, 5000));
       if (overrides.connectError !== undefined) throw overrides.connectError;
     }),
     listTools: vi.fn(async () => ({
-      tools:
-        overrides.tools ?? [
-          { name: 'search_graph' },
-          { name: 'get_code_snippet' },
-          { name: 'index_repository' },
-        ],
+      tools: overrides.tools ?? [{ name: 'search_graph' }, { name: 'get_code_snippet' }, { name: 'index_repository' }],
     })),
     callTool: vi.fn(async () => ({ isError: overrides.callIsError ?? false })),
     close: vi.fn(async () => undefined),

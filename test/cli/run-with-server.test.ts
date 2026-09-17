@@ -1,10 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  closeActiveServer,
-  getActiveServer,
-  runWithServer,
-} from '../../src/cli/run-with-server.js';
+import { closeActiveServer, getActiveServer, runWithServer } from '../../src/cli/run-with-server.js';
 import type { IAgentServerHandle } from '../../src/core/interfaces.js';
 
 function stubServer(): IAgentServerHandle & { close: ReturnType<typeof vi.fn> } {

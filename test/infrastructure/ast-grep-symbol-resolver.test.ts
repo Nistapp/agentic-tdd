@@ -56,83 +56,47 @@ describe('AstGrepSymbolResolver', () => {
   // -----------------------------------------------------------------------
 
   it('maps a range inside a top-level function to its name', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 2, end: 2 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 2, end: 2 }]);
     expect(symbols).toEqual(['foo']);
   });
 
   it('maps a range inside a class method to ClassName.methodName', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 14, end: 14 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 14, end: 14 }]);
     expect(symbols).toEqual(['Bar.methodA']);
   });
 
   it('maps a range inside a constructor', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 10, end: 10 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 10, end: 10 }]);
     expect(symbols).toEqual(['Bar.constructor']);
   });
 
   it('maps a range inside a static method', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 19, end: 19 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 19, end: 19 }]);
     expect(symbols).toEqual(['Bar.helper']);
   });
 
   it('maps a range inside an exported top-level function', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 24, end: 24 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 24, end: 24 }]);
     expect(symbols).toEqual(['topLevel']);
   });
 
   it('maps a range inside a generator function', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 28, end: 28 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 28, end: 28 }]);
     expect(symbols).toEqual(['generate']);
   });
 
   it('maps a range inside a top-level arrow function to its variable name', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 33, end: 33 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 33, end: 33 }]);
     expect(symbols).toEqual(['adder']);
   });
 
   it('maps a range inside a class field arrow to ClassName.fieldName', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 39, end: 39 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 39, end: 39 }]);
     expect(symbols).toEqual(['Baz.fieldFn']);
   });
 
   it('maps a range inside a class body (outside any method) to the class name', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 8, end: 8 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 8, end: 8 }]);
     expect(symbols).toEqual(['Bar']);
   });
 
@@ -151,11 +115,7 @@ class MathUtil {
   }
 }
 `;
-    const symbols = resolver.mapRangesToSymbols(
-      'test.js',
-      jsSource,
-      [{ start: 6, end: 6 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.js', jsSource, [{ start: 6, end: 6 }]);
     expect(symbols).toEqual(['MathUtil.add']);
   });
 
@@ -164,56 +124,32 @@ class MathUtil {
   // -----------------------------------------------------------------------
 
   it('returns empty array for a range at top level (no enclosing symbol)', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 
   it('returns empty array for an unsupported file extension', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'README.md',
-      '# Hello World',
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('README.md', '# Hello World', [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 
   it('returns empty array for .gherkin files (no parser available)', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'spec.gherkin',
-      'Feature: Login',
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('spec.gherkin', 'Feature: Login', [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 
   it('returns empty array for empty ranges input', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      'function foo() {}',
-      [],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', 'function foo() {}', []);
     expect(symbols).toEqual([]);
   });
 
   it('returns empty array for malformed source (does not throw)', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      '{{{{{broken syntax}}}}',
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', '{{{{{broken syntax}}}}', [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 
   it('returns empty array for empty source', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      '',
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', '', [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 
@@ -222,41 +158,29 @@ class MathUtil {
   // -----------------------------------------------------------------------
 
   it('deduplicates the same enclosing symbol from multiple ranges', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [
-        { start: 2, end: 2 },
-        { start: 3, end: 3 },
-        { start: 4, end: 4 },
-      ],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [
+      { start: 2, end: 2 },
+      { start: 3, end: 3 },
+      { start: 4, end: 4 },
+    ]);
     expect(symbols).toEqual(['foo']);
   });
 
   it('returns multiple unique symbols from ranges in different functions', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [
-        { start: 2, end: 2 },
-        { start: 14, end: 14 },
-        { start: 24, end: 24 },
-      ],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [
+      { start: 2, end: 2 },
+      { start: 14, end: 14 },
+      { start: 24, end: 24 },
+    ]);
     expect(symbols).toEqual(['Bar.methodA', 'foo', 'topLevel']);
   });
 
   it('returns sorted results', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'test.ts',
-      TS_SOURCE,
-      [
-        { start: 39, end: 39 },
-        { start: 2, end: 2 },
-        { start: 24, end: 24 },
-      ],
-    );
+    const symbols = resolver.mapRangesToSymbols('test.ts', TS_SOURCE, [
+      { start: 39, end: 39 },
+      { start: 2, end: 2 },
+      { start: 24, end: 24 },
+    ]);
     expect(symbols).toEqual(['Baz.fieldFn', 'foo', 'topLevel']);
   });
 
@@ -286,47 +210,27 @@ test('top level test', () => {
 `;
 
     it('maps a range inside an it body to describe › it', () => {
-      const symbols = resolver.mapRangesToSymbols(
-        'foo.test.ts',
-        TEST_SOURCE,
-        [{ start: 6, end: 6 }],
-      );
+      const symbols = resolver.mapRangesToSymbols('foo.test.ts', TEST_SOURCE, [{ start: 6, end: 6 }]);
       expect(symbols).toEqual(["describe('Foo') › it('handles null')"]);
     });
 
     it('maps the it declaration line to describe › it', () => {
-      const symbols = resolver.mapRangesToSymbols(
-        'foo.test.ts',
-        TEST_SOURCE,
-        [{ start: 4, end: 4 }],
-      );
+      const symbols = resolver.mapRangesToSymbols('foo.test.ts', TEST_SOURCE, [{ start: 4, end: 4 }]);
       expect(symbols).toEqual(["describe('Foo') › it('handles null')"]);
     });
 
     it('maps a range in the describe callback to the describe name', () => {
-      const symbols = resolver.mapRangesToSymbols(
-        'foo.test.ts',
-        TEST_SOURCE,
-        [{ start: 3, end: 3 }],
-      );
+      const symbols = resolver.mapRangesToSymbols('foo.test.ts', TEST_SOURCE, [{ start: 3, end: 3 }]);
       expect(symbols).toEqual(["describe('Foo')"]);
     });
 
     it('maps a range inside the second it block to its own path', () => {
-      const symbols = resolver.mapRangesToSymbols(
-        'foo.test.ts',
-        TEST_SOURCE,
-        [{ start: 11, end: 11 }],
-      );
+      const symbols = resolver.mapRangesToSymbols('foo.test.ts', TEST_SOURCE, [{ start: 11, end: 11 }]);
       expect(symbols).toEqual(["describe('Foo') › it('handles empty')"]);
     });
 
     it('maps a range inside a top-level test() to the test name', () => {
-      const symbols = resolver.mapRangesToSymbols(
-        'foo.test.ts',
-        TEST_SOURCE,
-        [{ start: 17, end: 17 }],
-      );
+      const symbols = resolver.mapRangesToSymbols('foo.test.ts', TEST_SOURCE, [{ start: 17, end: 17 }]);
       expect(symbols).toEqual(["test('top level test')"]);
     });
   });
@@ -341,11 +245,7 @@ function Component() {
   return <div>hello</div>;
 }
 `;
-    const symbols = resolver.mapRangesToSymbols(
-      'Component.tsx',
-      tsxSource,
-      [{ start: 3, end: 3 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('Component.tsx', tsxSource, [{ start: 3, end: 3 }]);
     expect(symbols).toEqual(['Component']);
   });
 
@@ -354,11 +254,7 @@ function Component() {
   // -----------------------------------------------------------------------
 
   it('returns empty for CSS (no enclosing symbols)', () => {
-    const symbols = resolver.mapRangesToSymbols(
-      'styles.css',
-      'body { color: red; }',
-      [{ start: 1, end: 1 }],
-    );
+    const symbols = resolver.mapRangesToSymbols('styles.css', 'body { color: red; }', [{ start: 1, end: 1 }]);
     expect(symbols).toEqual([]);
   });
 });

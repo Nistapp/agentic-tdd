@@ -4,9 +4,7 @@ import { StateContextProvider } from '../../src/core/context-provider.js';
 import { PipelinePass } from '../../src/core/types.js';
 import type { PipelineContext, PassHistory, FileChanges } from '../../src/core/types.js';
 
-function makeContext(
-  history: Partial<Record<PipelinePass, PassHistory>>,
-): PipelineContext {
+function makeContext(history: Partial<Record<PipelinePass, PassHistory>>): PipelineContext {
   return {
     featureName: 'test-feature',
     testCmd: ['npm', 'test'],
@@ -62,21 +60,17 @@ describe('StateContextProvider', () => {
 
   it('Pass 5 (Observability) merges targetSymbols from CoreImplementation and Refactor', () => {
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User', 'User.create'] },
-      ),
-      [PipelinePass.Refactor]: makePassHistory(
-        ['src/models/user.ts', 'src/utils/helper.ts'],
-        { 'src/models/user.ts': ['User.update'], 'src/utils/helper.ts': ['formatDate'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User', 'User.create'],
+      }),
+      [PipelinePass.Refactor]: makePassHistory(['src/models/user.ts', 'src/utils/helper.ts'], {
+        'src/models/user.ts': ['User.update'],
+        'src/utils/helper.ts': ['formatDate'],
+      }),
     });
     const result = provider.build(ctx, PipelinePass.Observability);
 
-    expect(result.files.implementation).toEqual([
-      'src/models/user.ts',
-      'src/utils/helper.ts',
-    ]);
+    expect(result.files.implementation).toEqual(['src/models/user.ts', 'src/utils/helper.ts']);
     expect(result.files.contracts).toEqual([]);
     expect(result.files.tests).toEqual([]);
 
@@ -88,10 +82,9 @@ describe('StateContextProvider', () => {
 
   it('Pass 5 (Observability) still receives CoreImplementation targets when Refactor is skipped', () => {
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User', 'User.create'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User', 'User.create'],
+      }),
     });
     const result = provider.build(ctx, PipelinePass.Observability);
 
@@ -103,25 +96,16 @@ describe('StateContextProvider', () => {
 
   it('Pass 6 (Security) merges targetSymbols from CoreImplementation, Refactor and Observability', () => {
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/auth.ts'],
-        { 'src/auth.ts': ['Auth.login'] },
-      ),
-      [PipelinePass.Refactor]: makePassHistory(
-        ['src/auth.ts', 'src/session.ts'],
-        { 'src/auth.ts': ['Auth.verifyToken'], 'src/session.ts': ['Session.create'] },
-      ),
-      [PipelinePass.Observability]: makePassHistory(
-        ['src/auth.ts'],
-        { 'src/auth.ts': ['Auth.logAttempt'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/auth.ts'], { 'src/auth.ts': ['Auth.login'] }),
+      [PipelinePass.Refactor]: makePassHistory(['src/auth.ts', 'src/session.ts'], {
+        'src/auth.ts': ['Auth.verifyToken'],
+        'src/session.ts': ['Session.create'],
+      }),
+      [PipelinePass.Observability]: makePassHistory(['src/auth.ts'], { 'src/auth.ts': ['Auth.logAttempt'] }),
     });
     const result = provider.build(ctx, PipelinePass.Security);
 
-    expect(result.files.implementation).toEqual([
-      'src/auth.ts',
-      'src/session.ts',
-    ]);
+    expect(result.files.implementation).toEqual(['src/auth.ts', 'src/session.ts']);
     expect(result.targetSymbols).toEqual({
       'src/auth.ts': ['Auth.logAttempt', 'Auth.login', 'Auth.verifyToken'],
       'src/session.ts': ['Session.create'],
@@ -130,37 +114,21 @@ describe('StateContextProvider', () => {
 
   it('Documentation returns contract and implementation files and merged target symbols', () => {
     const ctx = makeContext({
-      [PipelinePass.Contracts]: makePassHistory(
-        ['src/contracts/api.ts'],
-        { 'src/contracts/api.ts': ['ApiPort'] },
-      ),
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User.create'] },
-      ),
-      [PipelinePass.Refactor]: makePassHistory(
-        ['src/utils/helper.ts'],
-        { 'src/utils/helper.ts': ['formatDate'] },
-      ),
-      [PipelinePass.Observability]: makePassHistory(
-        ['src/logger.ts'],
-        { 'src/logger.ts': ['logMetric'] },
-      ),
-      [PipelinePass.Security]: makePassHistory(
-        ['src/middleware/auth.ts'],
-        { 'src/middleware/auth.ts': ['validateToken'] },
-      ),
+      [PipelinePass.Contracts]: makePassHistory(['src/contracts/api.ts'], { 'src/contracts/api.ts': ['ApiPort'] }),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User.create'],
+      }),
+      [PipelinePass.Refactor]: makePassHistory(['src/utils/helper.ts'], { 'src/utils/helper.ts': ['formatDate'] }),
+      [PipelinePass.Observability]: makePassHistory(['src/logger.ts'], { 'src/logger.ts': ['logMetric'] }),
+      [PipelinePass.Security]: makePassHistory(['src/middleware/auth.ts'], {
+        'src/middleware/auth.ts': ['validateToken'],
+      }),
     });
     const result = provider.build(ctx, PipelinePass.Documentation);
 
     expect(result.files.contracts).toEqual(['src/contracts/api.ts']);
     expect(result.files.implementation).toEqual(
-      expect.arrayContaining([
-        'src/models/user.ts',
-        'src/utils/helper.ts',
-        'src/logger.ts',
-        'src/middleware/auth.ts',
-      ]),
+      expect.arrayContaining(['src/models/user.ts', 'src/utils/helper.ts', 'src/logger.ts', 'src/middleware/auth.ts']),
     );
     expect(result.files.tests).toEqual([]);
     expect(result.targetSymbols).toEqual({
@@ -186,10 +154,7 @@ describe('StateContextProvider', () => {
 
   it('missing history entry for a referenced pass returns empty (non-fatal)', () => {
     const ctx = makeContext({
-      [PipelinePass.Refactor]: makePassHistory(
-        ['src/foo.ts'],
-        { 'src/foo.ts': ['doWork'] },
-      ),
+      [PipelinePass.Refactor]: makePassHistory(['src/foo.ts'], { 'src/foo.ts': ['doWork'] }),
     });
 
     const result = provider.build(ctx, PipelinePass.Observability);
@@ -208,10 +173,7 @@ describe('StateContextProvider', () => {
 
   it('merges and deduplicates targetSymbols across multiple upstream passes', () => {
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/shared.ts'],
-        { 'src/shared.ts': ['init', 'teardown'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/shared.ts'], { 'src/shared.ts': ['init', 'teardown'] }),
     });
     const result = provider.build(ctx, PipelinePass.Refactor);
     expect(result.files.implementation).toEqual(['src/shared.ts']);
@@ -222,10 +184,9 @@ describe('StateContextProvider', () => {
 
   it('unions symbols for the same file across upstream passes', () => {
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User.create', 'User.find'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User.create', 'User.find'],
+      }),
     });
 
     class MultiPassProvider extends StateContextProvider {
@@ -237,10 +198,9 @@ describe('StateContextProvider', () => {
     // Simulate having two upstream passes both contributing to same file.
     // Refactor depends on CoreImplementation for target symbols.
     const ctx2 = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User.create', 'User.find'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User.create', 'User.find'],
+      }),
     });
 
     const result = provider.build(ctx2, PipelinePass.Refactor);
@@ -279,10 +239,9 @@ describe('StateContextProvider', () => {
       },
     };
     const ctx = makeContext({
-      [PipelinePass.CoreImplementation]: makePassHistory(
-        ['src/models/user.ts'],
-        { 'src/models/user.ts': ['User', 'User.create'] },
-      ),
+      [PipelinePass.CoreImplementation]: makePassHistory(['src/models/user.ts'], {
+        'src/models/user.ts': ['User', 'User.create'],
+      }),
       [PipelinePass.Refactor]: makePassHistory(
         ['src/models/user.ts'],
         { 'src/models/user.ts': ['User.update'] },

@@ -1,8 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  createHitlHandler,
-  type ReadlineFactory,
-} from '../../src/cli/hitl-handler.js';
+import { createHitlHandler, type ReadlineFactory } from '../../src/cli/hitl-handler.js';
 import type { PipelineContext, FileChange } from '../../src/core/types.js';
 import { PipelinePass } from '../../src/core/types.js';
 

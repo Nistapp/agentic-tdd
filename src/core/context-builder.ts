@@ -7,10 +7,7 @@ interface ContextRuleCategory {
   implementation: PipelinePass[];
 }
 
-export const CONTEXT_RULES: Record<
-  PipelinePass,
-  { files: ContextRuleCategory; target: ContextRuleCategory }
-> = {
+export const CONTEXT_RULES: Record<PipelinePass, { files: ContextRuleCategory; target: ContextRuleCategory }> = {
   [PipelinePass.Design]: {
     files: { contracts: [], tests: [], implementation: [] },
     target: { contracts: [], tests: [], implementation: [] },
@@ -63,20 +60,12 @@ export const CONTEXT_RULES: Record<
     files: {
       contracts: [],
       tests: [],
-      implementation: [
-        PipelinePass.CoreImplementation,
-        PipelinePass.Refactor,
-        PipelinePass.Observability,
-      ],
+      implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor, PipelinePass.Observability],
     },
     target: {
       contracts: [],
       tests: [],
-      implementation: [
-        PipelinePass.CoreImplementation,
-        PipelinePass.Refactor,
-        PipelinePass.Observability,
-      ],
+      implementation: [PipelinePass.CoreImplementation, PipelinePass.Refactor, PipelinePass.Observability],
     },
   },
   [PipelinePass.Documentation]: {
@@ -103,10 +92,7 @@ export const CONTEXT_RULES: Record<
   },
 };
 
-function collectFiles(
-  history: Partial<Record<PipelinePass, PassHistory>>,
-  passes: PipelinePass[],
-): string[] {
+function collectFiles(history: Partial<Record<PipelinePass, PassHistory>>, passes: PipelinePass[]): string[] {
   const seen = new Set<string>();
   for (const p of passes) {
     const entry = history[p];
@@ -119,10 +105,7 @@ function collectFiles(
   return [...seen];
 }
 
-export function buildContextFiles(
-  ctx: PipelineContext,
-  currentPass: PipelinePass,
-): ContextFiles {
+export function buildContextFiles(ctx: PipelineContext, currentPass: PipelinePass): ContextFiles {
   const rule = CONTEXT_RULES[currentPass];
   if (!rule) {
     return { contracts: [], tests: [], implementation: [] };

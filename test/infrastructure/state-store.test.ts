@@ -195,8 +195,14 @@ describe('JsonStateStore', () => {
     const fs = new NodeFileSystem();
     const store = new JsonStateStore(fs, 'overwrite', workDir);
 
-    const ctx1 = makeContext({ featureName: 'first', history: { 0: { status: 'completed', filesTouched: ['a.txt'], attempts: 1 } } });
-    const ctx2 = makeContext({ featureName: 'second', history: { 1: { status: 'completed', filesTouched: ['b.txt'], attempts: 2 } } });
+    const ctx1 = makeContext({
+      featureName: 'first',
+      history: { 0: { status: 'completed', filesTouched: ['a.txt'], attempts: 1 } },
+    });
+    const ctx2 = makeContext({
+      featureName: 'second',
+      history: { 1: { status: 'completed', filesTouched: ['b.txt'], attempts: 2 } },
+    });
 
     await store.save(ctx1);
     await store.save(ctx2);

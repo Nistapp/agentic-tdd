@@ -5,7 +5,14 @@ import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 
 import type { IAgentRunner, IFileSystem, ILogger, PipelineConfig } from '../../core/interfaces.js';
 import { AgentRunError, AGENT_NAMES, PipelinePass } from '../../core/types.js';
-import type { AgentRunRequest, AgentRunResult, AgentStructuredOutput, AgentToolCallEvent, AgentMessageEvent, AgentUsage } from '../../core/types.js';
+import type {
+  AgentRunRequest,
+  AgentRunResult,
+  AgentStructuredOutput,
+  AgentToolCallEvent,
+  AgentMessageEvent,
+  AgentUsage,
+} from '../../core/types.js';
 import { sanitizeLogPayload } from '../../core/log-sanitizer.js';
 import { PACKAGE_AGENTS_DIR, getLogDir } from '../../utils/paths.js';
 import { buildIndexerBridgeTools } from './indexer-bridge.js';
@@ -115,15 +122,20 @@ export class PiSdkRunner implements IAgentRunner {
         modelRuntime,
       });
       if (!resolved.model || resolved.error) {
-        throw new AgentRunError('no_model', request.pass, resolved.error ?? `No model resolved for '${canonicalModel}'`);
+        throw new AgentRunError(
+          'no_model',
+          request.pass,
+          resolved.error ?? `No model resolved for '${canonicalModel}'`,
+        );
       }
 
       const tools = buildToolsAllowlist(frontmatter);
       // In-process indexer bridge: pi-mcp-adapter does not register its MCP
       // tools inside an embedded headless SDK session, so register the indexer
       // tools as SDK customTools (each invoking the binary's one-shot CLI).
-      const customTools = buildIndexerBridgeTools(INDEXER_TOOLS) as unknown as
-        NonNullable<CreateAgentSessionOpts['customTools']>;
+      const customTools = buildIndexerBridgeTools(INDEXER_TOOLS) as unknown as NonNullable<
+        CreateAgentSessionOpts['customTools']
+      >;
       const workDir = cwd();
       const resourceLoader = new sdk.DefaultResourceLoader({
         cwd: workDir,
@@ -146,10 +158,20 @@ export class PiSdkRunner implements IAgentRunner {
       });
       session = created.session;
 
-      execLogger.debug({ agent: agentName, model: `${canonicalModel}:${thinkingLevel}`, tools, indexerBridgeTools: customTools.length }, 'Pi SDK session created');
+      execLogger.debug(
+        {
+          agent: agentName,
+          model: `${canonicalModel}:${thinkingLevel}`,
+          tools,
+          indexerBridgeTools: customTools.length,
+        },
+        'Pi SDK session created',
+      );
 
       const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
-        captureEvent(event, textDeltas, messageEvents, toolCalls, (u) => { usage = u; });
+        captureEvent(event, textDeltas, messageEvents, toolCalls, (u) => {
+          usage = u;
+        });
       });
 
       try {
@@ -202,7 +224,10 @@ export class PiSdkRunner implements IAgentRunner {
     if (!canonical) {
       throw new AgentRunError('no_model', pass, `No model configured for agent '${agentName}'`);
     }
-    logger.debug({ agent: agentName, model: canonical, source: fromConfig ? 'config' : 'frontmatter' }, 'Resolved Pi model');
+    logger.debug(
+      { agent: agentName, model: canonical, source: fromConfig ? 'config' : 'frontmatter' },
+      'Resolved Pi model',
+    );
     return canonical;
   }
 
@@ -236,7 +261,10 @@ export class PiSdkRunner implements IAgentRunner {
       logger.debug({ inputFile }, 'Persisted agent input context to per-pass log');
 
       const logFile = join(logDir, `pass-${request.pass}-${runId}.log`);
-      const sanitized = sanitizeLogPayload({ output: result.output, structured: result.structured }, this.#logger.level);
+      const sanitized = sanitizeLogPayload(
+        { output: result.output, structured: result.structured },
+        this.#logger.level,
+      );
       await this.#fs.writeFile(logFile, JSON.stringify(sanitized, null, 2));
       logger.debug({ logFile }, 'Persisted Pi SDK run to per-pass log');
     } catch (err) {
@@ -336,7 +364,11 @@ function extractText(partial: unknown): string | undefined {
   const content = (partial as { content?: unknown }).content;
   if (!Array.isArray(content)) return undefined;
   const parts = content
-    .map((c) => (c !== null && typeof c === 'object' && (c as { type?: string }).type === 'text' ? (c as { text?: unknown }).text : undefined))
+    .map((c) =>
+      c !== null && typeof c === 'object' && (c as { type?: string }).type === 'text'
+        ? (c as { text?: unknown }).text
+        : undefined,
+    )
     .filter((t): t is string => typeof t === 'string');
   return parts.length > 0 ? parts.join('') : undefined;
 }

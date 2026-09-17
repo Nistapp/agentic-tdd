@@ -42,16 +42,12 @@ export interface McpConfigResult {
  *
  * @throws {Error} when the binary cannot be located on PATH.
  */
-export async function resolveMcpBinary(
-  exec?: (cmd: string, args: string[]) => Promise<string>,
-): Promise<string> {
+export async function resolveMcpBinary(exec?: (cmd: string, args: string[]) => Promise<string>): Promise<string> {
   const isWindows = process.platform === 'win32';
   const lookupCmd = isWindows ? 'where' : 'which';
   const lookupArgs = [isWindows ? 'codebase-memory-mcp.cmd' : 'codebase-memory-mcp'];
 
-  const runner = exec ?? ((cmd: string, args: string[]) =>
-    execFileAsync(cmd, args).then((r) => r.stdout)
-  );
+  const runner = exec ?? ((cmd: string, args: string[]) => execFileAsync(cmd, args).then((r) => r.stdout));
 
   let resolved: string | undefined;
   try {
@@ -65,7 +61,7 @@ export async function resolveMcpBinary(
   if (!resolved) {
     throw new Error(
       'codebase-memory-mcp binary not found on PATH. ' +
-      'Install the codebase-memory-mcp indexer (see its README) before running the pipeline.',
+        'Install the codebase-memory-mcp indexer (see its README) before running the pipeline.',
     );
   }
   return resolved;
@@ -107,7 +103,7 @@ export async function writeMcpConfig(
   resolvedBin?: string,
   resolveBinary?: () => Promise<string>,
 ): Promise<McpConfigResult> {
-  const bin = resolvedBin ?? await (resolveBinary ?? resolveMcpBinary)();
+  const bin = resolvedBin ?? (await (resolveBinary ?? resolveMcpBinary)());
   const templateRaw = await fs.readFile(templatePath);
   const serverEntry = JSON.parse(templateRaw).mcpServers?.[MCP_SERVER_KEY];
   if (!serverEntry) {

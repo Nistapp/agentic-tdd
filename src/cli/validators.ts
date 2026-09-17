@@ -88,10 +88,7 @@ export type AgentBackendName = (typeof VALID_AGENT_BACKENDS)[number];
  * Reject unknown `--backend` values early with a clear message. Returns the
  * validated backend (or `undefined` when the flag was not supplied).
  */
-export function validateBackend(
-  backend: string | undefined,
-  renderer: TerminalRenderer,
-): string | undefined {
+export function validateBackend(backend: string | undefined, renderer: TerminalRenderer): string | undefined {
   if (backend === undefined) return undefined;
   if ((VALID_AGENT_BACKENDS as readonly string[]).includes(backend)) return backend;
   renderer.fatal(

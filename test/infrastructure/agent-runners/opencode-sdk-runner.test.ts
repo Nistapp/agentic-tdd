@@ -56,12 +56,14 @@ interface ClientHarness {
   abort: ReturnType<typeof vi.fn>;
 }
 
-function makeClient(opts: {
-  events?: OpencodeEvent[];
-  promptResult?: unknown;
-  promptError?: unknown;
-  messagesResult?: unknown;
-} = {}): ClientHarness {
+function makeClient(
+  opts: {
+    events?: OpencodeEvent[];
+    promptResult?: unknown;
+    promptError?: unknown;
+    messagesResult?: unknown;
+  } = {},
+): ClientHarness {
   const create = vi.fn(async () => ({ data: { id: 'sess-1' } }));
   const prompt = vi.fn(async () => {
     if (opts.promptError !== undefined) throw opts.promptError;
@@ -215,7 +217,12 @@ describe('OpencodeSdkRunner.execute', () => {
             info: { role: 'assistant', tokens: { input: 7, output: 3 } },
             parts: [
               { type: 'text', text: 'fallback text' },
-              { type: 'tool', callID: 'c9', tool: 'codebase-memory_search_graph', state: { status: 'completed', output: '{}' } },
+              {
+                type: 'tool',
+                callID: 'c9',
+                tool: 'codebase-memory_search_graph',
+                state: { status: 'completed', output: '{}' },
+              },
             ],
           },
         ],
@@ -250,32 +257,42 @@ describe('OpencodeSdkRunner.execute', () => {
 
   it('classifies a missing API key', async () => {
     const { client } = makeClient({ events: [], promptError: new Error('no api key configured') });
-    const err = await makeRunner(client).execute(request()).catch((e: unknown) => e);
+    const err = await makeRunner(client)
+      .execute(request())
+      .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(AgentRunError);
     expect((err as AgentRunError).kind).toBe('no_api_key');
   });
 
   it('classifies a timeout', async () => {
     const { client } = makeClient({ events: [], promptError: new Error('request timed out') });
-    const err = await makeRunner(client).execute(request()).catch((e: unknown) => e);
+    const err = await makeRunner(client)
+      .execute(request())
+      .catch((e: unknown) => e);
     expect((err as AgentRunError).kind).toBe('timeout');
   });
 
   it('classifies an unknown provider/model as no_model', async () => {
     const { client } = makeClient({ events: [], promptError: new Error('unknown provider: foo') });
-    const err = await makeRunner(client).execute(request()).catch((e: unknown) => e);
+    const err = await makeRunner(client)
+      .execute(request())
+      .catch((e: unknown) => e);
     expect((err as AgentRunError).kind).toBe('no_model');
   });
 
   it('classifies everything else as agent_failed', async () => {
     const { client } = makeClient({ events: [], promptError: new Error('kaboom') });
-    const err = await makeRunner(client).execute(request()).catch((e: unknown) => e);
+    const err = await makeRunner(client)
+      .execute(request())
+      .catch((e: unknown) => e);
     expect((err as AgentRunError).kind).toBe('agent_failed');
   });
 
   it('deletes the session even when the run fails', async () => {
     const { client, deleteSession } = makeClient({ events: [], promptError: new Error('kaboom') });
-    await makeRunner(client).execute(request()).catch(() => undefined);
+    await makeRunner(client)
+      .execute(request())
+      .catch(() => undefined);
     expect(deleteSession).toHaveBeenCalledWith({ sessionID: 'sess-1' });
   });
 });

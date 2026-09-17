@@ -1,11 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { IFileSystem } from '../../src/core/interfaces.js';
 import { AGENT_NAMES } from '../../src/core/types.js';
-import {
-  stripJsonComments,
-  resolveModelConfig,
-  KNOWN_AGENTS,
-} from '../../src/cli/model-config.js';
+import { stripJsonComments, resolveModelConfig, KNOWN_AGENTS } from '../../src/cli/model-config.js';
 
 const USER_PATH = '/proj/.agentic-tdd/config.json';
 
@@ -27,12 +23,18 @@ const DEFAULT_JSON = JSON.stringify({
 const isDefaultPath = (p: string): boolean => p.endsWith('config.default.json') && !p.includes('.agentic-tdd');
 const isUserPath = (p: string): boolean => p.includes('.agentic-tdd') && p.endsWith('config.json');
 
-function makeFs(options: {
-  exists?: (path: string) => boolean;
-  readFile?: (path: string) => string;
-} = {}): IFileSystem {
+function makeFs(
+  options: {
+    exists?: (path: string) => boolean;
+    readFile?: (path: string) => string;
+  } = {},
+): IFileSystem {
   const exists = options.exists ?? (() => false);
-  const readFile = options.readFile ?? (() => { throw new Error(`no file configured: readFile`); });
+  const readFile =
+    options.readFile ??
+    (() => {
+      throw new Error(`no file configured: readFile`);
+    });
   return {
     exists: vi.fn(async (p: string) => exists(p)),
     readFile: vi.fn(async (p: string) => readFile(p)),
@@ -92,7 +94,12 @@ describe('resolveModelConfig', () => {
   it('M2: loads the bundled default with all 8 agents', async () => {
     const fs = makeFs({
       exists: (p) => isDefaultPath(p),
-      readFile: (p) => (isDefaultPath(p) ? DEFAULT_JSON : (() => { throw new Error('unexpected read'); })()),
+      readFile: (p) =>
+        isDefaultPath(p)
+          ? DEFAULT_JSON
+          : (() => {
+              throw new Error('unexpected read');
+            })(),
     });
     const result = await resolveModelConfig({}, { userPath: USER_PATH, fs });
     expect(Object.keys(result.models ?? {})).toHaveLength(8);
@@ -136,10 +143,7 @@ describe('resolveModelConfig', () => {
       exists: (p) => isUserPath(p) || p.endsWith('alt-config.json'),
       readFile: (p) => (p.endsWith('alt-config.json') ? altJson : userJson),
     });
-    const result = await resolveModelConfig(
-      { configPath: '/tmp/alt-config.json' },
-      { userPath: USER_PATH, fs },
-    );
+    const result = await resolveModelConfig({ configPath: '/tmp/alt-config.json' }, { userPath: USER_PATH, fs });
     expect(result.models?.['pass-0-design-agent']).toBe('google/gemini-2.0-flash');
   });
 
@@ -154,9 +158,9 @@ describe('resolveModelConfig', () => {
   });
 
   it('M8: invalid --model shape throws', async () => {
-    await expect(
-      resolveModelConfig({ model: 'no-slash' }, { userPath: USER_PATH, fs: makeFs() }),
-    ).rejects.toThrow(/provider\/model/);
+    await expect(resolveModelConfig({ model: 'no-slash' }, { userPath: USER_PATH, fs: makeFs() })).rejects.toThrow(
+      /provider\/model/,
+    );
   });
 
   it('M10: unknown top-level sections are ignored (forward-compat)', async () => {

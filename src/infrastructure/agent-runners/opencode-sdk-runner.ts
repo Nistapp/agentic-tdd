@@ -224,7 +224,11 @@ export class OpencodeSdkRunner implements IAgentRunner {
     const session = unwrapData(created) as { id?: unknown } | undefined;
     const id = session?.id;
     if (typeof id !== 'string' || id === '') {
-      throw new AgentRunError('agent_failed', pass, `opencode session.create returned no session id for agent '${agentName}'`);
+      throw new AgentRunError(
+        'agent_failed',
+        pass,
+        `opencode session.create returned no session id for agent '${agentName}'`,
+      );
     }
     return id;
   }
@@ -269,7 +273,7 @@ export class OpencodeSdkRunner implements IAgentRunner {
       'agent_failed',
       pass,
       `Agent '${agentName}' raised a permission request ('ask') during a headless run. ` +
-        "The harness only generates `allow`/`deny` permissions; a stray `ask` in the opencode config must be removed.",
+        'The harness only generates `allow`/`deny` permissions; a stray `ask` in the opencode config must be removed.',
     );
   }
 
@@ -311,7 +315,10 @@ export class OpencodeSdkRunner implements IAgentRunner {
       logger.debug({ inputFile }, 'Persisted agent input context to per-pass log');
 
       const logFile = join(logDir, `pass-${request.pass}-${runId}.log`);
-      const sanitized = sanitizeLogPayload({ output: result.output, structured: result.structured }, this.#logger.level);
+      const sanitized = sanitizeLogPayload(
+        { output: result.output, structured: result.structured },
+        this.#logger.level,
+      );
       await this.#fs.writeFile(logFile, JSON.stringify(sanitized, null, 2));
       logger.debug({ logFile }, 'Persisted opencode SDK run to per-pass log');
     } catch (err) {

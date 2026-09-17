@@ -23,10 +23,7 @@ export class JsonStateStore implements IStateStore {
     this.path = getStateFilePath(featureName, this.#workDir);
   }
 
-  static async findActive(
-    fs: IFileSystem,
-    workDir?: string,
-  ): Promise<JsonStateStore | undefined> {
+  static async findActive(fs: IFileSystem, workDir?: string): Promise<JsonStateStore | undefined> {
     const dir = getStateDir(workDir);
 
     const dirExists = await fs.exists(dir);
@@ -73,23 +70,17 @@ export class JsonStateStore implements IStateStore {
       parsed = JSON.parse(raw);
     } catch (err) {
       console.warn(
-        `[agentic-tdd] Corrupt state file at ${this.path}: ` +
-        `${err instanceof Error ? err.message : String(err)}`,
+        `[agentic-tdd] Corrupt state file at ${this.path}: ` + `${err instanceof Error ? err.message : String(err)}`,
       );
       throw new Error(`Corrupt state file at ${this.path}`);
     }
 
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'schemaVersion' in parsed &&
-      'context' in parsed
-    ) {
+    if (parsed && typeof parsed === 'object' && 'schemaVersion' in parsed && 'context' in parsed) {
       const env = parsed as StateFileEnvelope;
       if (!SUPPORTED_SCHEMA_VERSIONS.has(env.schemaVersion)) {
         console.warn(
           `[agentic-tdd] Unsupported state file schema version "${env.schemaVersion}" ` +
-          `at ${this.path}. Expected "${CURRENT_SCHEMA_VERSION}".`,
+            `at ${this.path}. Expected "${CURRENT_SCHEMA_VERSION}".`,
         );
         throw new Error(`Unsupported schema version: ${env.schemaVersion}`);
       }
@@ -98,7 +89,7 @@ export class JsonStateStore implements IStateStore {
 
     console.warn(
       `[agentic-tdd] State file at ${this.path} missing schema envelope — ` +
-      `treating as raw context (forward-compat fallback).`,
+        `treating as raw context (forward-compat fallback).`,
     );
     return parsed as PipelineContext;
   }

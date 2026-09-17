@@ -10,7 +10,7 @@ function sanitizeString(value: string, level: string): string {
 
 function sanitizeValue(value: unknown, level: string): unknown {
   if (typeof value === 'string') return sanitizeString(value, level);
-  if (Array.isArray(value)) return value.map(v => sanitizeValue(v, level));
+  if (Array.isArray(value)) return value.map((v) => sanitizeValue(v, level));
   if (value instanceof Date) return new Date(value.getTime());
   if (value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
     const result: Record<string, unknown> = {};

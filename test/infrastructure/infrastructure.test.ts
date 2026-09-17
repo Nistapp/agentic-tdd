@@ -190,7 +190,7 @@ describe('GitService', () => {
   it('commit returns add_warning when git add fails but commit succeeds', async () => {
     execaMock
       .mockRejectedValueOnce(new Error('add failed')) // git add fails
-      .mockResolvedValueOnce({ stdout: '' });  // git commit succeeds
+      .mockResolvedValueOnce({ stdout: '' }); // git commit succeeds
     const git = new GitService();
     const result = await git.commit(['bad.ts'], 'msg');
     expect(result.kind).toBe('add_warning');
@@ -364,11 +364,7 @@ describe('GitService', () => {
 
   it('getDiffLineRanges handles hunk header without count (defaults to 1)', async () => {
     execaMock.mockResolvedValue({
-      stdout:
-        'diff --git a/src/x.ts b/src/x.ts\n' +
-        '@@ -3 +3 @@\n' +
-        '-old\n' +
-        '+new\n',
+      stdout: 'diff --git a/src/x.ts b/src/x.ts\n' + '@@ -3 +3 @@\n' + '-old\n' + '+new\n',
     });
     const git = new GitService();
     const result = await git.getDiffLineRanges('HEAD~1', 'HEAD');
@@ -396,10 +392,7 @@ describe('GitService', () => {
 
   it('getDiffLineRanges caches results for the same ref pair', async () => {
     execaMock.mockResolvedValue({
-      stdout:
-        'diff --git a/src/foo.ts b/src/foo.ts\n' +
-        '@@ -1 +2 @@\n' +
-        '+changed\n',
+      stdout: 'diff --git a/src/foo.ts b/src/foo.ts\n' + '@@ -1 +2 @@\n' + '+changed\n',
     });
     const git = new GitService();
 
@@ -424,13 +417,7 @@ describe('GitService', () => {
     execaMock.mockResolvedValue({ stdout: '' });
     const git = new GitService();
     await git.getDiffLineRanges('abc123', 'def456');
-    expect(execaMock).toHaveBeenCalledWith('git', [
-      'diff',
-      '--unified=0',
-      'abc123',
-      'def456',
-      '--',
-    ]);
+    expect(execaMock).toHaveBeenCalledWith('git', ['diff', '--unified=0', 'abc123', 'def456', '--']);
   });
 
   // -----------------------------------------------------------------------
@@ -475,10 +462,10 @@ describe('GitService', () => {
     const git = new GitService();
     // isDirty clean, then branchExistsLocal → false, then checkout -b, then ensureBranchIsSynced
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
-      .mockRejectedValueOnce(new Error('not found'))    // branchExistsLocal → false
-      .mockResolvedValueOnce({ stdout: '' })            // checkout -b
-      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockRejectedValueOnce(new Error('not found')) // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' }) // checkout -b
+      .mockRejectedValueOnce(new Error('no remote')); // ensureBranchIsSynced → silent
 
     const result = await git.createFeatureBranch('PAY-404', 'develop', true);
     expect(result.kind).toBe('created');
@@ -491,11 +478,11 @@ describe('GitService', () => {
   it('createFeatureBranch returns created when a new branch is made', async () => {
     const git = new GitService();
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
-      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
-      .mockRejectedValueOnce(new Error('not found'))    // branchExistsLocal → false
-      .mockResolvedValueOnce({ stdout: '' })            // checkout -b
-      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' }) // getCurrentBranch
+      .mockRejectedValueOnce(new Error('not found')) // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' }) // checkout -b
+      .mockRejectedValueOnce(new Error('no remote')); // ensureBranchIsSynced → silent
 
     const result = await git.createFeatureBranch('PAY-404', null, true);
     expect(result.kind).toBe('created');
@@ -505,11 +492,11 @@ describe('GitService', () => {
   it('createFeatureBranch returns checked_out when branch exists and skipHitl is true', async () => {
     const git = new GitService();
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
-      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
-      .mockResolvedValueOnce({ stdout: '' })            // branchExistsLocal → true
-      .mockResolvedValueOnce({ stdout: '' })            // checkout
-      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' }) // getCurrentBranch
+      .mockResolvedValueOnce({ stdout: '' }) // branchExistsLocal → true
+      .mockResolvedValueOnce({ stdout: '' }) // checkout
+      .mockRejectedValueOnce(new Error('no remote')); // ensureBranchIsSynced → silent
 
     const result = await git.createFeatureBranch('PAY-404', null, true);
     expect(result.kind).toBe('checked_out');
@@ -520,11 +507,11 @@ describe('GitService', () => {
     const promptUser = vi.fn<[string], Promise<boolean>>().mockResolvedValue(true);
     const git = new GitService();
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
-      .mockResolvedValueOnce({ stdout: 'develop\n' })   // getCurrentBranch
-      .mockResolvedValueOnce({ stdout: '' })            // branchExistsLocal → true
-      .mockResolvedValueOnce({ stdout: '' })            // checkout
-      .mockRejectedValueOnce(new Error('no remote'));   // ensureBranchIsSynced → silent
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' }) // getCurrentBranch
+      .mockResolvedValueOnce({ stdout: '' }) // branchExistsLocal → true
+      .mockResolvedValueOnce({ stdout: '' }) // checkout
+      .mockRejectedValueOnce(new Error('no remote')); // ensureBranchIsSynced → silent
 
     const result = await git.createFeatureBranch('PAY-404', null, false, promptUser);
     expect(result.kind).toBe('checked_out');
@@ -535,9 +522,9 @@ describe('GitService', () => {
     const promptUser = vi.fn<[string], Promise<boolean>>().mockResolvedValue(false);
     const git = new GitService();
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })           // isDirty → clean
-      .mockResolvedValueOnce({ stdout: 'develop\n' });  // getCurrentBranch
-      // branchExistsLocal → true
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
+      .mockResolvedValueOnce({ stdout: 'develop\n' }); // getCurrentBranch
+    // branchExistsLocal → true
     execaMock.mockResolvedValueOnce({ stdout: '' });
 
     const result = await git.createFeatureBranch('PAY-404', null, false, promptUser);
@@ -548,11 +535,11 @@ describe('GitService', () => {
   it('createFeatureBranch uses current branch when baseBranchOverride is null', async () => {
     const git = new GitService();
     execaMock
-      .mockResolvedValueOnce({ stdout: '' })              // isDirty → clean
+      .mockResolvedValueOnce({ stdout: '' }) // isDirty → clean
       .mockResolvedValueOnce({ stdout: 'feature/xyz\n' }) // getCurrentBranch
-      .mockRejectedValueOnce(new Error('not found'))      // branchExistsLocal → false
-      .mockResolvedValueOnce({ stdout: '' })              // checkout -b
-      .mockRejectedValueOnce(new Error('no remote'));      // ensureBranchIsSynced → silent
+      .mockRejectedValueOnce(new Error('not found')) // branchExistsLocal → false
+      .mockResolvedValueOnce({ stdout: '' }) // checkout -b
+      .mockRejectedValueOnce(new Error('no remote')); // ensureBranchIsSynced → silent
 
     const result = await git.createFeatureBranch('PAY-404', null, true);
     expect(result.kind).toBe('created');
@@ -618,7 +605,11 @@ describe('CommandRunner', () => {
     });
     const runner = new CommandRunner();
     const result = await runner.spawn(['run', '--agent', 'pass-0-design-agent']);
-    expect(execaMock).toHaveBeenCalledWith('opencode', ['run', '--agent', 'pass-0-design-agent'], expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] }));
+    expect(execaMock).toHaveBeenCalledWith(
+      'opencode',
+      ['run', '--agent', 'pass-0-design-agent'],
+      expect.objectContaining({ stdio: ['ignore', 'pipe', 'pipe'] }),
+    );
     expect(result).toBe('agent output\n\n');
   });
 
@@ -654,7 +645,7 @@ describe('PACKAGE_AGENTS_DIR', () => {
     expect(existsSync(PACKAGE_AGENTS_DIR), `Expected ${PACKAGE_AGENTS_DIR} to exist`).toBe(true);
 
     const files = readdirSync(PACKAGE_AGENTS_DIR);
-    const mdFiles = files.filter(f => f.endsWith('.md'));
+    const mdFiles = files.filter((f) => f.endsWith('.md'));
 
     const expected = [
       'pass-0-design-agent.md',
@@ -672,7 +663,7 @@ describe('PACKAGE_AGENTS_DIR', () => {
       expect(existsSync(fullPath), `Expected ${fullPath} to exist`).toBe(true);
     }
 
-    const agentNames = mdFiles.filter(f => /^pass-\d/.test(f));
+    const agentNames = mdFiles.filter((f) => /^pass-\d/.test(f));
     expect(agentNames).toHaveLength(8);
   });
 });

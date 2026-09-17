@@ -14,13 +14,13 @@ import { cwd } from 'node:process';
 import type { IFileSystem, ILogger } from '../core/interfaces.js';
 import { AGENT_NAMES, PipelinePass } from '../core/types.js';
 import { PACKAGE_AGENTS_DIR } from '../utils/paths.js';
-import { INDEXER_TOOLS, MCP_INDEXER_SERVER_PREFIX, buildToolsAllowlist, isIndexerToolName } from './agent-runners/pi-sdk-runner.js';
 import {
-  execaProcessRunner,
-  resolveIndexerBinary,
-  unwrapMcpCliResult,
-  type ProcessRunner,
-} from './indexer-client.js';
+  INDEXER_TOOLS,
+  MCP_INDEXER_SERVER_PREFIX,
+  buildToolsAllowlist,
+  isIndexerToolName,
+} from './agent-runners/pi-sdk-runner.js';
+import { execaProcessRunner, resolveIndexerBinary, unwrapMcpCliResult, type ProcessRunner } from './indexer-client.js';
 import { buildIndexerBridgeTools } from './agent-runners/indexer-bridge.js';
 import { OPENCODE_INDEXER_CORE_TOOL_SUFFIXES } from './opencode-config.js';
 
@@ -31,11 +31,7 @@ export { resolveIndexerBinary, getResolvedIndexerBinary } from './indexer-client
  * The probe tolerates additional/newer tools (dynamic discovery) and only
  * fails when one of these core tools is missing.
  */
-export const INDEXER_CORE_TOOLS: readonly string[] = [
-  'search_graph',
-  'get_code_snippet',
-  'index_repository',
-];
+export const INDEXER_CORE_TOOLS: readonly string[] = ['search_graph', 'get_code_snippet', 'index_repository'];
 
 // ---------------------------------------------------------------------------
 // Result types
@@ -63,9 +59,7 @@ export interface IndexerProbeFailure {
   message: string;
 }
 
-export type IndexerProbeResult =
-  | { ok: true }
-  | { ok: false; failure: IndexerProbeFailure };
+export type IndexerProbeResult = { ok: true } | { ok: false; failure: IndexerProbeFailure };
 
 /** Structural view of the pi SDK surface the live probe needs. */
 export interface PiSdkLike {
@@ -100,10 +94,7 @@ export interface ProbeModelConfig {
 /** Default executable check backed by `access(..., X_OK)`. */
 export async function defaultIsExecutable(path: string): Promise<boolean> {
   try {
-    const [{ access }, { constants }] = await Promise.all([
-      import('node:fs/promises'),
-      import('node:fs'),
-    ]);
+    const [{ access }, { constants }] = await Promise.all([import('node:fs/promises'), import('node:fs')]);
     await access(path, constants.X_OK);
     return true;
   } catch {
@@ -130,13 +121,9 @@ export interface StaticIndexerProbeDeps {
   isExecutable?: (path: string) => Promise<boolean>;
 }
 
-export type StaticIndexerProbeResult =
-  | { ok: true; binary: string }
-  | { ok: false; failure: IndexerProbeFailure };
+export type StaticIndexerProbeResult = { ok: true; binary: string } | { ok: false; failure: IndexerProbeFailure };
 
-export async function runStaticIndexerChecks(
-  deps: StaticIndexerProbeDeps,
-): Promise<StaticIndexerProbeResult> {
+export async function runStaticIndexerChecks(deps: StaticIndexerProbeDeps): Promise<StaticIndexerProbeResult> {
   const logger = deps.logger.child({ module: 'indexer-static-probe' });
   const workDir = deps.workDir ?? cwd();
   const isExecutable = deps.isExecutable ?? defaultIsExecutable;
@@ -184,7 +171,7 @@ export async function runStaticIndexerChecks(
         kind: 'adapter_not_found',
         message:
           `pi-mcp-adapter is not declared in '${settingsPath}' packages. ` +
-          'Install it via pi\'s package manager (it is the canonical access path for ' +
+          "Install it via pi's package manager (it is the canonical access path for " +
           'the codebase-memory MCP server) and retry.',
       },
     };
@@ -192,10 +179,7 @@ export async function runStaticIndexerChecks(
 
   // 2b. Merged MCP config (as pi-mcp-adapter would resolve it) has a
   //     `codebase-memory` entry and it registers direct tools.
-  const candidateFiles = deps.mcpConfigFiles ?? [
-    join(workDir, '.mcp.json'),
-    join(deps.agentDir, 'mcp.json'),
-  ];
+  const candidateFiles = deps.mcpConfigFiles ?? [join(workDir, '.mcp.json'), join(deps.agentDir, 'mcp.json')];
   let entryFile: string | undefined;
   let entryHasDirectTools = false;
   for (const candidate of candidateFiles) {
@@ -277,15 +261,15 @@ export interface LiveProbeDeps {
 const DESIGN_THINKING_LEVEL = 'high';
 
 export async function runLiveIndexerProbe(deps: LiveProbeDeps): Promise<IndexerProbeResult> {
-  const loadPiSdk = deps.loadPiSdk ?? (async () => {
-    const mod = await import('@earendil-works/pi-coding-agent');
-    return mod as unknown as PiSdkLike;
-  });
+  const loadPiSdk =
+    deps.loadPiSdk ??
+    (async () => {
+      const mod = await import('@earendil-works/pi-coding-agent');
+      return mod as unknown as PiSdkLike;
+    });
   const timeoutMs = deps.timeoutMs ?? 30_000;
   const workDir = deps.workDir ?? cwd();
-  const coreToolNames = (deps.coreTools ?? INDEXER_CORE_TOOLS).map(
-    (name) => MCP_INDEXER_SERVER_PREFIX + name,
-  );
+  const coreToolNames = (deps.coreTools ?? INDEXER_CORE_TOOLS).map((name) => MCP_INDEXER_SERVER_PREFIX + name);
   const logger = deps.logger.child({ module: 'indexer-live-probe' });
   const agentName = AGENT_NAMES[PipelinePass.Design];
 
@@ -500,8 +484,7 @@ export interface OpencodeStaticDeps {
 }
 
 export type OpencodeStaticResult =
-  | { ok: true; binary: string; opencodeVersion: string | null }
-  | { ok: false; failure: IndexerProbeFailure };
+  { ok: true; binary: string; opencodeVersion: string | null } | { ok: false; failure: IndexerProbeFailure };
 
 /**
  * G2 for the opencode backend: prove the indexer binary is present/executable
@@ -533,10 +516,12 @@ export async function runOpencodeStaticChecks(deps: OpencodeStaticDeps): Promise
     };
   }
 
-  const resolveOpencode = deps.resolveOpencodeBinary ?? (async () => {
-    const { resolveOpencodeBinary } = await import('./opencode-server.js');
-    return resolveOpencodeBinary();
-  });
+  const resolveOpencode =
+    deps.resolveOpencodeBinary ??
+    (async () => {
+      const { resolveOpencodeBinary } = await import('./opencode-server.js');
+      return resolveOpencodeBinary();
+    });
   const opencodeBinary = await resolveOpencode();
   if (opencodeBinary === null) {
     return {
@@ -550,10 +535,12 @@ export async function runOpencodeStaticChecks(deps: OpencodeStaticDeps): Promise
     };
   }
 
-  const getVersion = deps.getOpencodeVersion ?? (async () => {
-    const { getOpencodeVersion } = await import('./opencode-server.js');
-    return getOpencodeVersion();
-  });
+  const getVersion =
+    deps.getOpencodeVersion ??
+    (async () => {
+      const { getOpencodeVersion } = await import('./opencode-server.js');
+      return getOpencodeVersion();
+    });
   const version = await getVersion();
   logger.info({ opencodeBinary, version }, 'opencode binary resolved');
 

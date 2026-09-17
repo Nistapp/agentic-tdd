@@ -10,7 +10,21 @@
  *   - embeddable in a VS Code extension (swap out the CLI implementation).
  */
 
-import type { PipelineContext, AgenticEvent, AgenticEventKind, GitCommitResult, TestRunResult, FileChange, Range, DiffLineChange, AgentRunRequest, AgentRunResult, BuiltContext, PipelinePass, CreateFeatureBranchOutcome } from './types.js';
+import type {
+  PipelineContext,
+  AgenticEvent,
+  AgenticEventKind,
+  GitCommitResult,
+  TestRunResult,
+  FileChange,
+  Range,
+  DiffLineChange,
+  AgentRunRequest,
+  AgentRunResult,
+  BuiltContext,
+  PipelinePass,
+  CreateFeatureBranchOutcome,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // IGitService — git operations that the pipeline engine needs
@@ -298,4 +312,3 @@ export interface IContextProvider {
    */
   build(ctx: PipelineContext, pass: PipelinePass): BuiltContext;
 }
-

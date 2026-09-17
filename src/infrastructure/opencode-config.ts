@@ -49,8 +49,9 @@ export const OPENCODE_INDEXER_TOOL_SUFFIXES: readonly string[] = [
 ] as const;
 
 /** Fully-qualified opencode MCP tool names (`codebase-memory_<tool>`). */
-export const OPENCODE_INDEXER_TOOLS: readonly string[] =
-  OPENCODE_INDEXER_TOOL_SUFFIXES.map((tool) => `${OPENCODE_INDEXER_SERVER_NAME}_${tool}`);
+export const OPENCODE_INDEXER_TOOLS: readonly string[] = OPENCODE_INDEXER_TOOL_SUFFIXES.map(
+  (tool) => `${OPENCODE_INDEXER_SERVER_NAME}_${tool}`,
+);
 
 /** Derive the opencode tool name for a raw indexer tool suffix. */
 export function opencodeToolName(suffix: string): string {
@@ -113,9 +114,7 @@ const MAPPED_PERMISSION_KEYS: readonly string[] = [
  *
  * MCP tools are never placed in a deny list — the indexer is harness-guaranteed.
  */
-export function mapPermission(
-  frontmatterPermission: unknown,
-): Record<string, OpencodePermissionAction> {
+export function mapPermission(frontmatterPermission: unknown): Record<string, OpencodePermissionAction> {
   const out: Record<string, OpencodePermissionAction> = {};
   if (
     frontmatterPermission === null ||
