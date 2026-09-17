@@ -198,6 +198,20 @@ codebase-memory_detect_changes(project="<project>")
 - Group imports: (1) Node built-ins, (2) third-party, (3) internal — separated by
   a blank line.
 
+### Documentation
+
+- `docs/` is the single source of truth for permanent documentation; `artefacts/`
+  is transient and off-limits to agents (see §4 File Reading Policy).
+- Every `.md` file under `docs/` MUST follow `docs/STYLE_GUIDE.md` — the canonical
+  rules. Link to the relevant section rather than restating rules here.
+- **Definition of done:** when a change alters a public interface, observable
+  behaviour, architecture, an ADR, or the 8-pass pipeline, update the affected
+  documentation pages, their source line anchors, and the ADR index tables in the
+  same change set (`STYLE_GUIDE §6.3`). Pure internal refactors with no observable
+  or documentation impact do not require doc edits.
+- New or revised ADRs MUST follow `STYLE_GUIDE §7` and be registered in
+  `docs/architecture/README.md`.
+
 ---
 
 ## 6. Testing Standards
@@ -266,6 +280,7 @@ each file's frontmatter + body and emits one `primary` opencode agent per pass
 - Do not skip the `codebase-memory-mcp` indexing step at the start of a session.
 - Do not run `opencode` or make real API calls in tests.
 - Do not modify `dist/` manually — it is generated.
+- Do not edit files under `docs/` without following `docs/STYLE_GUIDE.md`.
 - Do not inspect, grep, glob, or read from `artefacts/` unless the user explicitly
   passes a specific file path in their prompt (see §4 File Reading Policy).
 - Do not treat documents in `artefacts/` as architectural source of truth or
